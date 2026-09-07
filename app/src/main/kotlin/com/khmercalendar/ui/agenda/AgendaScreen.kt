@@ -53,7 +53,9 @@ import com.khmercalendar.core.khmer.KhmerTerms
 import com.khmercalendar.ui.calendar.EventRow
 import com.khmercalendar.ui.components.ColorDot
 import com.khmercalendar.ui.components.EmptyState
+import com.khmercalendar.ui.components.CalendarFormats
 import com.khmercalendar.ui.components.localeNumber
+import com.khmercalendar.ui.theme.LocalAppSettings
 import java.time.LocalDate
 
 /**
@@ -222,6 +224,7 @@ fun SearchScreen(
     val results by viewModel.searchResults.collectAsStateWithLifecycle()
     val focusRequester = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
+    val settings = LocalAppSettings.current
 
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
@@ -292,7 +295,11 @@ fun SearchScreen(
                             )
                             Text(
                                 listOfNotNull(
-                                    "${localeNumber(hit.date.dayOfMonth)} ${KhmerTerms.solarMonth(hit.date.monthValue)} ${localeNumber(hit.date.year)}",
+                                    CalendarFormats.date(
+                                        hit.date,
+                                        settings.dateFormat,
+                                        settings.useKhmerNumerals,
+                                    ),
                                     hit.subtitle.takeIf { it.isNotBlank() },
                                 ).joinToString(" · "),
                                 style = MaterialTheme.typography.bodySmall,

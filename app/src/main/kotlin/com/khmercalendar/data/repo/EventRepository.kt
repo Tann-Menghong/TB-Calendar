@@ -152,7 +152,20 @@ class EventRepository(
     suspend fun reminders(eventId: Long): List<Int> =
         reminderDao.forEvent(eventId).map { it.minutesBefore }
 
-    fun search(query: String): Flow<List<EventEntity>> = eventDao.search(query.trim())
+    fun search(query: String): Flow<List<EventEntity>> =
+        eventDao.search(escapeForLike(query.trim()))
+
+    /**
+     * Makes a user's text safe to drop into a LIKE pattern.
+     *
+     * `%` and `_` are wildcards to LIKE, so typing them searched for something the user did
+     * not ask for: "%" matched the entire calendar, and "_" matched any single character.
+     * The backslash goes first, because escaping it after the others would escape the escapes.
+     */
+    internal fun escapeForLike(raw: String): String = raw
+        .replace("\\", "\\\\")
+        .replace("%", "\\%")
+        .replace("_", "\\_")
 
     /** Inserts or updates, returning the event id. Reminders are replaced wholesale. */
     suspend fun save(draft: EventDraftModel): Long {

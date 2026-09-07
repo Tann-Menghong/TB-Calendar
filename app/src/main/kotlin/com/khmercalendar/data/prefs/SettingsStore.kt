@@ -60,7 +60,7 @@ class SettingsStore(context: Context) {
         highlightWeekends = this[Keys.HIGHLIGHT_WEEKENDS] ?: true,
 
         timeFormat = enumOf(this[Keys.TIME_FORMAT], TimeFormat.SYSTEM),
-        dateFormat = enumOf(this[Keys.DATE_FORMAT], DateFormat.DMY),
+        dateFormat = enumOf(this[Keys.DATE_FORMAT], DateFormat.KHMER),
         dayStartHour = this[Keys.DAY_START_HOUR] ?: 8,
         dayEndHour = this[Keys.DAY_END_HOUR] ?: 18,
 

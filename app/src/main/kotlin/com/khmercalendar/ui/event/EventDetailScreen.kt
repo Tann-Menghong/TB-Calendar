@@ -39,6 +39,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.khmercalendar.core.khmer.Chhankitek
 import com.khmercalendar.core.khmer.KhmerTerms
 import com.khmercalendar.ui.components.localeNumber
+import com.khmercalendar.ui.components.localeWrittenDate
 import com.khmercalendar.ui.theme.LocalAppSettings
 import java.time.LocalDate
 import com.khmercalendar.ui.components.CalendarFormats
@@ -95,13 +96,9 @@ fun EventDetailScreen(
             Text(draft.title, style = MaterialTheme.typography.headlineSmall)
 
             val lunar = remember(occurrenceDate) { Chhankitek.toLunarOrNull(occurrenceDate) }
-            Text(
-                text = "ថ្ងៃ${KhmerTerms.dayOfWeek(occurrenceDate.dayOfWeek)} " +
-                    "ទី${localeNumber(occurrenceDate.dayOfMonth)} " +
-                    "ខែ${KhmerTerms.solarMonth(occurrenceDate.monthValue)} " +
-                    "ឆ្នាំ${localeNumber(occurrenceDate.year)}",
-                style = MaterialTheme.typography.bodyLarge,
-            )
+            val dateLine = "ថ្ងៃ${KhmerTerms.dayOfWeek(occurrenceDate.dayOfWeek)} " +
+                localeWrittenDate(occurrenceDate)
+            Text(dateLine, style = MaterialTheme.typography.bodyLarge)
             lunar?.let {
                 Text(
                     it.format(),
@@ -155,7 +152,7 @@ fun EventDetailScreen(
                 OutlinedButton(
                     onClick = {
                         shareEvent(
-                            context, draft.title, occurrenceDate, draft, use24Hour, khmerNumerals,
+                            context, draft.title, dateLine, draft, use24Hour, khmerNumerals,
                         )
                     },
                 ) {
@@ -229,15 +226,14 @@ private fun repeatLabel(frequency: String): String = when (frequency) {
 private fun shareEvent(
     context: android.content.Context,
     title: String,
-    date: LocalDate,
+    dateLine: String,
     draft: com.khmercalendar.domain.EventDraftModel,
     use24Hour: Boolean,
     khmerNumerals: Boolean,
 ) {
     val text = buildString {
         appendLine(title)
-        append("ថ្ងៃ${KhmerTerms.dayOfWeek(date.dayOfWeek)} ")
-        append("ទី${date.dayOfMonth} ខែ${KhmerTerms.solarMonth(date.monthValue)} ឆ្នាំ${date.year}")
+        append(dateLine)
         if (!draft.allDay) {
             append("  ")
             append(CalendarFormats.time(draft.startTime, use24Hour, khmerNumerals))

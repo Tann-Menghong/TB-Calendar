@@ -83,7 +83,12 @@ fun SwitchRow(
 
 /** A single-choice row inside a group. */
 @Composable
-fun ChoiceRow(title: String, selected: Boolean, onClick: () -> Unit) {
+fun ChoiceRow(
+    title: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    subtitle: String? = null,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -93,7 +98,17 @@ fun ChoiceRow(title: String, selected: Boolean, onClick: () -> Unit) {
     ) {
         RadioButton(selected = selected, onClick = onClick)
         Spacer(Modifier.width(12.dp))
-        Text(title, style = MaterialTheme.typography.bodyLarge)
+        Column {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            // A format is easier to judge from an example than from its name.
+            subtitle?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }
 

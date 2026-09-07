@@ -36,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,10 +49,12 @@ import com.khmercalendar.data.prefs.CalendarDensity
 import com.khmercalendar.data.prefs.DashboardCard
 import com.khmercalendar.data.prefs.SettingsStore
 import com.khmercalendar.data.prefs.ThemeMode
+import com.khmercalendar.ui.components.CalendarFormats
 import com.khmercalendar.ui.components.localeNumber
 import com.khmercalendar.ui.theme.AccentPalette
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
+import java.time.LocalDate
 import com.khmercalendar.core.khmer.CalendarWeek
 import com.khmercalendar.core.khmer.KhmerTerms
 import com.khmercalendar.data.prefs.DateFormat
@@ -270,11 +273,13 @@ fun AppearanceScreen(
                     )
                 }
                 Spacer(Modifier.height(6.dp))
+                val today = remember { LocalDate.now() }
                 DateFormat.entries.forEach { format ->
                     ChoiceRow(
                         title = format.labelKm,
                         selected = settings.dateFormat == format,
                         onClick = { scope.launch { settingsStore.setDateFormat(format) } },
+                        subtitle = CalendarFormats.date(today, format, settings.useKhmerNumerals),
                     )
                 }
             }

@@ -20,7 +20,14 @@ enum class TimeFormat(val labelKm: String) {
 }
 
 /** The order of the parts of a written date. */
+/**
+ * How a date is written when it is shown on its own.
+ *
+ * [KHMER] is the default and the app's own voice - ១៥ មករា ២០២៦. The numeric forms exist for
+ * people who prefer a compact date, and are the reason the enum carries a pattern at all.
+ */
 enum class DateFormat(val labelKm: String, val pattern: String) {
+    KHMER("ថ្ងៃ ខែ ឆ្នាំ (ខ្មែរ)", "d MMMM yyyy"),
     DMY("ថ្ងៃ/ខែ/ឆ្នាំ", "dd/MM/yyyy"),
     YMD("ឆ្នាំ-ខែ-ថ្ងៃ", "yyyy-MM-dd"),
     MDY("ខែ/ថ្ងៃ/ឆ្នាំ", "MM/dd/yyyy"),
@@ -89,7 +96,12 @@ data class AppSettings(
 
     // --- behaviour ---
     val timeFormat: TimeFormat = TimeFormat.SYSTEM,
-    val dateFormat: DateFormat = DateFormat.DMY,
+    /**
+     * Default is [DateFormat.KHMER], which is what every screen already drew while this
+     * setting was being ignored. Anyone who never touched it sees no change; anyone who did
+     * pick a numeric format now finally gets it.
+     */
+    val dateFormat: DateFormat = DateFormat.KHMER,
     /** Start of the working day, used by free-slot suggestions and the week grid. */
     val dayStartHour: Int = 8,
     /** End of the working day. Always later than [dayStartHour]. */

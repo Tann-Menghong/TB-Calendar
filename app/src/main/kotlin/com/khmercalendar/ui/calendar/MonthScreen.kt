@@ -44,6 +44,7 @@ import com.khmercalendar.domain.EventOccurrence
 import com.khmercalendar.ui.components.ColorDot
 import com.khmercalendar.ui.components.EmptyState
 import com.khmercalendar.ui.components.localeNumber
+import com.khmercalendar.ui.components.localeWrittenDate
 import com.khmercalendar.ui.theme.LocalAppSettings
 import com.khmercalendar.core.khmer.CalendarWeek
 import java.time.DayOfWeek
@@ -340,8 +341,7 @@ fun DayHeadline(date: java.time.LocalDate, modifier: Modifier = Modifier) {
     }
     Column(modifier) {
         Text(
-            text = "ថ្ងៃ${KhmerTerms.dayOfWeek(date.dayOfWeek)} ទី${localeNumber(date.dayOfMonth)} " +
-                "ខែ${KhmerTerms.solarMonth(date.monthValue)} ឆ្នាំ${localeNumber(date.year)}",
+            text = "ថ្ងៃ${KhmerTerms.dayOfWeek(date.dayOfWeek)} " + localeWrittenDate(date),
             style = MaterialTheme.typography.titleMedium,
         )
         lunar?.let {

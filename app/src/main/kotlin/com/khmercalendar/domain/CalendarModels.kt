@@ -55,6 +55,46 @@ data class EventDraftModel(
 )
 
 /**
+ * The times a brand-new event opens with.
+ *
+ * Pulled out of the view model so the awkward hours can be tested. "The next whole hour" is
+ * the right default almost all day, but [java.time.LocalTime] wraps silently at midnight:
+ * computed on the clock alone, an event added at 23:20 opened at 00:00 *that morning* -
+ * twenty-three hours in the past - and one added at 22:51 opened 23:00 to 00:00, which the
+ * editor then refused to save because the end looked earlier than the start. Carrying the
+ * date through the arithmetic is what fixes both.
+ */
+object EventDraftDefaults {
+
+    fun times(
+        now: LocalDateTime,
+        durationMinutes: Int,
+        preferredDate: LocalDate? = null,
+    ): Times {
+        val startAt = now.plusHours(1).truncatedTo(java.time.temporal.ChronoUnit.HOURS)
+        val endAt = startAt.plusMinutes(durationMinutes.toLong())
+        val date = preferredDate ?: startAt.toLocalDate()
+        val spansDays = java.time.temporal.ChronoUnit.DAYS.between(
+            startAt.toLocalDate(),
+            endAt.toLocalDate(),
+        )
+        return Times(
+            date = date,
+            startTime = startAt.toLocalTime(),
+            endDate = date.plusDays(spansDays),
+            endTime = endAt.toLocalTime(),
+        )
+    }
+
+    data class Times(
+        val date: LocalDate,
+        val startTime: java.time.LocalTime,
+        val endDate: LocalDate,
+        val endTime: java.time.LocalTime,
+    )
+}
+
+/**
  * Conversion between the wall-clock times the UI works in and the UTC milliseconds the
  * database stores.
  *

@@ -9,6 +9,7 @@ import com.khmercalendar.core.khmer.KhmerTerms
 import com.khmercalendar.data.prefs.AppSettings
 import com.khmercalendar.data.prefs.DateFormat
 import com.khmercalendar.data.prefs.TimeFormat
+import com.khmercalendar.ui.theme.LocalAppSettings
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -63,9 +64,37 @@ object CalendarFormats {
         khmerNumerals: Boolean,
     ): String = time(start, use24Hour, khmerNumerals) + " – " + time(end, use24Hour, khmerNumerals)
 
-    /** A numeric date in the user's chosen order. */
+    /**
+     * A date in the user's chosen format.
+     *
+     * [DateFormat.KHMER] is written out - ១៥ មករា ២០២៦ - and is built here rather than through
+     * a [DateTimeFormatter] pattern, because `MMMM` resolves against the JVM locale and would
+     * print "January" on a device set to English. The other three are numeric orders.
+     */
     fun date(date: LocalDate, format: DateFormat, khmerNumerals: Boolean): String =
-        digits(date.format(DateTimeFormatter.ofPattern(format.pattern)), khmerNumerals)
+        if (format == DateFormat.KHMER) {
+            digits(date.dayOfMonth.toString(), khmerNumerals) + " " +
+                KhmerTerms.solarMonth(date.monthValue) + " " +
+                digits(date.year.toString(), khmerNumerals)
+        } else {
+            digits(date.format(DateTimeFormatter.ofPattern(format.pattern)), khmerNumerals)
+        }
+
+    /**
+     * The same date in prose: ទី១៥ ខែមករា ឆ្នាំ២០២៦.
+     *
+     * The particles are how a date reads inside a Khmer sentence, so headlines and the event
+     * detail screen use this while compact field rows use [date]. A user who has picked a
+     * numeric order gets the numeric order in both - there is no prose form of "07/09/2026".
+     */
+    fun writtenDate(date: LocalDate, format: DateFormat, khmerNumerals: Boolean): String =
+        if (format == DateFormat.KHMER) {
+            "ទី" + digits(date.dayOfMonth.toString(), khmerNumerals) + " " +
+                "ខែ" + KhmerTerms.solarMonth(date.monthValue) + " " +
+                "ឆ្នាំ" + digits(date.year.toString(), khmerNumerals)
+        } else {
+            date(date, format, khmerNumerals)
+        }
 
     /** A date written out in Khmer: ថ្ងៃច័ន្ទ ១៥ មករា ២០២៦. */
     fun longDate(date: LocalDate, khmerNumerals: Boolean): String = buildString {
@@ -95,3 +124,17 @@ fun localeTime(time: LocalTime, settings: AppSettings): String =
 @Composable
 fun localeTimeRange(start: LocalTime, end: LocalTime, settings: AppSettings): String =
     CalendarFormats.timeRange(start, end, LocalUses24Hour.current, settings.useKhmerNumerals)
+
+/** A full date in the user's chosen format, for a compact field row. */
+@Composable
+fun localeDate(date: LocalDate): String {
+    val settings = LocalAppSettings.current
+    return CalendarFormats.date(date, settings.dateFormat, settings.useKhmerNumerals)
+}
+
+/** A full date in the user's chosen format, written for prose. */
+@Composable
+fun localeWrittenDate(date: LocalDate): String {
+    val settings = LocalAppSettings.current
+    return CalendarFormats.writtenDate(date, settings.dateFormat, settings.useKhmerNumerals)
+}

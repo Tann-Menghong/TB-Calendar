@@ -1,5 +1,6 @@
 package com.khmercalendar.ui.components
 
+import android.provider.Settings
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -14,9 +15,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalAccessibilityManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
@@ -93,11 +95,26 @@ fun DashboardSkeleton(modifier: Modifier = Modifier) {
  *
  * A shimmer that cannot be turned off is an accessibility problem, and the placeholder still
  * reads perfectly well without it.
+ *
+ * The signal is the system animator duration scale, which is what "Remove animations" in
+ * accessibility settings and the developer-options animation scales both write to. Compose has
+ * no reduced-motion flag of its own, and an earlier version of this checked whether
+ * `LocalAccessibilityManager` was null - which is never true in a running app, so the shimmer
+ * ran regardless of what the user had asked for.
  */
 @Composable
 private fun skeletonAlpha(): Float {
-    val reduceMotion = LocalAccessibilityManager.current == null
-    if (reduceMotion) return 0.09f
+    val context = LocalContext.current
+    val animationsOff = remember(context) {
+        runCatching {
+            Settings.Global.getFloat(
+                context.contentResolver,
+                Settings.Global.ANIMATOR_DURATION_SCALE,
+                1f,
+            )
+        }.getOrDefault(1f) == 0f
+    }
+    if (animationsOff) return 0.09f
 
     val transition = rememberInfiniteTransition(label = "skeleton")
     val alpha by transition.animateFloat(

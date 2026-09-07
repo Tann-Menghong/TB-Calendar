@@ -171,4 +171,58 @@ class EventRepositoryTest {
         assertEquals(1, repository.search("ភ្នំពេញ").first().size)
         assertEquals(0, repository.search("សៀមរាប").first().size)
     }
+
+    @Test
+    fun `an event that runs past midnight lands on both days`() = runTest {
+        val date = LocalDate.of(2026, 3, 10)
+        repository.save(
+            EventDraftModel(
+                title = "ការងារយប់",
+                date = date,
+                startTime = LocalTime.of(23, 0),
+                endTime = LocalTime.of(1, 0),
+                endDate = date,
+            ),
+        )
+
+        // The editor used to refuse this outright, which meant no event could be created
+        // after 11pm at all - the default end time was already the next midnight.
+        val days = repository.occurrences(date, date.plusDays(1))
+
+        assertEquals(listOf(date, date.plusDays(1)), days.keys.sorted())
+        val occurrence = days.getValue(date).single()
+        assertEquals(LocalTime.of(23, 0), occurrence.start.toLocalTime())
+        assertEquals(date.plusDays(1), occurrence.end.toLocalDate())
+        assertEquals(LocalTime.of(1, 0), occurrence.end.toLocalTime())
+    }
+
+    @Test
+    fun `a search for a percent sign does not match every event`() = runTest {
+        val date = LocalDate.of(2026, 3, 10)
+        listOf("ប្រជុំការងារ", "Sprint 50% done", "Lunch").forEach { name ->
+            repository.save(
+                EventDraftModel(
+                    title = name,
+                    date = date,
+                    startTime = LocalTime.of(8, 0),
+                    endTime = LocalTime.of(9, 0),
+                    endDate = date,
+                ),
+            )
+        }
+
+        // "%" is a LIKE wildcard. Passed through unescaped it matches every row, so the search
+        // box silently answers "everything" to a query that should find one event.
+        val percent = repository.search("%").first()
+        assertEquals("A literal % should match only the event containing one", 1, percent.size)
+        assertEquals("Sprint 50% done", percent.single().title)
+
+        // "_" is the single-character wildcard, and has the same problem.
+        val underscore = repository.search("_").first()
+        assertTrue("A literal _ matches nothing here", underscore.isEmpty())
+
+        // Ordinary Khmer search still works.
+        val khmer = repository.search("ប្រជុំ").first()
+        assertEquals(1, khmer.size)
+    }
 }

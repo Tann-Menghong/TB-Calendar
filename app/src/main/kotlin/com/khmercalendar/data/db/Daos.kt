@@ -71,12 +71,16 @@ interface EventDao {
      * words, so an FTS tokeniser splits it in places that are not word boundaries and then
      * fails to match the substring the user typed. A substring scan over a personal calendar
      * is a few thousand rows at most, and it matches what people expect typing mid-word.
+     *
+     * [query] must already have its LIKE metacharacters escaped - see
+     * [com.khmercalendar.data.repo.EventRepository.escapeForLike]. Without that, searching for
+     * "%" returns the entire calendar and "_" matches any single character.
      */
     @Query(
         "SELECT * FROM events " +
-            "WHERE title LIKE '%' || :query || '%' " +
-            "   OR description LIKE '%' || :query || '%' " +
-            "   OR location LIKE '%' || :query || '%' " +
+            "WHERE title LIKE '%' || :query || '%' ESCAPE '\\' " +
+            "   OR description LIKE '%' || :query || '%' ESCAPE '\\' " +
+            "   OR location LIKE '%' || :query || '%' ESCAPE '\\' " +
             "ORDER BY startUtcMillis DESC LIMIT 300"
     )
     fun search(query: String): Flow<List<EventEntity>>

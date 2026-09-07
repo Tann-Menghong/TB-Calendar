@@ -40,10 +40,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.khmercalendar.core.khmer.KhmerTerms
 import com.khmercalendar.core.recurrence.Frequency
+import com.khmercalendar.ui.components.localeDate
 import com.khmercalendar.ui.components.localeNumber
-import java.time.LocalDate
 import java.time.LocalTime
 import com.khmercalendar.ui.components.localeTime
 import com.khmercalendar.ui.components.rememberPlatformPickers
@@ -126,7 +125,7 @@ fun EventEditScreen(
 
             FieldRow(
                 label = "ចាប់ផ្តើម",
-                value = formatDate(draft.date) + if (draft.allDay) "" else "  " + formatTime(draft.startTime),
+                value = localeDate(draft.date) + if (draft.allDay) "" else "  " + formatTime(draft.startTime),
                 onClick = {
                     pickers.date(draft.date) { picked ->
                         viewModel.update {
@@ -155,7 +154,7 @@ fun EventEditScreen(
 
             FieldRow(
                 label = "បញ្ចប់",
-                value = formatDate(draft.endDate) + if (draft.allDay) "" else "  " + formatTime(draft.endTime),
+                value = localeDate(draft.endDate) + if (draft.allDay) "" else "  " + formatTime(draft.endTime),
                 onClick = {
                     pickers.date(draft.endDate) { picked ->
                         viewModel.update { it.copy(endDate = maxOf(picked, it.date)) }
@@ -167,6 +166,18 @@ fun EventEditScreen(
                     }
                 },
             )
+
+            // An end at or before the start on the same date means the event runs into the
+            // next day. The editor used to refuse to save that, while the storage layer
+            // handled it correctly - so a new event added after 11pm could not be saved at
+            // all. It is allowed now, and said out loud so it is never a silent surprise.
+            if (!draft.allDay && draft.endDate == draft.date && draft.endTime <= draft.startTime) {
+                Text(
+                    "បញ្ចប់នៅថ្ងៃបន្ទាប់",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
             SectionLabel("ធ្វើម្តងទៀត")
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
@@ -291,10 +302,6 @@ private fun FieldRow(label: String, value: String, onClick: () -> Unit) {
 private fun RepeatChip(label: String, selected: Boolean, onClick: () -> Unit) {
     FilterChip(selected = selected, onClick = onClick, label = { Text(label) })
 }
-
-@Composable
-private fun formatDate(date: LocalDate): String =
-    "${localeNumber(date.dayOfMonth)} ${KhmerTerms.solarMonth(date.monthValue)} ${localeNumber(date.year)}"
 
 @Composable
 private fun formatTime(time: LocalTime): String =

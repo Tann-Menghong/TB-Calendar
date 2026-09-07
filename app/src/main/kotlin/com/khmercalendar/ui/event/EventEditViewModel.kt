@@ -7,6 +7,7 @@ import com.khmercalendar.core.recurrence.RecurrenceRule
 import com.khmercalendar.data.db.CategoryEntity
 import com.khmercalendar.data.prefs.AppSettings
 import com.khmercalendar.data.repo.EventRepository
+import com.khmercalendar.domain.EventDraftDefaults
 import com.khmercalendar.domain.EventDraftModel
 import com.khmercalendar.domain.EventTimes
 import com.khmercalendar.notify.ReminderScheduler
@@ -16,7 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.time.LocalTime
+import java.time.LocalDateTime
 import java.time.ZoneId
 
 data class EventEditState(
@@ -43,16 +44,20 @@ class EventEditViewModel(
             val categories = repository.categories()
             if (eventId <= 0L) {
                 val prefs = settings.value
-                val date = initialDate ?: LocalDate.now()
-                // A new event starts at the next whole hour, which is what someone adding an
-                // event during the day almost always wants.
-                val start = LocalTime.now().plusHours(1).withMinute(0).withSecond(0).withNano(0)
+                // A new event starts at the next whole hour. Computed with the date attached,
+                // so that late in the evening it rolls into tomorrow instead of wrapping back
+                // to this morning - see [EventDraftDefaults].
+                val times = EventDraftDefaults.times(
+                    now = LocalDateTime.now(),
+                    durationMinutes = prefs.defaultEventDurationMinutes,
+                    preferredDate = initialDate,
+                )
                 _state.value = EventEditState(
                     draft = EventDraftModel(
-                        date = date,
-                        endDate = date,
-                        startTime = start,
-                        endTime = start.plusMinutes(prefs.defaultEventDurationMinutes.toLong()),
+                        date = times.date,
+                        endDate = times.endDate,
+                        startTime = times.startTime,
+                        endTime = times.endTime,
                         categoryId = categories.firstOrNull()?.id,
                         reminderMinutes = listOf(prefs.defaultReminderMinutes),
                     ),
@@ -128,10 +133,6 @@ class EventEditViewModel(
         val draft = _state.value.draft
         if (draft.title.isBlank() && draft.description.isBlank()) {
             _state.update { it.copy(error = "សូមបញ្ចូលចំណងជើងព្រឹត្តិការណ៍") }
-            return
-        }
-        if (!draft.allDay && draft.endDate == draft.date && draft.endTime < draft.startTime) {
-            _state.update { it.copy(error = "ម៉ោងបញ្ចប់ត្រូវតែក្រោយម៉ោងចាប់ផ្តើម") }
             return
         }
         viewModelScope.launch {
