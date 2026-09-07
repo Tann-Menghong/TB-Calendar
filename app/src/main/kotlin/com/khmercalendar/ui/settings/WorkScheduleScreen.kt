@@ -1,6 +1,5 @@
 package com.khmercalendar.ui.settings
 
-import android.app.TimePickerDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,7 +30,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.khmercalendar.core.khmer.KhmerTerms
@@ -42,6 +40,7 @@ import com.khmercalendar.data.prefs.AppSettings
 import com.khmercalendar.data.prefs.SettingsStore
 import com.khmercalendar.ui.components.CalendarFormats
 import com.khmercalendar.ui.components.LocalUses24Hour
+import com.khmercalendar.ui.components.rememberPlatformPickers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
@@ -65,7 +64,7 @@ fun WorkScheduleScreen(
     val settings by settingsFlow.collectAsStateWithLifecycle()
     val schedule = settings.workSchedule
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+    val pickers = rememberPlatformPickers()
     val uses24Hour = LocalUses24Hour.current
     val khmerNumerals = settings.useKhmerNumerals
 
@@ -121,7 +120,7 @@ fun WorkScheduleScreen(
                     onEditBlock = { index, isStart ->
                         val block = schedule.dayOf(day).blocks[index]
                         val initial = if (isStart) block.start else block.end
-                        showTimePicker(context, initial, uses24Hour) { picked ->
+                        pickers.time(initial) { picked ->
                             val edited = if (isStart) {
                                 block.copy(start = picked)
                             } else {
@@ -242,29 +241,6 @@ private fun DayRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-    }
-}
-
-/**
- * The platform time picker rather than a Compose one.
- *
- * It is the dialog the user already knows, it honours the device's own 12/24-hour setting,
- * and it works identically back to API 26 - which a hand-rolled picker would not.
- */
-private fun showTimePicker(
-    context: android.content.Context,
-    initial: LocalTime,
-    uses24Hour: Boolean,
-    onPicked: (LocalTime) -> Unit,
-) {
-    runCatching {
-        TimePickerDialog(
-            context,
-            { _, hour, minute -> onPicked(LocalTime.of(hour, minute)) },
-            initial.hour,
-            initial.minute,
-            uses24Hour,
-        ).show()
     }
 }
 

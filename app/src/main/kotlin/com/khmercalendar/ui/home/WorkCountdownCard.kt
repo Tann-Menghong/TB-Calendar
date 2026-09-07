@@ -40,7 +40,11 @@ import com.khmercalendar.core.work.WorkState
 import com.khmercalendar.core.work.WorkStatus
 import com.khmercalendar.ui.components.CalendarFormats
 import com.khmercalendar.ui.components.LocalUses24Hour
+import com.khmercalendar.ui.theme.GradientTone
+import com.khmercalendar.ui.theme.Gradients
 import com.khmercalendar.ui.theme.LocalAppSettings
+import com.khmercalendar.ui.theme.Radius
+import com.khmercalendar.ui.theme.Spacing
 import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.LocalDateTime
@@ -70,16 +74,16 @@ fun WorkCountdownCard(
 
     val settings = LocalAppSettings.current
     val uses24Hour = LocalUses24Hour.current
-    val palette = paletteFor(status.state)
+    val tone = toneFor(status.state)
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(Brush.linearGradient(palette.gradient)),
+            .clip(RoundedCornerShape(Radius.lg))
+            .background(Brush.linearGradient(tone.colors)),
     ) {
         Row(
-            Modifier.padding(18.dp).fillMaxWidth(),
+            Modifier.padding(Spacing.lg).fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
@@ -87,7 +91,7 @@ fun WorkCountdownCard(
                     text = status.state.labelKm,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = palette.onGradient,
+                    color = tone.onTone,
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
@@ -97,7 +101,7 @@ fun WorkCountdownCard(
                         settings.useKhmerNumerals,
                     ),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = palette.onGradient.copy(alpha = 0.85f),
+                    color = tone.onTone.copy(alpha = 0.85f),
                 )
 
                 Spacer(Modifier.height(10.dp))
@@ -106,17 +110,17 @@ fun WorkCountdownCard(
                         text = clock(remaining, settings.useKhmerNumerals),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
-                        color = palette.onGradient,
+                        color = tone.onTone,
                     )
                     Text(
                         text = subtitleFor(status, uses24Hour, settings.useKhmerNumerals),
                         style = MaterialTheme.typography.bodySmall,
-                        color = palette.onGradient.copy(alpha = 0.85f),
+                        color = tone.onTone.copy(alpha = 0.85f),
                     )
                 } ?: Text(
                     text = closingLine(status),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = palette.onGradient.copy(alpha = 0.9f),
+                    color = tone.onTone.copy(alpha = 0.9f),
                 )
 
                 if (status.remainingToday > Duration.ZERO && status.state != WorkState.FINISHED) {
@@ -125,7 +129,7 @@ fun WorkCountdownCard(
                         text = "ការងារនៅសល់ថ្ងៃនេះ៖ " +
                             clock(status.remainingToday, settings.useKhmerNumerals),
                         style = MaterialTheme.typography.labelMedium,
-                        color = palette.onGradient.copy(alpha = 0.8f),
+                        color = tone.onTone.copy(alpha = 0.8f),
                     )
                 }
             }
@@ -134,10 +138,10 @@ fun WorkCountdownCard(
                 Spacer(Modifier.size(12.dp))
                 ProgressRing(
                     progress = progress,
-                    track = palette.onGradient.copy(alpha = 0.25f),
-                    indicator = palette.onGradient,
+                    track = tone.onTone.copy(alpha = 0.25f),
+                    indicator = tone.onTone,
                     label = "${KhmerNumerals.toKhmer((progress * 100).toInt())}%",
-                    labelColor = palette.onGradient,
+                    labelColor = tone.onTone,
                     khmerNumerals = settings.useKhmerNumerals,
                 )
             }
@@ -222,45 +226,19 @@ private fun ProgressRing(
 
 // -----------------------------------------------------------------------------------------
 
-private data class WorkPalette(val gradient: List<Color>, val onGradient: Color)
-
 /**
- * A colour per state.
+ * A gradient per state.
  *
- * The gradient is doing work here rather than decoration: at a glance across the room, green
- * means working, amber means a break, blue-grey means the day is done. Two stops only, and
- * always in the same hue family, so the dashboard does not turn into a paint chart.
+ * The mapping lives here; the colours live in [Gradients], with every other gradient in the
+ * app, so a restyle is one edit in the theme rather than a hunt through the screens.
  */
-private fun paletteFor(state: WorkState): WorkPalette = when (state) {
-    WorkState.WORKING -> WorkPalette(
-        gradient = listOf(Color(0xFF1E9E6A), Color(0xFF12795A)),
-        onGradient = Color.White,
-    )
-
-    WorkState.BREAK -> WorkPalette(
-        gradient = listOf(Color(0xFFE0902B), Color(0xFFC96F1E)),
-        onGradient = Color.White,
-    )
-
-    WorkState.BEFORE_WORK -> WorkPalette(
-        gradient = listOf(Color(0xFF2F6FED), Color(0xFF2453B8)),
-        onGradient = Color.White,
-    )
-
-    WorkState.FINISHED -> WorkPalette(
-        gradient = listOf(Color(0xFF4A5568), Color(0xFF2D3748)),
-        onGradient = Color.White,
-    )
-
-    WorkState.DAY_OFF -> WorkPalette(
-        gradient = listOf(Color(0xFF7A4FE0), Color(0xFF5A34B0)),
-        onGradient = Color.White,
-    )
-
-    WorkState.DISABLED -> WorkPalette(
-        gradient = listOf(Color(0xFF9AA2B2), Color(0xFF7A8294)),
-        onGradient = Color.White,
-    )
+private fun toneFor(state: WorkState): GradientTone = when (state) {
+    WorkState.WORKING -> Gradients.working
+    WorkState.BREAK -> Gradients.resting
+    WorkState.BEFORE_WORK -> Gradients.upcoming
+    WorkState.FINISHED -> Gradients.done
+    WorkState.DAY_OFF -> Gradients.away
+    WorkState.DISABLED -> Gradients.muted
 }
 
 /** HH:MM:SS, in the user's digits. */

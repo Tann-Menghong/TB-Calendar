@@ -16,4 +16,21 @@
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
     </style>
+
+    <!--
+      Themes for the platform date and time pickers.
+
+      Both are declared here rather than split across values/ and values-night/ because the
+      app has its own light/dark setting, which a resource qualifier cannot see: a user who
+      forces dark while the system is light would otherwise get a white dialog over a dark
+      screen. The choice is made in code from the same flag the Compose theme uses.
+    -->
+    <style name="Theme.KhmerCalendar.Dialog.Light" parent="android:Theme.Material.Light.Dialog.Alert">
+        <item name="android:colorAccent">@color/dialog_accent</item>
+    </style>
+
+    <style name="Theme.KhmerCalendar.Dialog.Dark" parent="android:Theme.Material.Dialog.Alert">
+        <item name="android:colorAccent">@color/dialog_accent</item>
+    </style>
+
 </resources>

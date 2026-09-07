@@ -7,4 +7,12 @@
     <color name="widget_accent">#FF2F6FED</color>
     <color name="widget_holiday">#FFCE3B57</color>
     <color name="window_background">#FFFAFAFC</color>
+
+    <!--
+      The default accent, used by the platform pickers' clock face and calendar grid, which
+      take their colour from a theme attribute and so cannot follow a runtime accent. The
+      dialog buttons are recoloured to the live accent in code.
+    -->
+    <color name="dialog_accent">#2F6FED</color>
+
 </resources>

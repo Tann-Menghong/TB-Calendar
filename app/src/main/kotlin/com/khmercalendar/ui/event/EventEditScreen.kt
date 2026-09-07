@@ -1,7 +1,5 @@
 package com.khmercalendar.ui.event
 
-import android.app.DatePickerDialog
-import android.app.TimePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -40,7 +38,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.khmercalendar.core.khmer.KhmerTerms
@@ -49,14 +46,16 @@ import com.khmercalendar.ui.components.localeNumber
 import java.time.LocalDate
 import java.time.LocalTime
 import com.khmercalendar.ui.components.localeTime
+import com.khmercalendar.ui.components.rememberPlatformPickers
 import com.khmercalendar.ui.theme.LocalAppSettings
 
 /**
  * The add and edit form.
  *
  * Platform date and time pickers rather than Compose ones on purpose: they are already
- * localised into Khmer on the user's device, they honour the system 12/24-hour setting, and
- * they are the control every other app on the phone uses.
+ * localised into Khmer on the user's device and they are the control every other app on the
+ * phone uses. They come from [rememberPlatformPickers], which puts them in the app's own
+ * light or dark theme and its own 12/24-hour preference.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,7 +65,7 @@ fun EventEditScreen(
     onSaved: () -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val context = LocalContext.current
+    val pickers = rememberPlatformPickers()
     val draft = state.draft
 
     LaunchedEffect(state.saved) { if (state.saved) onSaved() }
@@ -129,12 +128,12 @@ fun EventEditScreen(
                 label = "ចាប់ផ្តើម",
                 value = formatDate(draft.date) + if (draft.allDay) "" else "  " + formatTime(draft.startTime),
                 onClick = {
-                    pickDate(context, draft.date) { picked ->
+                    pickers.date(draft.date) { picked ->
                         viewModel.update {
                             it.copy(date = picked, endDate = maxOf(picked, it.endDate))
                         }
                         if (!draft.allDay) {
-                            pickTime(context, draft.startTime) { t ->
+                            pickers.time(draft.startTime) { t ->
                                 viewModel.update { d ->
                                     val duration = java.time.Duration.between(d.startTime, d.endTime)
                                     d.copy(
@@ -158,10 +157,10 @@ fun EventEditScreen(
                 label = "បញ្ចប់",
                 value = formatDate(draft.endDate) + if (draft.allDay) "" else "  " + formatTime(draft.endTime),
                 onClick = {
-                    pickDate(context, draft.endDate) { picked ->
+                    pickers.date(draft.endDate) { picked ->
                         viewModel.update { it.copy(endDate = maxOf(picked, it.date)) }
                         if (!draft.allDay) {
-                            pickTime(context, draft.endTime) { t ->
+                            pickers.time(draft.endTime) { t ->
                                 viewModel.update { it.copy(endTime = t) }
                             }
                         }
@@ -310,30 +309,3 @@ private fun reminderLabel(minutes: Int): String = when {
 
 private val REMINDER_CHOICES = listOf(0, 10, 30, 60, 1440)
 
-private fun pickDate(
-    context: android.content.Context,
-    initial: LocalDate,
-    onPicked: (LocalDate) -> Unit,
-) {
-    DatePickerDialog(
-        context,
-        { _, year, month, day -> onPicked(LocalDate.of(year, month + 1, day)) },
-        initial.year,
-        initial.monthValue - 1,
-        initial.dayOfMonth,
-    ).show()
-}
-
-private fun pickTime(
-    context: android.content.Context,
-    initial: LocalTime,
-    onPicked: (LocalTime) -> Unit,
-) {
-    TimePickerDialog(
-        context,
-        { _, hour, minute -> onPicked(LocalTime.of(hour, minute)) },
-        initial.hour,
-        initial.minute,
-        android.text.format.DateFormat.is24HourFormat(context),
-    ).show()
-}

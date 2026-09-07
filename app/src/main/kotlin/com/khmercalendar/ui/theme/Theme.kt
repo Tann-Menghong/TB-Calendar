@@ -30,6 +30,15 @@ import com.khmercalendar.data.prefs.ThemeMode
 val LocalAppSettings = staticCompositionLocalOf { AppSettings() }
 
 /**
+ * Whether the app is currently drawing dark.
+ *
+ * Published because it is not derivable further down: the app's own theme setting can
+ * disagree with the system's, so `isSystemInDarkTheme()` is the wrong answer for anything
+ * outside Compose's own colour scheme - a platform dialog, most of all.
+ */
+val LocalIsDarkTheme = staticCompositionLocalOf { false }
+
+/**
  * Typography tuned for Khmer.
  *
  * Khmer stacks diacritics above and below the baseline, so a line height sized for Latin
@@ -164,8 +173,14 @@ fun KhmerCalendarTheme(
     CompositionLocalProvider(
         LocalAppSettings provides settings,
         LocalUses24Hour provides uses24Hour,
+        LocalIsDarkTheme provides dark,
     ) {
-        MaterialTheme(colorScheme = scheme, typography = typography, content = content)
+        MaterialTheme(
+            colorScheme = scheme,
+            typography = typography,
+            shapes = AppShapes,
+            content = content,
+        )
     }
 }
 

@@ -24,6 +24,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.khmercalendar.ui.theme.Elevation
+import com.khmercalendar.ui.theme.Spacing
 import com.khmercalendar.core.khmer.KhmerNumerals
 import com.khmercalendar.ui.theme.LocalAppSettings
 
@@ -57,9 +59,9 @@ fun SectionCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = Elevation.flat),
     ) {
-        Column(Modifier.padding(16.dp), content = content)
+        Column(Modifier.padding(Spacing.lg), content = content)
     }
 }
 
@@ -94,7 +96,7 @@ fun EmptyState(
     action: (@Composable () -> Unit)? = null,
 ) {
     Column(
-        modifier = modifier.fillMaxWidth().padding(32.dp),
+        modifier = modifier.fillMaxWidth().padding(Spacing.xxl),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(
@@ -103,9 +105,9 @@ fun EmptyState(
             modifier = Modifier.size(48.dp),
             tint = MaterialTheme.colorScheme.outline,
         )
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Spacing.md))
         Text(title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(Spacing.xs))
         Text(
             text = message,
             style = MaterialTheme.typography.bodyMedium,
@@ -113,7 +115,7 @@ fun EmptyState(
             textAlign = TextAlign.Center,
         )
         if (action != null) {
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(Spacing.lg))
             action()
         }
     }

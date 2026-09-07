@@ -31,6 +31,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.khmercalendar.ui.components.SectionCard
+import com.khmercalendar.ui.theme.Radius
+import com.khmercalendar.ui.theme.Spacing
 
 /**
  * The five things people open the app to do.
@@ -54,7 +56,7 @@ fun QuickActionsCard(
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(Spacing.md))
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -78,20 +80,20 @@ private fun QuickAction(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(Radius.md))
             .clickable(onClick = onClick)
-            .padding(horizontal = 4.dp, vertical = 6.dp),
+            .padding(horizontal = Spacing.xs, vertical = Spacing.xs),
     ) {
         Box(
             Modifier
                 .size(44.dp)
-                .clip(RoundedCornerShape(14.dp))
+                .clip(RoundedCornerShape(Radius.md))
                 .background(tint.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(22.dp))
         }
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(Spacing.xs))
         Text(
             label,
             style = MaterialTheme.typography.labelSmall,
