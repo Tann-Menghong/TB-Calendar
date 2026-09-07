@@ -1,5 +1,73 @@
 # Changelog
 
+## 1.3.0 — 2026-09-07
+
+### The dashboard has a top
+
+The Home tab opened straight into a date card. It now opens with a greeting that matches the
+time of day — អរុណសួស្តី, ទិវាសួស្តី, សាយណ្ហសួស្តី, រាត្រីសួស្តី, using the same boundaries as the
+Khmer parts of the day, so the greeting can never disagree with the line beneath it — the
+date, a live clock, and what is next.
+
+"What is next" prefers the next event as a relative time: **Backup-Roundtrip-Test ·
+ក្នុងរយៈពេល ៤៩ នាទី**. A count of today's events is what is left to say when nothing is coming.
+All-day entries are excluded, because "in 40 minutes" is meaningless for something with no
+clock time and the dashboard would otherwise announce a birthday as though it were starting.
+
+Its gradient is a low-alpha wash of the accent the user chose, not a second saturated block.
+The work card's colour is doing a job — green means working, amber means a break — and two
+competing blocks of colour mean neither reads as a signal.
+
+### Fixed: three settings that did nothing
+
+**Loading states did not exist.** `isLoading` was set on both the dashboard and the calendar
+and read by nothing, so the first frame after a cold start was an *empty state* —
+គ្មានព្រឹត្តិការណ៍ថ្ងៃនេះ — that corrected itself a moment later. Telling someone they have
+nothing on and then taking it back is worse than saying nothing, because the empty state is a
+claim. Skeleton placeholders now hold the layout until the data arrives.
+
+**Work notification settings took effect tomorrow.** Alarms were armed at process start and by
+the daily worker, and nowhere else. Turning notifications on, editing a shift, or changing the
+warning time did nothing at all until the app was next launched. The settings are now observed
+the way widget data already was — watch the state, not each write path — so the settings
+screen, a restored backup, and anything added later all reach it, and none of them has to
+remember to.
+
+**Work alarms could never be cancelled.** Cancellation built a bare `Intent` while the armed
+one carried a `data` URI, and `data` counts toward `Intent.filterEquals` — so `FLAG_NO_CREATE`
+never matched and every alarm survived. The set of armed request codes also lived only in
+memory, which put yesterday's alarms permanently out of reach after a restart. The practical
+effect: **turning work notifications off left them firing.** The URI is now derived from the
+request code, which makes it reproducible from nothing, and cancellation sweeps the whole code
+range.
+
+**One screen counted in Latin.** The event editor carried its own copy of the reminder label
+that never learned about Khmer numerals, so it showed "10 នាទី" while notification settings —
+the same information — showed "១០ នាទីមុន".
+
+### New: a warning before the shift changes
+
+Optional, off by default, and configurable at 5, 10, 15 or 30 minutes in
+**ការកំណត់ → កាលវិភាគការងារ**. Off by default because a warning doubles the day's notifications,
+and these share a notification channel with event reminders — a countdown that announces itself
+too often gets the whole channel silenced.
+
+### Verified on device
+
+On an Android 15 emulator, against this build:
+
+- The alarm fix, by cycling the setting and reading the armed alarms back out of the system:
+  30 min → 17:00 + 17:30; 15 min → 17:15 + 17:30; off → 17:30 only; 5 min → 17:25 + 17:30;
+  notifications off → none. Previously the stale alarms simply accumulated.
+- The live re-arm, by changing the setting without restarting the app.
+- **A full backup round-trip**: export to JSON (title, location, UTC millis, zone and reminder
+  all faithful), wipe all app data, restore — the event came back. Restore states that it adds
+  to existing data rather than replacing it, and asks first.
+- **A full `.ics` round-trip**: export produced valid RFC 5545 with `DTSTART` correctly
+  converted to UTC and the reminder as `TRIGGER:-PT30M`; importing it back created the event.
+- The greeting, clock, next-event line and skeletons.
+- Both widget providers registered, and a widget update with no crash.
+
 ## 1.2.0 — 2026-09-07
 
 ### The assistant understands a pasted announcement
