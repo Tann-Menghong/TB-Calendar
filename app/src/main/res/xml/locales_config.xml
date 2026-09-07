@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Khmer first: it is the language the interface is written in. -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="km" />
+    <locale android:name="en" />
+</locale-config>

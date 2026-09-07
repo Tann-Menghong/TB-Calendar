@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="add_event"
+        android:enabled="true"
+        android:icon="@drawable/ic_notification"
+        android:shortcutShortLabel="@string/shortcut_add_event_short"
+        android:shortcutLongLabel="@string/shortcut_add_event_long">
+        <intent
+            android:action="com.khmercalendar.action.NEW_EVENT"
+            android:targetPackage="com.khmercalendar"
+            android:targetClass="com.khmercalendar.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="assistant"
+        android:enabled="true"
+        android:icon="@drawable/ic_notification"
+        android:shortcutShortLabel="@string/shortcut_assistant_short"
+        android:shortcutLongLabel="@string/shortcut_assistant_long">
+        <intent
+            android:action="com.khmercalendar.action.ASSISTANT"
+            android:targetPackage="com.khmercalendar"
+            android:targetClass="com.khmercalendar.MainActivity" />
+    </shortcut>
+</shortcuts>

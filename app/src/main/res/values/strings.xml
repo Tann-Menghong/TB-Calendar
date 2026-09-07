@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      The interface is authored in Khmer inside the Compose sources, which is where a Khmer
+      speaker reading this code expects to find it. This file carries the strings the Android
+      framework itself renders - launcher label, widget descriptions, shortcuts - which cannot
+      come from Compose. values-km/ holds the Khmer forms and is the default on a Khmer device.
+    -->
+    <string name="app_name">Khmer Calendar</string>
+    <string name="widget_month_label">Khmer Calendar month</string>
+    <string name="widget_month_description">This month with holidays and event marks.</string>
+    <string name="widget_agenda_label">Khmer Calendar agenda</string>
+    <string name="widget_agenda_description">Your next events.</string>
+    <string name="shortcut_add_event_short">New event</string>
+    <string name="shortcut_add_event_long">Create an event</string>
+    <string name="shortcut_assistant_short">Assistant</string>
+    <string name="shortcut_assistant_long">On-device assistant</string>
+    <string name="notification_channel_reminders">Event reminders</string>
+    <string name="notification_channel_downloads">Model downloads</string>
+</resources>

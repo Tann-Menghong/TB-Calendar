@@ -1,0 +1,241 @@
+package com.khmercalendar.ui.event
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.khmercalendar.core.khmer.Chhankitek
+import com.khmercalendar.core.khmer.KhmerTerms
+import com.khmercalendar.ui.components.localeNumber
+import com.khmercalendar.ui.theme.LocalAppSettings
+import java.time.LocalDate
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EventDetailScreen(
+    viewModel: EventEditViewModel,
+    eventId: Long,
+    occurrenceDate: LocalDate,
+    onBack: () -> Unit,
+    onEdit: (Long) -> Unit,
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val draft = state.draft
+    val context = LocalContext.current
+    var showDelete by remember { mutableStateOf(false) }
+
+    LaunchedEffect(eventId) { viewModel.load(eventId, occurrenceDate) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("ព័ត៌មានលម្អិត") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "ត្រឡប់")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { onEdit(eventId) }) {
+                        Icon(Icons.Default.Edit, contentDescription = "កែសម្រួល")
+                    }
+                    IconButton(onClick = { viewModel.duplicate(eventId) { onBack() } }) {
+                        Icon(Icons.Default.ContentCopy, contentDescription = "ចម្លង")
+                    }
+                    IconButton(onClick = { showDelete = true }) {
+                        Icon(Icons.Default.Delete, contentDescription = "លុប")
+                    }
+                },
+            )
+        },
+    ) { padding ->
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(draft.title, style = MaterialTheme.typography.headlineSmall)
+
+            val lunar = remember(occurrenceDate) { Chhankitek.toLunarOrNull(occurrenceDate) }
+            Text(
+                text = "ថ្ងៃ${KhmerTerms.dayOfWeek(occurrenceDate.dayOfWeek)} " +
+                    "ទី${localeNumber(occurrenceDate.dayOfMonth)} " +
+                    "ខែ${KhmerTerms.solarMonth(occurrenceDate.monthValue)} " +
+                    "ឆ្នាំ${localeNumber(occurrenceDate.year)}",
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            lunar?.let {
+                Text(
+                    it.format(),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            if (!draft.allDay) {
+                Text(
+                    text = localeNumber("%02d:%02d".format(draft.startTime.hour, draft.startTime.minute)) +
+                        " – " +
+                        localeNumber("%02d:%02d".format(draft.endTime.hour, draft.endTime.minute)),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+            } else {
+                Text("ពេញមួយថ្ងៃ", style = MaterialTheme.typography.bodyLarge)
+            }
+
+            if (draft.location.isNotBlank()) {
+                DetailLine("ទីតាំង", draft.location)
+            }
+            draft.recurrence?.let {
+                DetailLine("ធ្វើម្តងទៀត", repeatLabel(it.frequency.name))
+            }
+            if (draft.reminderMinutes.isNotEmpty()) {
+                val khmerDigits = LocalAppSettings.current.useKhmerNumerals
+                DetailLine("ការរំលឹក", draft.reminderMinutes.joinToString(", ") { m ->
+                    when {
+                        m == 0 -> "ពេលចាប់ផ្តើម"
+                        m < 60 -> "${localeNumber(m, khmerDigits)} នាទីមុន"
+                        m < 1440 -> "${localeNumber(m / 60, khmerDigits)} ម៉ោងមុន"
+                        else -> "${localeNumber(m / 1440, khmerDigits)} ថ្ងៃមុន"
+                    }
+                })
+            }
+            if (draft.description.isNotBlank()) {
+                Spacer(Modifier.height(4.dp))
+                Text(draft.description, style = MaterialTheme.typography.bodyMedium)
+            }
+
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (draft.isTask) {
+                    OutlinedButton(
+                        onClick = { viewModel.setCompleted(eventId, !draft.isCompleted) },
+                    ) {
+                        Text(if (draft.isCompleted) "សម្គាល់ថាមិនទាន់រួច" else "សម្គាល់ថារួចរាល់")
+                    }
+                }
+                OutlinedButton(onClick = { shareEvent(context, draft.title, occurrenceDate, draft) }) {
+                    Icon(Icons.Default.Share, contentDescription = null)
+                    Spacer(Modifier.padding(horizontal = 4.dp))
+                    Text("ចែករំលែក")
+                }
+            }
+            Spacer(Modifier.height(32.dp))
+        }
+    }
+
+    if (showDelete) {
+        AlertDialog(
+            onDismissRequest = { showDelete = false },
+            title = { Text("លុបព្រឹត្តិការណ៍") },
+            text = {
+                Text(
+                    if (draft.recurrence != null) {
+                        "នេះជាព្រឹត្តិការណ៍ដែលធ្វើម្តងទៀត។ តើអ្នកចង់លុបតែថ្ងៃនេះ ឬទាំងអស់?"
+                    } else {
+                        "តើអ្នកប្រាកដទេ?"
+                    }
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDelete = false
+                    viewModel.delete(eventId, onBack)
+                }) { Text(if (draft.recurrence != null) "លុបទាំងអស់" else "លុប") }
+            },
+            dismissButton = {
+                Row {
+                    if (draft.recurrence != null) {
+                        TextButton(onClick = {
+                            showDelete = false
+                            viewModel.deleteOccurrence(eventId, occurrenceDate, onBack)
+                        }) { Text("តែថ្ងៃនេះ") }
+                    }
+                    TextButton(onClick = { showDelete = false }) { Text("បោះបង់") }
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun DetailLine(label: String, value: String) {
+    Column {
+        Text(label, style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+private fun repeatLabel(frequency: String): String = when (frequency) {
+    "DAILY" -> "រាល់ថ្ងៃ"
+    "WEEKLY" -> "រាល់សប្តាហ៍"
+    "MONTHLY" -> "រាល់ខែ"
+    "YEARLY" -> "រាល់ឆ្នាំ"
+    else -> frequency
+}
+
+/**
+ * Shares an event as plain text.
+ *
+ * Text rather than an .ics attachment: the common case is pasting the details into Telegram
+ * or Messenger, where an attachment is worse than useless. Whole-calendar interchange is what
+ * the .ics export in Backup is for.
+ */
+private fun shareEvent(
+    context: android.content.Context,
+    title: String,
+    date: LocalDate,
+    draft: com.khmercalendar.domain.EventDraftModel,
+) {
+    val text = buildString {
+        appendLine(title)
+        append("ថ្ងៃ${KhmerTerms.dayOfWeek(date.dayOfWeek)} ")
+        append("ទី${date.dayOfMonth} ខែ${KhmerTerms.solarMonth(date.monthValue)} ឆ្នាំ${date.year}")
+        if (!draft.allDay) {
+            append("  %02d:%02d".format(draft.startTime.hour, draft.startTime.minute))
+        }
+        if (draft.location.isNotBlank()) appendLine().append("ទីតាំង៖ ${draft.location}")
+        if (draft.description.isNotBlank()) appendLine().append(draft.description)
+    }
+    val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(android.content.Intent.EXTRA_TEXT, text)
+    }
+    runCatching { context.startActivity(android.content.Intent.createChooser(intent, "ចែករំលែក")) }
+}

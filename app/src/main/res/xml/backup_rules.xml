@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Auto Backup carries the calendar but never the downloaded model. Only datastore/ is
+  included from the file domain, so models/ is outside the backup by construction: those
+  files are hundreds of megabytes, they are re-downloadable, and pushing them through the
+  user's Google account would be both slow and pointless.
+-->
+<full-backup-content>
+    <include domain="database" path="." />
+    <include domain="sharedpref" path="." />
+    <include domain="file" path="datastore/" />
+</full-backup-content>

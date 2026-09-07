@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ប្រតិទិនខ្មែរ</string>
+    <string name="widget_month_label">ប្រតិទិនខែ</string>
+    <string name="widget_month_description">ខែនេះ ជាមួយបុណ្យជាតិ និងសញ្ញាព្រឹត្តិការណ៍។</string>
+    <string name="widget_agenda_label">កាលវិភាគ</string>
+    <string name="widget_agenda_description">ព្រឹត្តិការណ៍បន្ទាប់របស់អ្នក។</string>
+    <string name="shortcut_add_event_short">ព្រឹត្តិការណ៍ថ្មី</string>
+    <string name="shortcut_add_event_long">បង្កើតព្រឹត្តិការណ៍</string>
+    <string name="shortcut_assistant_short">ជំនួយការ</string>
+    <string name="shortcut_assistant_long">ជំនួយការក្នុងឧបករណ៍</string>
+    <string name="notification_channel_reminders">ការរំលឹកព្រឹត្តិការណ៍</string>
+    <string name="notification_channel_downloads">ការទាញយកម៉ូដែល</string>
+</resources>

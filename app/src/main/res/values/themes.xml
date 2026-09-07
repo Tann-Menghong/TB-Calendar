@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      A launch theme only. Every pixel after the first frame is drawn by Compose, so this
+      exists to give the window a background that matches the app before onCreate returns -
+      without it the launch shows a white flash on a dark-themed device.
+    -->
+    <style name="Theme.KhmerCalendar.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.KhmerCalendar</item>
+    </style>
+
+    <style name="Theme.KhmerCalendar" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+</resources>
