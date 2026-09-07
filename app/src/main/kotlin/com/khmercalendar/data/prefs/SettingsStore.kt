@@ -80,6 +80,7 @@ class SettingsStore(context: Context) {
             .decode(this[Keys.WORK_SCHEDULE])
             .copy(enabled = this[Keys.WORK_ENABLED] ?: true),
         workNotifications = this[Keys.WORK_NOTIFICATIONS] ?: false,
+        workNotifyLeadMinutes = this[Keys.WORK_NOTIFY_LEAD] ?: 0,
 
         widgetTheme = enumOf(this[Keys.WIDGET_THEME], ThemeMode.SYSTEM),
         widgetOpacity = this[Keys.WIDGET_OPACITY] ?: 0.92f,
@@ -156,6 +157,10 @@ class SettingsStore(context: Context) {
 
     suspend fun setWorkCountdownEnabled(on: Boolean) = put(Keys.WORK_ENABLED, on)
     suspend fun setWorkNotifications(on: Boolean) = put(Keys.WORK_NOTIFICATIONS, on)
+
+    /** Clamped rather than trusted: an absurd lead time would arm alarms on the wrong day. */
+    suspend fun setWorkNotifyLead(minutes: Int) =
+        put(Keys.WORK_NOTIFY_LEAD, minutes.coerceIn(0, 60))
 
     suspend fun setWidgetTheme(mode: ThemeMode) = put(Keys.WIDGET_THEME, mode.name)
     suspend fun setWidgetOpacity(value: Float) = put(Keys.WIDGET_OPACITY, value.coerceIn(0.2f, 1f))
@@ -255,6 +260,7 @@ class SettingsStore(context: Context) {
         val WORK_SCHEDULE = stringPreferencesKey("work_schedule")
         val WORK_ENABLED = booleanPreferencesKey("work_enabled")
         val WORK_NOTIFICATIONS = booleanPreferencesKey("work_notifications")
+        val WORK_NOTIFY_LEAD = intPreferencesKey("work_notify_lead")
 
         val WIDGET_THEME = stringPreferencesKey("widget_theme")
         val WIDGET_OPACITY = floatPreferencesKey("widget_opacity")

@@ -49,6 +49,7 @@ import com.khmercalendar.core.khmer.KhmerTerms
 import com.khmercalendar.domain.EventOccurrence
 import com.khmercalendar.ui.Routes
 import com.khmercalendar.ui.calendar.EventRow
+import com.khmercalendar.ui.components.DashboardSkeleton
 import com.khmercalendar.ui.components.EmptyState
 import com.khmercalendar.ui.components.SectionCard
 import com.khmercalendar.ui.components.SectionHeader
@@ -101,11 +102,23 @@ fun HomeScreen(
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            settings.visibleDashboardCards().forEach { card ->
+            if (state.isLoading) {
+                // Not an empty state: until the query returns, "you have nothing on" is a
+                // claim the app cannot yet make.
+                item { DashboardSkeleton() }
+            }
+
+            if (!state.isLoading) settings.visibleDashboardCards().forEach { card ->
                 item(key = card.key) {
                     when (card) {
                         com.khmercalendar.data.prefs.DashboardCard.TODAY ->
-                            TodayCard(state, onOpenDay)
+                            TodayHeroCard(
+                                date = state.today,
+                                eventsToday = state.todayEvents.size,
+                                nextEventAt = state.nextEventToday?.start?.toLocalTime(),
+                                nextEventTitle = state.nextEventToday?.title,
+                                onOpenDay = onOpenDay,
+                            )
 
                         com.khmercalendar.data.prefs.DashboardCard.LUNAR ->
                             LunarCard(state)
@@ -150,46 +163,8 @@ fun HomeScreen(
                 }
             }
 
-            item { StatsRow(state) }
+            if (!state.isLoading) item { StatsRow(state) }
             item { Spacer(Modifier.height(72.dp)) }
-        }
-    }
-}
-
-@Composable
-private fun TodayCard(state: HomeState, onOpenDay: (LocalDate) -> Unit) {
-    val date = state.today
-    SectionCard(modifier = Modifier.clickable { onOpenDay(date) }) {
-        Text(
-            text = KhmerTerms.dayOfWeek(date.dayOfWeek),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(
-                text = localeNumber(date.dayOfMonth),
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = "${KhmerTerms.solarMonth(date.monthValue)} ${localeNumber(date.year)}",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 6.dp),
-            )
-        }
-        if (state.todayEvents.isEmpty()) {
-            Text(
-                "គ្មានព្រឹត្តិការណ៍ថ្ងៃនេះ",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        } else {
-            Text(
-                "ព្រឹត្តិការណ៍ ${localeNumber(state.todayEvents.size)}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }

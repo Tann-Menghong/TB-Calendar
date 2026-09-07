@@ -111,6 +111,14 @@ data class AppSettings(
      */
     val workSchedule: WorkSchedule = WorkSchedule.DEFAULT,
     val workNotifications: Boolean = false,
+    /**
+     * Minutes of warning before a shift change, or 0 for none.
+     *
+     * Off by default. A warning doubles the day's notifications, and a countdown that
+     * announces itself too often gets silenced within a week - taking the event reminders the
+     * user actually wanted with it, since Android silences per channel.
+     */
+    val workNotifyLeadMinutes: Int = 0,
 
     // --- home-screen widgets ---
     val widgetTheme: ThemeMode = ThemeMode.SYSTEM,

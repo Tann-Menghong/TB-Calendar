@@ -16,6 +16,7 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.khmercalendar.core.khmer.KhmerNumerals
 import com.khmercalendar.core.khmer.KhmerTerms
 import com.khmercalendar.core.work.WorkBlock
 import com.khmercalendar.core.work.WorkDay
@@ -100,6 +102,29 @@ fun WorkScheduleScreen(
                 enabled = schedule.enabled,
                 onChange = { on -> scope.launch { settingsStore.setWorkNotifications(on) } },
             )
+
+            // Only meaningful once notifications are on, so it is hidden rather than shown
+            // greyed out - a disabled control the user cannot explain is worse than no control.
+            if (settings.workNotifications && schedule.enabled) {
+                Text(
+                    "ជូនដំណឹងជាមុន",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp),
+                )
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    LEAD_CHOICES.forEach { minutes ->
+                        FilterChip(
+                            selected = settings.workNotifyLeadMinutes == minutes,
+                            onClick = { scope.launch { settingsStore.setWorkNotifyLead(minutes) } },
+                            label = { Text(leadLabel(minutes, khmerNumerals)) },
+                        )
+                    }
+                }
+            }
 
             HorizontalDivider()
 
@@ -243,6 +268,17 @@ private fun DayRow(
         }
     }
 }
+
+/** Off, or a few minutes' warning. Kept short so the row fits one line on a small screen. */
+private val LEAD_CHOICES = listOf(0, 5, 10, 15, 30)
+
+private fun leadLabel(minutes: Int, khmerNumerals: Boolean): String =
+    if (minutes == 0) {
+        "បិទ"
+    } else {
+        val n = if (khmerNumerals) KhmerNumerals.toKhmer(minutes) else minutes.toString()
+        "$n នាទី"
+    }
 
 private fun labelFor(start: LocalTime): String = when {
     start.hour < 12 -> WorkSchedule.MORNING_KM

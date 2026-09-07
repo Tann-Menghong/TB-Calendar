@@ -49,7 +49,23 @@ data class HomeState(
     val stats: HomeStats = HomeStats(),
     val note: String = "",
     val isLoading: Boolean = true,
-)
+) {
+    /**
+     * The next timed event still to come today, if there is one.
+     *
+     * All-day entries are excluded: "in 40 minutes" is meaningless for something that has no
+     * clock time, and the dashboard would otherwise announce a birthday as though it were
+     * about to start.
+     */
+    val nextEventToday: EventOccurrence?
+        get() {
+            val now = java.time.LocalDateTime.now()
+            return todayEvents
+                .filterNot { it.allDay || it.isCompleted }
+                .filter { it.start.isAfter(now) }
+                .minByOrNull { it.start }
+        }
+}
 
 /**
  * Backs the dashboard.

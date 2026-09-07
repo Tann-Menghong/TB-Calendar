@@ -13,6 +13,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 class KhmerCalendarApp : Application(), Configuration.Provider {
@@ -59,6 +62,7 @@ class KhmerCalendarApp : Application(), Configuration.Provider {
         }
 
         observeDataForWidgets()
+        observeWorkSchedule()
     }
 
     /**
@@ -80,6 +84,47 @@ class KhmerCalendarApp : Application(), Configuration.Provider {
             }
         }
     }
+
+    /**
+     * Re-arms the work-shift notices when the schedule or its settings change.
+     *
+     * Without this they were armed only at process start and by the daily worker, so turning
+     * notifications on, editing a shift, or changing the warning time did nothing at all until
+     * the app was next launched - a setting that silently takes effect tomorrow reads as a
+     * setting that does not work.
+     *
+     * Watching the settings rather than calling the scheduler from each screen means the
+     * settings UI, a restored backup and anything added later all reach it, and none of them
+     * has to remember to. Only the fields that affect an alarm are compared, so unrelated
+     * preference writes - a theme change, a font size - do not re-arm anything.
+     */
+    private fun observeWorkSchedule() {
+        appScope.launch {
+            runCatching {
+                container.settings
+                    .map {
+                        WorkAlarmInputs(
+                            schedule = it.workSchedule,
+                            notify = it.workNotifications,
+                            enabled = it.notificationsEnabled,
+                            lead = it.workNotifyLeadMinutes,
+                        )
+                    }
+                    .distinctUntilChanged()
+                    .drop(1) // The first value is the one onCreate already armed.
+                    .collect {
+                        runCatching { container.reminderScheduler.rescheduleAll() }
+                    }
+            }
+        }
+    }
+
+    private data class WorkAlarmInputs(
+        val schedule: com.khmercalendar.core.work.WorkSchedule,
+        val notify: Boolean,
+        val enabled: Boolean,
+        val lead: Int,
+    )
 
     private companion object {
         const val DOWNLOAD_NOTIFICATION_ID = 4201

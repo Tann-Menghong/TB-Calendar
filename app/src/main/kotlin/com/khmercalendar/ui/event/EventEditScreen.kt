@@ -300,11 +300,19 @@ private fun formatDate(date: LocalDate): String =
 private fun formatTime(time: LocalTime): String =
     localeTime(time, LocalAppSettings.current)
 
+/**
+ * The chip labels, in the user's digits.
+ *
+ * Shorter than the wording in notification settings - a chip has to fit five across - but it
+ * must agree on the numerals. This copy was written without [localeNumber], so a calendar set
+ * to Khmer numerals showed "10 នាទី" on this one screen and "១០ នាទីមុន" everywhere else.
+ */
+@Composable
 private fun reminderLabel(minutes: Int): String = when {
     minutes == 0 -> "ពេលចាប់ផ្តើម"
-    minutes < 60 -> "$minutes នាទី"
-    minutes < 1440 -> "${minutes / 60} ម៉ោង"
-    else -> "${minutes / 1440} ថ្ងៃ"
+    minutes < 60 -> "${localeNumber(minutes)} នាទី"
+    minutes < 1440 -> "${localeNumber(minutes / 60)} ម៉ោង"
+    else -> "${localeNumber(minutes / 1440)} ថ្ងៃ"
 }
 
 private val REMINDER_CHOICES = listOf(0, 10, 30, 60, 1440)

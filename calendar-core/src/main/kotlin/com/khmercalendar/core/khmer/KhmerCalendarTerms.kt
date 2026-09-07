@@ -127,6 +127,21 @@ object KhmerTerms {
         else -> "យប់"
     }
 
+    /**
+     * The greeting for a time of day.
+     *
+     * Khmer has a distinct greeting per part of the day rather than one all-purpose word, and
+     * using the wrong one is the sort of thing a native reader notices immediately. The
+     * boundaries follow [partOfDay] so a dashboard cannot greet the user with អរុណសួស្តី while
+     * the line beneath it reads រសៀល.
+     */
+    fun greeting(hour: Int): String = when (hour) {
+        in 5..11 -> "អរុណសួស្តី"
+        in 12..17 -> "ទិវាសួស្តី"
+        in 18..20 -> "សាយណ្ហសួស្តី"
+        else -> "រាត្រីសួស្តី"
+    }
+
     private val SOLAR_MONTHS = arrayOf(
         "មករា", "កុម្ភៈ", "មីនា", "មេសា", "ឧសភា", "មិថុនា",
         "កក្កដា", "សីហា", "កញ្ញា", "តុលា", "វិច្ឆិកា", "ធ្នូ",

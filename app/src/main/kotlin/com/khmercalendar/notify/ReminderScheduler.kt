@@ -88,6 +88,7 @@ class ReminderScheduler(
             context = context,
             schedule = settings.workSchedule,
             enabled = settings.workNotifications && settings.notificationsEnabled,
+            leadMinutes = settings.workNotifyLeadMinutes,
         )
 
         if (settings.holidayNotifications) {
