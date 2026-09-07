@@ -1,5 +1,73 @@
 # Changelog
 
+## 1.3.1 — 2026-09-07
+
+A patch release, from continuing to audit settings that are written and never read. Three of
+the four fixes below come from that one question: *does anything actually read this?*
+
+### No event could be created after 11pm
+
+A new event opens at the next whole hour. That was computed on a clock time with no date
+attached, and a clock time wraps silently at midnight.
+
+At 23:20, "the next whole hour" came out as 00:00 — and, keeping today's date, the editor
+opened on a slot twenty-three hours in the past. Between 22:01 and 23:00 it was worse: the
+editor opened 23:00 to 00:00, and its own validation then read that end as earlier than the
+start and refused to save, with no way forward except editing both times by hand.
+
+The arithmetic now carries the date, so 22:51 gives 23:00 today to midnight tomorrow, and
+23:20 moves the whole event to tomorrow morning. Seven tests pin the awkward hours: 22:51,
+23:20, exactly on the hour, a date picked from the calendar grid, and an eight-hour default
+duration that lands the following morning.
+
+Verified on the emulator at 22:57, which is exactly the minute that could not be saved before.
+
+### The editor and the database disagreed about midnight
+
+Storage has always treated an end at or before the start as an event running into the next
+day. The editor refused to save one. The editor now allows it and says so — **បញ្ចប់នៅថ្ងៃបន្ទាប់**
+appears under the end row — so a 10pm-to-2am shift is one event rather than a rejection, and
+a mis-tapped end time is never a silent 23-hour event.
+
+### The date format setting did nothing
+
+**ការកំណត់ → រូបរាង** has offered a choice of three date orders since 1.1.0. Nothing in the app
+read the setting. The function that would have applied it had no callers at all — you could
+pick ថ្ងៃ/ខែ/ឆ្នាំ, watch the radio button move, and every date in the app stayed exactly as it
+was.
+
+It now reaches the event editor's start and end rows, the event detail headline, the day
+headline shared by the month and week screens, and the search results. Each choice in
+Appearance shows today's date rendered that way, so you can see the difference before picking
+one.
+
+There is a fourth choice now, **ថ្ងៃ ខែ ឆ្នាំ (ខ្មែរ)**, and it is the default. It is the written
+Khmer form every screen already drew, so anyone who never opened this setting sees nothing
+change; anyone who did pick a numeric order finally gets it.
+
+One detail worth naming: the Khmer month name is looked up, not formatted. A date pattern's
+`MMMM` resolves against the phone's locale, so on a device set to English it would have
+printed "September" in the middle of an otherwise entirely Khmer screen. There is a test that
+sets the JVM locale to US and to France and checks the month stays មករា.
+
+### Searching for "%" returned your whole calendar
+
+`%` and `_` are wildcards to SQLite's `LIKE`. Typed into the search box they went through
+unescaped, so `%` matched every event and `_` matched any single character. Both are now
+literal, and Khmer substring search — which is why this is a `LIKE` scan and not full-text
+search in the first place — is unchanged.
+
+### Tested
+
+130 unit tests pass and lint is clean. Everything above was checked on an Android 8.0 (API 26)
+emulator: switching the date format to dd/MM/yyyy and back to Khmer, the live previews in
+Appearance, and creating and saving an event at 22:57.
+
+### Privacy
+
+Unchanged: no account, no analytics, no tracking, no ads. Your calendar never leaves the
+device. The AI is optional, off by default, and runs entirely on-device.
+
 ## 1.3.0 — 2026-09-07
 
 ### The dashboard has a top

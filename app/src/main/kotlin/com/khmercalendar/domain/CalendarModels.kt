@@ -73,7 +73,16 @@ object EventDraftDefaults {
     ): Times {
         val startAt = now.plusHours(1).truncatedTo(java.time.temporal.ChronoUnit.HOURS)
         val endAt = startAt.plusMinutes(durationMinutes.toLong())
-        val date = preferredDate ?: startAt.toLocalDate()
+        val date = when (preferredDate) {
+            // Nothing was pointed at: follow the hour, wherever it landed.
+            null -> startAt.toLocalDate()
+            // Today was pointed at - which is what every "add" button that is not a calendar
+            // cell passes - and the next whole hour has already rolled into tomorrow. Follow
+            // it, rather than opening on midnight *this* morning, twenty-three hours back.
+            now.toLocalDate() -> startAt.toLocalDate()
+            // A real choice from the calendar grid. It wins, past or future.
+            else -> preferredDate
+        }
         val spansDays = java.time.temporal.ChronoUnit.DAYS.between(
             startAt.toLocalDate(),
             endAt.toLocalDate(),

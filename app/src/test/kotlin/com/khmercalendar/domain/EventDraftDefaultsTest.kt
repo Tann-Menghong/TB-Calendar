@@ -89,6 +89,36 @@ class EventDraftDefaultsTest {
     }
 
     @Test
+    fun `today passed in explicitly still rolls past midnight`() {
+        // Every "add" button outside the calendar grid passes today's date, so the roll has
+        // to survive that. Without this, the release build opened a new event at 00:00 this
+        // morning when tapped at 23:07.
+        val t = EventDraftDefaults.times(
+            now = LocalDateTime.of(today, LocalTime.of(23, 7)),
+            durationMinutes = duration,
+            preferredDate = today,
+        )
+
+        assertEquals(today.plusDays(1), t.date)
+        assertEquals(LocalTime.MIDNIGHT, t.startTime)
+        assertEquals(today.plusDays(1), t.endDate)
+        assertEquals(LocalTime.of(1, 0), t.endTime)
+    }
+
+    @Test
+    fun `a past date chosen from the grid is left alone`() {
+        val past = LocalDate.of(2026, 1, 2)
+        val t = EventDraftDefaults.times(
+            now = LocalDateTime.of(today, LocalTime.of(23, 7)),
+            durationMinutes = duration,
+            preferredDate = past,
+        )
+
+        assertEquals(past, t.date)
+        assertEquals(LocalTime.MIDNIGHT, t.startTime)
+    }
+
+    @Test
     fun `a long default duration still lands on the right day`() {
         val t = EventDraftDefaults.times(
             now = LocalDateTime.of(today, LocalTime.of(21, 5)),
