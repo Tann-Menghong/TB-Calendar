@@ -16,7 +16,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
+import com.khmercalendar.ui.components.CalendarFormats
+import com.khmercalendar.data.prefs.TimeFormat
 
 /**
  * Shows an event reminder, and handles the actions on it.
@@ -59,14 +62,31 @@ class ReminderReceiver : BroadcastReceiver() {
         val timeText = if (allDay) {
             "ពេញមួយថ្ងៃ"
         } else {
-            KhmerNumerals.toKhmer("%02d:%02d".format(start.hour, start.minute))
+            CalendarFormats.time(
+                time = start.toLocalTime(),
+                use24Hour = CalendarFormats.uses24Hour(
+                    context,
+                    settings?.timeFormat ?: TimeFormat.SYSTEM,
+                ),
+                khmerNumerals = settings?.useKhmerNumerals ?: true,
+            )
         }
-        val body = listOfNotNull(timeText, location?.takeIf { it.isNotBlank() }).joinToString(" · ")
+        val body = intent.getStringExtra(EXTRA_BODY)
+            ?: listOfNotNull(timeText, location?.takeIf { it.isNotBlank() }).joinToString(" · ")
+
+        // A holiday reminder has no event behind it, so it opens the day rather than an
+        // event that does not exist, and carries no snooze or complete action.
+        val holidayEpochDay = intent.getLongExtra(EXTRA_HOLIDAY_EPOCH_DAY, -1L)
+        val isHoliday = holidayEpochDay >= 0
 
         val openIntent = PendingIntent.getActivity(
             context,
             requestCode,
-            MainActivity.eventIntent(context, eventId),
+            if (isHoliday) {
+                MainActivity.dayIntent(context, LocalDate.ofEpochDay(holidayEpochDay))
+            } else {
+                MainActivity.eventIntent(context, eventId)
+            },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
@@ -79,16 +99,20 @@ class ReminderReceiver : BroadcastReceiver() {
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
             .setContentIntent(openIntent)
-            .addAction(
-                0,
-                "ពន្យារ ១០ នាទី",
-                actionIntent(context, ACTION_SNOOZE, intent, requestCode + SNOOZE_OFFSET),
-            )
-            .addAction(
-                0,
-                "រួចរាល់",
-                actionIntent(context, ACTION_COMPLETE, intent, requestCode + COMPLETE_OFFSET),
-            )
+            .apply {
+                if (!isHoliday) {
+                    addAction(
+                        0,
+                        "ពន្យារ ១០ នាទី",
+                        actionIntent(context, ACTION_SNOOZE, intent, requestCode + SNOOZE_OFFSET),
+                    )
+                    addAction(
+                        0,
+                        "រួចរាល់",
+                        actionIntent(context, ACTION_COMPLETE, intent, requestCode + COMPLETE_OFFSET),
+                    )
+                }
+            }
             .build()
 
         // POST_NOTIFICATIONS can be revoked at any time; the platform throws rather than
@@ -160,6 +184,8 @@ class ReminderReceiver : BroadcastReceiver() {
         private const val EXTRA_START = "start"
         private const val EXTRA_ALL_DAY = "all_day"
         private const val EXTRA_REQUEST_CODE = "request_code"
+        private const val EXTRA_HOLIDAY_EPOCH_DAY = "holiday_epoch_day"
+        private const val EXTRA_BODY = "body"
 
         private const val SNOOZE_MINUTES = 10
         private const val SNOOZE_OFFSET = 1_000_000
@@ -184,6 +210,29 @@ class ReminderReceiver : BroadcastReceiver() {
             // Distinct data keeps PendingIntents for the same event but different lead times
             // from collapsing into one another.
             data = android.net.Uri.parse("khmercalendar://reminder/$eventId/$minutesBefore/$requestCode")
+        }
+
+        /**
+         * A reminder that a public holiday is coming.
+         *
+         * Shares this receiver rather than adding a second one: the notification, the
+         * channel and the "did the user turn notifications off" check are identical, and
+         * only the tap target and the absence of actions differ.
+         */
+        fun holidayIntent(
+            context: Context,
+            nameKm: String,
+            date: LocalDate,
+            bodyKm: String,
+            requestCode: Int,
+        ): Intent = Intent(context, ReminderReceiver::class.java).apply {
+            putExtra(EXTRA_EVENT_ID, -1L)
+            putExtra(EXTRA_TITLE, nameKm)
+            putExtra(EXTRA_BODY, bodyKm)
+            putExtra(EXTRA_ALL_DAY, true)
+            putExtra(EXTRA_REQUEST_CODE, requestCode)
+            putExtra(EXTRA_HOLIDAY_EPOCH_DAY, date.toEpochDay())
+            data = android.net.Uri.parse("khmercalendar://holiday/${date.toEpochDay()}")
         }
     }
 }

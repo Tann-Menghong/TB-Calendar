@@ -13,6 +13,7 @@ import com.khmercalendar.data.prefs.AppSettings
 import com.khmercalendar.data.prefs.SettingsStore
 import com.khmercalendar.data.repo.EventRepository
 import com.khmercalendar.notify.ReminderScheduler
+import com.khmercalendar.update.UpdateRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -59,6 +60,14 @@ class AppContainer(
     val backupManager: BackupManager by lazy { BackupManager(context, database, appVersion) }
 
     val modelStore: ModelStore by lazy { ModelStore(context) }
+
+    /**
+     * Application updates.
+     *
+     * Holds no state and opens no connection until something asks it to, so constructing it
+     * eagerly costs nothing and no check happens unless the user opens the update screen.
+     */
+    val updateRepository: UpdateRepository by lazy { UpdateRepository(context) }
 
     /**
      * The inference backend.

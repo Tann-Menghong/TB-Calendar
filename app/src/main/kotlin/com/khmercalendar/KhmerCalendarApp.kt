@@ -69,6 +69,7 @@ class KhmerCalendarApp : Application(), Configuration.Provider {
      * The debounce collapses the burst of table notifications a bulk import produces into a
      * single redraw.
      */
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
     private fun observeDataForWidgets() {
         appScope.launch {
             runCatching {

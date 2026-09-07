@@ -34,6 +34,7 @@ import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.khmercalendar.core.holiday.KhmerHolidays
+import com.khmercalendar.core.khmer.CalendarWeek
 import com.khmercalendar.core.khmer.Chhankitek
 import com.khmercalendar.core.khmer.KhmerTerms
 import com.khmercalendar.data.prefs.AppSettings
@@ -65,7 +66,7 @@ object MonthWidget : GlanceAppWidget() {
             val settings by container.settings.collectAsState(initialSettings)
             val today = LocalDate.now()
             val month = YearMonth.from(today)
-            val gridStart = startOfGrid(month.atDay(1), settings.weekStart)
+            val gridStart = CalendarWeek.startOfMonthGrid(month, settings.weekStart)
             val gridEnd = gridStart.plusDays(41)
 
             val byDay by produceState(
@@ -170,7 +171,7 @@ private fun Header(
 private fun WeekdayRow(weekStart: DayOfWeek, palette: WidgetPalette) {
     Row(modifier = GlanceModifier.fillMaxWidth()) {
         repeat(7) { index ->
-            val day = weekStart.plus(index.toLong())
+            val day = CalendarWeek.daysOfWeek(weekStart)[index]
             Text(
                 text = KhmerTerms.dayOfWeekShort(day),
                 modifier = GlanceModifier.defaultWeight(),
@@ -197,8 +198,7 @@ private fun DayCell(
     palette: WidgetPalette,
     modifier: GlanceModifier,
 ) {
-    val weekend = settings.highlightWeekends &&
-        (date.dayOfWeek == DayOfWeek.SATURDAY || date.dayOfWeek == DayOfWeek.SUNDAY)
+    val weekend = settings.highlightWeekends && CalendarWeek.isWeekend(date)
     val textColor = when {
         isToday -> palette.onAccent
         !inMonth -> palette.muted
@@ -244,7 +244,3 @@ class MonthWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = MonthWidget
 }
 
-private fun startOfGrid(firstOfMonth: LocalDate, weekStart: DayOfWeek): LocalDate {
-    val shift = (firstOfMonth.dayOfWeek.value - weekStart.value + 7) % 7
-    return firstOfMonth.minusDays(shift.toLong())
-}

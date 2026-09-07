@@ -26,8 +26,8 @@ android {
         // library desugaring, which the calendar arithmetic leans on heavily.
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -129,6 +129,10 @@ dependencies {
     // MainActivity uses. Pinning fragment forward keeps both on a compatible version.
     implementation(libs.androidx.fragment.ktx)
     implementation(libs.androidx.biometric)
+
+    // The only network the app module itself does: fetching the release manifest and, when
+    // the user asks, the update APK.
+    implementation(libs.okhttp)
 
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)

@@ -49,6 +49,8 @@ import com.khmercalendar.ui.holiday.HolidayScreen
 import com.khmercalendar.ui.home.HomeScreen
 import com.khmercalendar.ui.home.HomeViewModel
 import com.khmercalendar.ui.settings.AboutScreen
+import com.khmercalendar.ui.settings.UpdateViewModel
+import com.khmercalendar.ui.settings.UpdateScreen
 import com.khmercalendar.ui.settings.AiModelScreen
 import com.khmercalendar.ui.settings.AiModelViewModel
 import com.khmercalendar.ui.settings.AppearanceScreen
@@ -267,6 +269,11 @@ fun KhmerCalendarNavHost(
             composable(Routes.SETTINGS_AI) {
                 val vm: AiModelViewModel = viewModel(factory = factory)
                 AiModelScreen(viewModel = vm, onBack = navController::popBackStack)
+            }
+
+            composable(Routes.SETTINGS_UPDATE) {
+                val vm: UpdateViewModel = viewModel(factory = factory)
+                UpdateScreen(viewModel = vm, onBack = navController::popBackStack)
             }
 
             composable(Routes.SETTINGS_ABOUT) {

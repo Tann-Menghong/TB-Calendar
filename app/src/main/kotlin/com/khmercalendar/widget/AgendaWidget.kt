@@ -188,7 +188,7 @@ private fun EventRow(
                 maxLines = 1,
             )
             Text(
-                text = subtitle(occurrence, today, settings),
+                text = subtitle(context, occurrence, today, settings),
                 style = TextStyle(color = palette.muted, fontSize = 10.sp),
                 maxLines = 1,
             )
@@ -198,6 +198,7 @@ private fun EventRow(
 
 /** "ថ្ងៃនេះ 14:00", or the day plus the time when it is further out. */
 private fun subtitle(
+    context: Context,
     occurrence: EventOccurrence,
     today: LocalDate,
     settings: AppSettings,
@@ -209,11 +210,7 @@ private fun subtitle(
             " " + KhmerTerms.solarMonth(occurrence.occurrenceDate.monthValue)
     }
     if (occurrence.allDay) return "$dayPart · ពេញមួយថ្ងៃ"
-    val time = widgetTime(
-        occurrence.start.hour,
-        occurrence.start.minute,
-        settings.useKhmerNumerals,
-    )
+    val time = widgetTime(context, occurrence.start.toLocalTime(), settings)
     return "$dayPart · $time"
 }
 

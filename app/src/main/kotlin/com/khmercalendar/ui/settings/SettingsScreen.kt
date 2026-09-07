@@ -13,6 +13,7 @@ import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material.icons.outlined.Celebration
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.SystemUpdateAlt
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Palette
@@ -152,6 +153,12 @@ fun SettingsScreen(
             HorizontalDivider()
 
             SettingsGroup("អំពី") {
+                SettingsRow(
+                    title = "បច្ចុប្បន្នភាពកម្មវិធី",
+                    subtitle = "ពិនិត្យកំណែថ្មី — មិនស្វ័យប្រវត្តិ",
+                    icon = Icons.Outlined.SystemUpdateAlt,
+                    onClick = { onNavigate(Routes.SETTINGS_UPDATE) },
+                )
                 SettingsRow(
                     title = "អំពីកម្មវិធី",
                     icon = Icons.Outlined.Info,

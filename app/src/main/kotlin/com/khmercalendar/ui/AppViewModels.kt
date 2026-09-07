@@ -11,6 +11,7 @@ import com.khmercalendar.ui.event.EventEditViewModel
 import com.khmercalendar.ui.home.HomeViewModel
 import com.khmercalendar.ui.settings.AiModelViewModel
 import com.khmercalendar.ui.settings.CategoriesViewModel
+import com.khmercalendar.ui.settings.UpdateViewModel
 
 /**
  * One factory for every ViewModel in the app.
@@ -46,4 +47,5 @@ fun appViewModelFactory(container: AppContainer): ViewModelProvider.Factory = vi
         )
     }
     initializer { CategoriesViewModel(container.eventRepository) }
+    initializer { UpdateViewModel(container.updateRepository) }
 }

@@ -48,6 +48,8 @@ import com.khmercalendar.core.recurrence.Frequency
 import com.khmercalendar.ui.components.localeNumber
 import java.time.LocalDate
 import java.time.LocalTime
+import com.khmercalendar.ui.components.localeTime
+import com.khmercalendar.ui.theme.LocalAppSettings
 
 /**
  * The add and edit form.
@@ -297,7 +299,7 @@ private fun formatDate(date: LocalDate): String =
 
 @Composable
 private fun formatTime(time: LocalTime): String =
-    localeNumber("%02d:%02d".format(time.hour, time.minute))
+    localeTime(time, LocalAppSettings.current)
 
 private fun reminderLabel(minutes: Int): String = when {
     minutes == 0 -> "ពេលចាប់ផ្តើម"

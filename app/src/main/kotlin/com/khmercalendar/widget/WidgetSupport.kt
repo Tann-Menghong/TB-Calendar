@@ -13,7 +13,9 @@ import com.khmercalendar.MainActivity
 import com.khmercalendar.data.prefs.AppSettings
 import com.khmercalendar.data.prefs.ThemeMode
 import com.khmercalendar.core.khmer.KhmerNumerals
+import com.khmercalendar.ui.components.CalendarFormats
 import java.time.LocalDate
+import java.time.LocalTime
 
 /** The container, reached from a widget's own context. */
 internal val Context.container: AppContainer
@@ -88,10 +90,12 @@ internal fun eventIntent(context: Context, eventId: Long, date: LocalDate): Inte
 internal fun widgetNumber(value: Int, khmerNumerals: Boolean): String =
     if (khmerNumerals) KhmerNumerals.toKhmer(value) else value.toString()
 
-internal fun widgetTime(hour: Int, minute: Int, khmerNumerals: Boolean): String {
-    val text = "%02d:%02d".format(hour, minute)
-    return if (khmerNumerals) KhmerNumerals.toKhmer(text) else text
-}
+internal fun widgetTime(context: Context, time: LocalTime, settings: AppSettings): String =
+    CalendarFormats.time(
+        time = time,
+        use24Hour = CalendarFormats.uses24Hour(context, settings.timeFormat),
+        khmerNumerals = settings.useKhmerNumerals,
+    )
 
 /** Redraws both widgets. Safe to call when neither has been placed. */
 internal suspend fun refreshWidgets(context: Context) {

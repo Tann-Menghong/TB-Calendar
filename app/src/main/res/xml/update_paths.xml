@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Only the updates cache directory is exposed, and only so the system installer can read the
+  APK the user asked for. Nothing under files/ - and in particular not the database or the
+  downloaded model - is reachable through this provider.
+-->
+<paths>
+    <cache-path name="updates" path="updates/" />
+</paths>

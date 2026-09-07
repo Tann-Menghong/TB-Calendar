@@ -1,8 +1,29 @@
 package com.khmercalendar.data.prefs
 
+import com.khmercalendar.core.khmer.CalendarWeek
 import java.time.DayOfWeek
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
+
+/**
+ * How a clock time is written.
+ *
+ * [SYSTEM] follows the device setting, which is what most people expect and what keeps the
+ * app consistent with the notification shade. The explicit choices exist because Cambodia
+ * uses both conventions and a shared phone often has the "wrong" one set.
+ */
+enum class TimeFormat(val labelKm: String) {
+    SYSTEM("តាមប្រព័ន្ធ"),
+    H24("២៤ ម៉ោង"),
+    H12("១២ ម៉ោង"),
+}
+
+/** The order of the parts of a written date. */
+enum class DateFormat(val labelKm: String, val pattern: String) {
+    DMY("ថ្ងៃ/ខែ/ឆ្នាំ", "dd/MM/yyyy"),
+    YMD("ឆ្នាំ-ខែ-ថ្ងៃ", "yyyy-MM-dd"),
+    MDY("ខែ/ថ្ងៃ/ឆ្នាំ", "MM/dd/yyyy"),
+}
 
 /** How dense the month grid is drawn. */
 enum class CalendarDensity(val cellHeightDp: Int, val labelKm: String) {
@@ -49,7 +70,12 @@ data class AppSettings(
     val backgroundOpacity: Float = 0.12f,
 
     // --- what the calendar shows ---
-    val weekStart: DayOfWeek = DayOfWeek.SUNDAY,
+    /**
+     * The first day of the week, honoured by every view, the week numbers, the widgets and
+     * new recurring events alike. Monday by default, following Cambodian and ISO-8601
+     * practice; see [com.khmercalendar.core.khmer.CalendarWeek].
+     */
+    val weekStart: DayOfWeek = CalendarWeek.DEFAULT_START,
     val showKhmerLunarDates: Boolean = true,
     val showGregorianDates: Boolean = true,
     val showHolidays: Boolean = true,
@@ -59,6 +85,13 @@ data class AppSettings(
     val highlightWeekends: Boolean = true,
 
     // --- behaviour ---
+    val timeFormat: TimeFormat = TimeFormat.SYSTEM,
+    val dateFormat: DateFormat = DateFormat.DMY,
+    /** Start of the working day, used by free-slot suggestions and the week grid. */
+    val dayStartHour: Int = 8,
+    /** End of the working day. Always later than [dayStartHour]. */
+    val dayEndHour: Int = 18,
+
     val startScreen: StartScreen = StartScreen.HOME,
     val defaultReminderMinutes: Int = 30,
     val defaultEventDurationMinutes: Int = 60,

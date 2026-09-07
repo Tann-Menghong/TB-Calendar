@@ -52,6 +52,10 @@ import com.khmercalendar.ui.components.localeNumber
 import com.khmercalendar.ui.theme.AccentPalette
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
+import com.khmercalendar.core.khmer.CalendarWeek
+import com.khmercalendar.core.khmer.KhmerTerms
+import com.khmercalendar.data.prefs.DateFormat
+import com.khmercalendar.data.prefs.TimeFormat
 
 /**
  * Appearance and customization.
@@ -233,13 +237,78 @@ fun AppearanceScreen(
             HorizontalDivider()
 
             SettingsGroup("ថ្ងៃដំបូងនៃសប្តាហ៍") {
-                listOf(DayOfWeek.SUNDAY, DayOfWeek.MONDAY, DayOfWeek.SATURDAY).forEach { day ->
+                Text(
+                    "ប្រើក្នុងប្រតិទិនខែ សប្តាហ៍ កាលវិភាគ លេខសប្តាហ៍ ធាតុក្រាហ្វិក " +
+                        "និងព្រឹត្តិការណ៍ធ្វើម្តងទៀត។",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+                // All seven, not a shortlist: a shortlist is a guess about which conventions
+                // matter, and the preference costs nothing to offer in full.
+                DayOfWeek.entries.forEach { day ->
                     ChoiceRow(
-                        title = com.khmercalendar.core.khmer.KhmerTerms.dayOfWeek(day),
+                        title = KhmerTerms.dayOfWeek(day) +
+                            if (day == CalendarWeek.DEFAULT_START) "  (លំនាំដើម)" else "",
                         selected = settings.weekStart == day,
                         onClick = { scope.launch { settingsStore.setWeekStart(day) } },
                     )
                 }
+            }
+
+            HorizontalDivider()
+
+            SettingsGroup("ទម្រង់ម៉ោង និងកាលបរិច្ឆេទ") {
+                TimeFormat.entries.forEach { format ->
+                    ChoiceRow(
+                        title = format.labelKm,
+                        selected = settings.timeFormat == format,
+                        onClick = { scope.launch { settingsStore.setTimeFormat(format) } },
+                    )
+                }
+                Spacer(Modifier.height(6.dp))
+                DateFormat.entries.forEach { format ->
+                    ChoiceRow(
+                        title = format.labelKm,
+                        selected = settings.dateFormat == format,
+                        onClick = { scope.launch { settingsStore.setDateFormat(format) } },
+                    )
+                }
+            }
+
+            HorizontalDivider()
+
+            SettingsGroup("ម៉ោងធ្វើការ") {
+                Text(
+                    "ប្រើសម្រាប់ការស្នើពេលទំនេរ និងការបង្ហាញប្រតិទិនសប្តាហ៍។",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+                SliderRow(
+                    label = "ចាប់ផ្តើម",
+                    value = settings.dayStartHour.toFloat(),
+                    range = 0f..23f,
+                    steps = 22,
+                    display = "${localeNumber(settings.dayStartHour)}:០០",
+                    onChange = { v ->
+                        scope.launch {
+                            settingsStore.setWorkingHours(v.toInt(), settings.dayEndHour)
+                        }
+                    },
+                )
+                SliderRow(
+                    label = "បញ្ចប់",
+                    value = settings.dayEndHour.toFloat(),
+                    range = 1f..24f,
+                    steps = 22,
+                    display = "${localeNumber(settings.dayEndHour)}:០០",
+                    onChange = { v ->
+                        scope.launch {
+                            settingsStore.setWorkingHours(settings.dayStartHour, v.toInt())
+                        }
+                    },
+                )
             }
 
             HorizontalDivider()

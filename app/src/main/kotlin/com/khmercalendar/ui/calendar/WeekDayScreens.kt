@@ -34,6 +34,9 @@ import com.khmercalendar.core.khmer.KhmerTerms
 import com.khmercalendar.ui.components.EmptyState
 import com.khmercalendar.ui.components.localeNumber
 import java.time.LocalDate
+import com.khmercalendar.ui.components.localeTime
+import com.khmercalendar.ui.components.localeTimeRange
+import com.khmercalendar.ui.theme.LocalAppSettings
 
 /** Seven day columns as stacked rows, which reads better one-handed than a grid of columns. */
 @Composable
@@ -202,9 +205,11 @@ fun DayScreen(
                                         overflow = TextOverflow.Ellipsis,
                                     )
                                     Text(
-                                        localeNumber("%02d:%02d".format(event.start.hour, event.start.minute)) +
-                                            " – " +
-                                            localeNumber("%02d:%02d".format(event.end.hour, event.end.minute)),
+                                        localeTimeRange(
+                                            event.start.toLocalTime(),
+                                            event.end.toLocalTime(),
+                                            LocalAppSettings.current,
+                                        ),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )

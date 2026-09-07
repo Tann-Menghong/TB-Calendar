@@ -23,6 +23,7 @@ object Routes {
     const val SETTINGS_CATEGORIES = "settings/categories"
     const val SETTINGS_BACKUP = "settings/backup"
     const val SETTINGS_AI = "settings/ai"
+    const val SETTINGS_UPDATE = "settings/update"
     const val SETTINGS_ABOUT = "settings/about"
 
     const val EVENT_DETAIL = "event/{eventId}?date={date}"

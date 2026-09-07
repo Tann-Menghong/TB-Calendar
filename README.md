@@ -28,8 +28,14 @@ Nothing in this app needs an account, and no calendar data ever leaves the phone
 **Customisation**
 - Light / dark / system, eight accent colours, dynamic colour on Android 12+.
 - Font scale, three grid densities, an optional background image with an opacity control.
+- **First day of the week — any of the seven, Monday by default.** One preference, honoured by
+  the month grid, week view, agenda, week numbers, both widgets and the recurrence engine.
+- **12/24-hour clock** (the 12-hour form uses the Khmer parts of the day, `២ រសៀល`, not AM/PM)
+  and a choice of date order.
+- **Working hours**, used by free-slot suggestions.
 - Show or hide lunar dates, Gregorian dates, holidays, event dots, week numbers.
-- Notification sound, vibration, default reminder and default duration.
+- Notification sound, vibration, default reminder and default duration; holiday notices the
+  evening before a public holiday.
 - Two home-screen widgets — month grid and agenda — with their own theme, opacity and
   lunar-date switches.
 
@@ -44,6 +50,13 @@ Nothing in this app needs an account, and no calendar data ever leaves the phone
   computed from the database, not generated. The model only helps with wording it cannot get
   from rules.
 
+**Updates**
+- Settings → About → app updates checks a version manifest in this repository, shows the
+  changelog, and downloads on request. The file is verified (length, optional SHA-256, and
+  that its signing certificate matches the installed app) before Android's own installer is
+  opened for you to confirm. Nothing is checked in the background and nothing installs
+  silently.
+
 **Privacy and portability**
 - Local-first storage, no account, no analytics.
 - Optional PIN and biometric app lock.
@@ -51,6 +64,21 @@ Nothing in this app needs an account, and no calendar data ever leaves the phone
   Framework — so a backup goes wherever you choose, with no storage permission.
 
 ---
+
+## What uses the network
+
+Three things, all started by you, and nothing else:
+
+| | |
+|---|---|
+| Downloading an AI model | Only after you tap download and confirm the size. |
+| Checking for an app update | Only when you open the update screen or tap check. |
+| Downloading an app update | Only when you tap download. |
+
+Everything else — the calendar, lunar dates, holidays, events, reminders, search, widgets,
+backup, `.ics` import/export, and every answer the assistant computes rather than generates —
+works with the device offline. There is no account, no analytics, no tracking, and no API key
+anywhere in the source.
 
 ## Requirements
 

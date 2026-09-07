@@ -41,6 +41,9 @@ import com.khmercalendar.core.khmer.KhmerTerms
 import com.khmercalendar.ui.components.localeNumber
 import com.khmercalendar.ui.theme.LocalAppSettings
 import java.time.LocalDate
+import com.khmercalendar.ui.components.CalendarFormats
+import com.khmercalendar.ui.components.LocalUses24Hour
+import com.khmercalendar.ui.components.localeTimeRange
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -109,9 +112,7 @@ fun EventDetailScreen(
 
             if (!draft.allDay) {
                 Text(
-                    text = localeNumber("%02d:%02d".format(draft.startTime.hour, draft.startTime.minute)) +
-                        " – " +
-                        localeNumber("%02d:%02d".format(draft.endTime.hour, draft.endTime.minute)),
+                    text = localeTimeRange(draft.startTime, draft.endTime, LocalAppSettings.current),
                     style = MaterialTheme.typography.bodyLarge,
                 )
             } else {
@@ -149,7 +150,15 @@ fun EventDetailScreen(
                         Text(if (draft.isCompleted) "សម្គាល់ថាមិនទាន់រួច" else "សម្គាល់ថារួចរាល់")
                     }
                 }
-                OutlinedButton(onClick = { shareEvent(context, draft.title, occurrenceDate, draft) }) {
+                val use24Hour = LocalUses24Hour.current
+                val khmerNumerals = LocalAppSettings.current.useKhmerNumerals
+                OutlinedButton(
+                    onClick = {
+                        shareEvent(
+                            context, draft.title, occurrenceDate, draft, use24Hour, khmerNumerals,
+                        )
+                    },
+                ) {
                     Icon(Icons.Default.Share, contentDescription = null)
                     Spacer(Modifier.padding(horizontal = 4.dp))
                     Text("ចែករំលែក")
@@ -222,13 +231,16 @@ private fun shareEvent(
     title: String,
     date: LocalDate,
     draft: com.khmercalendar.domain.EventDraftModel,
+    use24Hour: Boolean,
+    khmerNumerals: Boolean,
 ) {
     val text = buildString {
         appendLine(title)
         append("ថ្ងៃ${KhmerTerms.dayOfWeek(date.dayOfWeek)} ")
         append("ទី${date.dayOfMonth} ខែ${KhmerTerms.solarMonth(date.monthValue)} ឆ្នាំ${date.year}")
         if (!draft.allDay) {
-            append("  %02d:%02d".format(draft.startTime.hour, draft.startTime.minute))
+            append("  ")
+            append(CalendarFormats.time(draft.startTime, use24Hour, khmerNumerals))
         }
         if (draft.location.isNotBlank()) appendLine().append("ទីតាំង៖ ${draft.location}")
         if (draft.description.isNotBlank()) appendLine().append(draft.description)

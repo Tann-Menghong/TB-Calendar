@@ -7,6 +7,8 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 import androidx.core.content.getSystemService
+import com.khmercalendar.core.holiday.HolidayKind
+import com.khmercalendar.core.holiday.KhmerHolidays
 import com.khmercalendar.data.prefs.SettingsStore
 import com.khmercalendar.data.repo.EventRepository
 import kotlinx.coroutines.flow.first
@@ -80,7 +82,54 @@ class ReminderScheduler(
                 armed++
             }
         }
+        if (settings.holidayNotifications) {
+            armed += armHolidayReminders(alarmManager, now, zone, armed)
+        }
         Log.i(TAG, "Armed $armed reminders over the next $WINDOW_DAYS days")
+    }
+
+    /**
+     * One notification the evening before each public holiday in the window.
+     *
+     * The evening before rather than the morning of: the useful thing to know about a day
+     * off is that tomorrow is one, while you can still change your plans. Observances are
+     * skipped - they are worth showing in the calendar but not worth a notification.
+     */
+    private fun armHolidayReminders(
+        alarmManager: AlarmManager,
+        now: LocalDateTime,
+        zone: ZoneId,
+        alreadyArmed: Int,
+    ): Int {
+        val from = now.toLocalDate()
+        val holidays = runCatching {
+            KhmerHolidays.inRange(from, from.plusDays(WINDOW_DAYS.toLong()))
+                .filter { it.kind == HolidayKind.PUBLIC }
+        }.getOrDefault(emptyList())
+
+        var armed = 0
+        for (holiday in holidays) {
+            if (alreadyArmed + armed >= MAX_ALARMS) break
+            val fireAt = holiday.date.minusDays(1).atTime(HOLIDAY_NOTICE_HOUR, 0)
+            if (fireAt.isBefore(now)) continue
+
+            val requestCode = HOLIDAY_CODE_BASE + holiday.date.toEpochDay().toInt()
+            val intent = ReminderReceiver.holidayIntent(
+                context = context,
+                nameKm = holiday.nameKm,
+                date = holiday.date,
+                bodyKm = "ថ្ងៃស្អែកជាថ្ងៃឈប់សម្រាក",
+                requestCode = requestCode,
+            )
+            val pending = PendingIntent.getBroadcast(
+                context, requestCode, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+            schedule(alarmManager, fireAt.atZone(zone).toInstant().toEpochMilli(), pending)
+            trackedRequestCodes += requestCode
+            armed++
+        }
+        return armed
     }
 
     private fun schedule(alarmManager: AlarmManager, triggerMillis: Long, pending: PendingIntent) {
@@ -134,6 +183,12 @@ class ReminderScheduler(
          * system to keep working if the user's calendar is unusually dense.
          */
         private const val MAX_ALARMS = 300
+
+        /** Holiday notices fire at this hour the day before. */
+        private const val HOLIDAY_NOTICE_HOUR = 18
+
+        /** Keeps holiday request codes clear of the event ones. */
+        private const val HOLIDAY_CODE_BASE = 900_000_000
 
         /**
          * Which alarms are currently armed.

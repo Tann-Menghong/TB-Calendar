@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
+import com.khmercalendar.core.khmer.CalendarWeek
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
@@ -137,20 +138,20 @@ class CalendarViewModel(
     }
 
     companion object {
-        /** The Sunday (or Monday) on or before the first of the month. */
-        fun gridStart(month: YearMonth, weekStart: DayOfWeek): LocalDate {
-            val first = month.atDay(1)
-            val shift = ((first.dayOfWeek.value - weekStart.value) + 7) % 7
-            return first.minusDays(shift.toLong())
-        }
+        /**
+         * Thin forwarders onto [CalendarWeek].
+         *
+         * Kept so existing call sites read naturally, but the arithmetic lives in one place:
+         * the month grid, the week view, the widgets and the recurrence engine must agree
+         * about where a week begins, and they only do if they share the implementation.
+         */
+        fun gridStart(month: YearMonth, weekStart: DayOfWeek): LocalDate =
+            CalendarWeek.startOfMonthGrid(month, weekStart)
 
-        fun weekStart(date: LocalDate, weekStart: DayOfWeek): LocalDate {
-            val shift = ((date.dayOfWeek.value - weekStart.value) + 7) % 7
-            return date.minusDays(shift.toLong())
-        }
+        fun weekStart(date: LocalDate, weekStart: DayOfWeek): LocalDate =
+            CalendarWeek.startOfWeek(date, weekStart)
 
         /** Column headings in the user's chosen week order. */
-        fun weekDays(weekStart: DayOfWeek): List<DayOfWeek> =
-            (0..6).map { DayOfWeek.of(((weekStart.value - 1 + it) % 7) + 1) }
+        fun weekDays(weekStart: DayOfWeek): List<DayOfWeek> = CalendarWeek.daysOfWeek(weekStart)
     }
 }

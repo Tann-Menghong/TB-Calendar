@@ -22,6 +22,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.sp
 import com.khmercalendar.data.prefs.AppSettings
+import com.khmercalendar.ui.components.CalendarFormats
+import com.khmercalendar.ui.components.LocalUses24Hour
 import com.khmercalendar.data.prefs.ThemeMode
 
 /** Settings reachable from anywhere in the tree without threading them through every call. */
@@ -153,7 +155,16 @@ fun KhmerCalendarTheme(
     }
     val typography = remember(settings.fontScale) { khmerTypography(settings.fontScale) }
 
-    CompositionLocalProvider(LocalAppSettings provides settings) {
+    // TimeFormat.SYSTEM needs a Context, so it is resolved once here rather than at every
+    // place a time is drawn.
+    val uses24Hour = remember(settings.timeFormat, context) {
+        CalendarFormats.uses24Hour(context, settings.timeFormat)
+    }
+
+    CompositionLocalProvider(
+        LocalAppSettings provides settings,
+        LocalUses24Hour provides uses24Hour,
+    ) {
         MaterialTheme(colorScheme = scheme, typography = typography, content = content)
     }
 }

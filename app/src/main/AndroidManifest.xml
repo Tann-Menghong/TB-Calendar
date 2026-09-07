@@ -23,6 +23,13 @@
     -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
+    <!--
+      Needed only to hand a downloaded update to Android's own installer, which the user then
+      confirms. The app never installs anything silently and never checks for updates on its
+      own; see UpdateRepository.
+    -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <application
         android:name=".KhmerCalendarApp"
         android:allowBackup="true"
@@ -108,6 +115,35 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_agenda_info" />
         </receiver>
+
+        <!--
+          Exposes only the update APK the user chose to download, so the system installer can
+          read it. Scoped to cache/updates by @xml/update_paths.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.updates"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/update_paths" />
+        </provider>
+
+        <!--
+          WorkManager's foreground service, re-declared to add the type.
+
+          From Android 14 the system rejects startForeground() with a type that the <service>
+          element does not declare, and it throws inside onStartCommand on the main thread -
+          where no try/catch in the worker can reach it, so the process dies. WorkManager's
+          own manifest entry declares no type, so any worker calling setForeground() with
+          FOREGROUND_SERVICE_TYPE_DATA_SYNC would take the whole app down with it. Merging
+          the attribute in here is the fix; ModelDownloadWorker is the only user.
+        -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
 
         <!--
           WorkManager's own initializer is removed so it starts on demand rather than on every

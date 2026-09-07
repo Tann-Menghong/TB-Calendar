@@ -1,5 +1,6 @@
 package com.khmercalendar.core.recurrence
 
+import com.khmercalendar.core.khmer.CalendarWeek
 import java.time.LocalDate
 
 /**
@@ -67,8 +68,10 @@ object RecurrenceExpander {
 
             Frequency.WEEKLY -> {
                 val days = rule.byDay.ifEmpty { setOf(start.dayOfWeek) }
-                // Walk week blocks from the start's own week so INTERVAL counts weeks, not days.
-                var weekStart = start.minusDays((start.dayOfWeek.value % 7).toLong()) // week begins Sunday
+                // Walk week blocks from the start's own week so INTERVAL counts weeks, not
+                // days. Which day begins that block is the rule's WKST, not an assumption:
+                // with INTERVAL > 1 it decides which side of a boundary an occurrence lands.
+                var weekStart = CalendarWeek.startOfWeek(start, rule.weekStart)
                 var guard = 0
                 outer@ while (!weekStart.isAfter(hardEnd) && guard++ < MAX_OCCURRENCES) {
                     for (i in 0..6) {

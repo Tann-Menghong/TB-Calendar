@@ -148,6 +148,42 @@ feature off. `AiEngineFactory` returns `NoOpAiEngine` when the runtime classes a
 
 ---
 
+## 4e. What "verified" means for a downloaded bundle
+
+The check is **exact length against the published `Content-Length`**, and that is the whole
+check. It catches the failure that actually happens: a transfer cut short by a dropped
+connection, a killed process or a full disk.
+
+There is deliberately **no content sniffing**. A `.task` bundle has no common signature — the
+Qwen bundles are a length-prefixed zip (`PK` at offset 4), the Gemma one a length-prefixed
+TFLite flatbuffer (`TFL3` at offset 4). An earlier version of this code checked for zip magic
+and rejected both real catalogue files as damaged. A check that fails valid input is worse
+than no check.
+
+Catching subtler corruption — a flipped bit somewhere inside two gigabytes — needs a published
+digest, which these bundles do not have. If you host your own, add a `sha256` alongside
+`sizeBytes` and check it in `ModelStore.inspect`; the update manifest already does exactly
+this for APKs.
+
+## 4f. Why downloading can no longer take the app down
+
+`ModelDownloadWorker` promotes itself to a foreground service so a multi-gigabyte transfer
+survives the user switching apps. From Android 14, `startForeground()` with a type the
+`<service>` element does not declare throws — **inside `Service.onStartCommand`, on the main
+thread**, where no `try` in the worker can reach it. WorkManager's own manifest entry declares
+no type, so this app re-declares it:
+
+```xml
+<service
+    android:name="androidx.work.impl.foreground.SystemForegroundService"
+    android:foregroundServiceType="dataSync"
+    tools:node="merge" />
+```
+
+This was a real crash, not a hypothetical one. Beyond the manifest, the worker now treats
+foreground promotion as a nicety that may be refused, bounds its retries, and reports typed
+failures rather than retrying forever.
+
 ## 5. Memory safety
 
 - **Before download:** free storage is checked against the file size, and total RAM against

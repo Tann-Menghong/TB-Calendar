@@ -112,6 +112,21 @@ object KhmerTerms {
         DayOfWeek.SATURDAY -> "ស"
     }
 
+    /**
+     * The part of the day a 12-hour time belongs to.
+     *
+     * Khmer names the parts of the day rather than using AM/PM, and the boundaries are the
+     * conventional ones: ព្រឹក to noon, រសៀល through the afternoon, ល្ងាច from six, យប់ after
+     * nine. A 12-hour clock written "២ PM" reads as a translation; "២ រសៀល" reads as Khmer.
+     */
+    fun partOfDay(hour: Int): String = when (hour) {
+        in 0..4 -> "យប់"
+        in 5..11 -> "ព្រឹក"
+        in 12..17 -> "រសៀល"
+        in 18..20 -> "ល្ងាច"
+        else -> "យប់"
+    }
+
     private val SOLAR_MONTHS = arrayOf(
         "មករា", "កុម្ភៈ", "មីនា", "មេសា", "ឧសភា", "មិថុនា",
         "កក្កដា", "សីហា", "កញ្ញា", "តុលា", "វិច្ឆិកា", "ធ្នូ",

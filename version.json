@@ -1,0 +1,11 @@
+{
+  "versionCode": 2,
+  "versionName": "1.1.0",
+  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v1.1.0/TB-Calendar-1.1.0.apk",
+  "apkSizeBytes": 60045276,
+  "apkSha256": "f83866570b475763514be9642c6a40c773848920a5b9f9c49cdbe5ec6a24738a",
+  "minSdk": 26,
+  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v1.1.0",
+  "releaseNotesKm": "ជួសជុលការគាំងពេលទាញយកម៉ូដែល AI។ ថ្ងៃច័ន្ទជាថ្ងៃដំបូងនៃសប្តាហ៍តាមលំនាំដើម។ បន្ថែមទម្រង់ម៉ោង ១២/២៤ លេខសប្តាហ៍ ម៉ោងធ្វើការ និងការគ្រប់គ្រងបច្ចុប្បន្នភាពកម្មវិធី។",
+  "releaseNotesEn": "Fixes the crash when downloading an AI model. Monday is now the default first day of the week. Adds 12/24-hour clock, week numbers, working hours, and in-app update checking."
+}

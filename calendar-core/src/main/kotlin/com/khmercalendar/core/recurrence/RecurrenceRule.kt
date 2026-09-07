@@ -1,5 +1,6 @@
 package com.khmercalendar.core.recurrence
 
+import com.khmercalendar.core.khmer.CalendarWeek
 import java.time.DayOfWeek
 import java.time.LocalDate
 
@@ -22,6 +23,15 @@ data class RecurrenceRule(
     val count: Int? = null,
     /** Stop on or before this date. Mutually exclusive with [count]. */
     val until: LocalDate? = null,
+    /**
+     * RFC 5545 `WKST` - which day the week starts on.
+     *
+     * Only observable when [interval] is greater than one on a [Frequency.WEEKLY] rule, but
+     * there it decides which occurrences fall in which counted week: "every two weeks on
+     * Monday and Sunday" produces different dates under a Monday week than a Sunday one.
+     * The specification defaults it to Monday, and so does this app's own preference.
+     */
+    val weekStart: DayOfWeek = CalendarWeek.DEFAULT_START,
 ) {
     init {
         require(interval >= 1) { "interval must be at least 1" }
@@ -35,6 +45,11 @@ data class RecurrenceRule(
         if (byDay.isNotEmpty()) {
             append(";BYDAY=")
             append(DayOfWeek.entries.filter { it in byDay }.joinToString(",") { ICAL_DAYS[it]!! })
+        }
+        // WKST is only emitted when it can change the expansion, keeping the common rule
+        // short and identical to what other calendar apps write.
+        if (frequency == Frequency.WEEKLY && interval > 1 && weekStart != DayOfWeek.MONDAY) {
+            append(";WKST=").append(ICAL_DAYS[weekStart])
         }
         count?.let { append(";COUNT=").append(it) }
         until?.let {
@@ -83,6 +98,8 @@ data class RecurrenceRule(
                 // UNTIL wins if a malformed rule carries both, matching how most clients behave.
                 count = if (until != null) null else count,
                 until = until,
+                weekStart = parts["WKST"]?.let { DAYS_BY_ICAL[it.trim().uppercase()] }
+                    ?: DayOfWeek.MONDAY,
             )
         }
     }

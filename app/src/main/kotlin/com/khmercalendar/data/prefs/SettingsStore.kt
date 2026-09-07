@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.khmercalendar.core.khmer.CalendarWeek
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
@@ -47,8 +48,7 @@ class SettingsStore(context: Context) {
         backgroundImageUri = this[Keys.BACKGROUND_URI],
         backgroundOpacity = this[Keys.BACKGROUND_OPACITY] ?: 0.12f,
 
-        weekStart = this[Keys.WEEK_START]?.let { runCatching { DayOfWeek.of(it) }.getOrNull() }
-            ?: DayOfWeek.SUNDAY,
+        weekStart = CalendarWeek.fromValue(this[Keys.WEEK_START]),
         showKhmerLunarDates = this[Keys.SHOW_LUNAR] ?: true,
         showGregorianDates = this[Keys.SHOW_GREGORIAN] ?: true,
         showHolidays = this[Keys.SHOW_HOLIDAYS] ?: true,
@@ -56,6 +56,11 @@ class SettingsStore(context: Context) {
         showWeekNumbers = this[Keys.SHOW_WEEK_NUMBERS] ?: false,
         useKhmerNumerals = this[Keys.KHMER_NUMERALS] ?: true,
         highlightWeekends = this[Keys.HIGHLIGHT_WEEKENDS] ?: true,
+
+        timeFormat = enumOf(this[Keys.TIME_FORMAT], TimeFormat.SYSTEM),
+        dateFormat = enumOf(this[Keys.DATE_FORMAT], DateFormat.DMY),
+        dayStartHour = this[Keys.DAY_START_HOUR] ?: 8,
+        dayEndHour = this[Keys.DAY_END_HOUR] ?: 18,
 
         startScreen = enumOf(this[Keys.START_SCREEN], StartScreen.HOME),
         defaultReminderMinutes = this[Keys.DEFAULT_REMINDER] ?: 30,
@@ -110,6 +115,19 @@ class SettingsStore(context: Context) {
     suspend fun setShowWeekNumbers(on: Boolean) = put(Keys.SHOW_WEEK_NUMBERS, on)
     suspend fun setKhmerNumerals(on: Boolean) = put(Keys.KHMER_NUMERALS, on)
     suspend fun setHighlightWeekends(on: Boolean) = put(Keys.HIGHLIGHT_WEEKENDS, on)
+
+    suspend fun setTimeFormat(format: TimeFormat) = put(Keys.TIME_FORMAT, format.name)
+    suspend fun setDateFormat(format: DateFormat) = put(Keys.DATE_FORMAT, format.name)
+
+    /** Keeps the working day a real interval; an inverted one would break free-slot search. */
+    suspend fun setWorkingHours(startHour: Int, endHour: Int) {
+        val from = startHour.coerceIn(0, 23)
+        val to = endHour.coerceIn(from + 1, 24)
+        store.edit {
+            it[Keys.DAY_START_HOUR] = from
+            it[Keys.DAY_END_HOUR] = to
+        }
+    }
 
     suspend fun setStartScreen(screen: StartScreen) = put(Keys.START_SCREEN, screen.name)
     suspend fun setDefaultReminder(minutes: Int) = put(Keys.DEFAULT_REMINDER, minutes)
@@ -202,6 +220,11 @@ class SettingsStore(context: Context) {
         val SHOW_WEEK_NUMBERS = booleanPreferencesKey("show_week_numbers")
         val KHMER_NUMERALS = booleanPreferencesKey("khmer_numerals")
         val HIGHLIGHT_WEEKENDS = booleanPreferencesKey("highlight_weekends")
+
+        val TIME_FORMAT = stringPreferencesKey("time_format")
+        val DATE_FORMAT = stringPreferencesKey("date_format")
+        val DAY_START_HOUR = intPreferencesKey("day_start_hour")
+        val DAY_END_HOUR = intPreferencesKey("day_end_hour")
 
         val START_SCREEN = stringPreferencesKey("start_screen")
         val DEFAULT_REMINDER = intPreferencesKey("default_reminder")

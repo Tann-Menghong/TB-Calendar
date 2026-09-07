@@ -45,8 +45,10 @@ import com.khmercalendar.ui.components.ColorDot
 import com.khmercalendar.ui.components.EmptyState
 import com.khmercalendar.ui.components.localeNumber
 import com.khmercalendar.ui.theme.LocalAppSettings
+import com.khmercalendar.core.khmer.CalendarWeek
 import java.time.DayOfWeek
 import java.time.YearMonth
+import com.khmercalendar.ui.components.localeTimeRange
 
 /**
  * The month grid.
@@ -86,7 +88,7 @@ fun MonthScreen(
     }
 
     Column(modifier.fillMaxSize()) {
-        WeekdayHeader(settings.weekStart)
+        WeekdayHeader(settings.weekStart, settings.showWeekNumbers)
 
         HorizontalPager(
             state = pagerState,
@@ -129,10 +131,13 @@ fun MonthScreen(
 }
 
 @Composable
-private fun WeekdayHeader(weekStart: DayOfWeek) {
+private fun WeekdayHeader(weekStart: DayOfWeek, showWeekNumbers: Boolean) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp)) {
+        // An empty cell above the week-number gutter: without it the weekday captions sit one
+        // column left of the days they label.
+        if (showWeekNumbers) Spacer(Modifier.width(WEEK_NUMBER_WIDTH))
         CalendarViewModel.weekDays(weekStart).forEach { day ->
-            val weekend = day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY
+            val weekend = day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY  // header cell
             Text(
                 text = KhmerTerms.dayOfWeekShort(day),
                 modifier = Modifier.weight(1f),
@@ -158,6 +163,13 @@ private fun MonthGrid(
     Column(Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
         state.weeks.forEach { week ->
             Row(Modifier.fillMaxWidth()) {
+                if (settings.showWeekNumbers) {
+                    WeekNumberCell(
+                        week = week,
+                        weekStart = settings.weekStart,
+                        height = settings.density.cellHeightDp,
+                    )
+                }
                 week.forEach { cell ->
                     DayCell(
                         cell = cell,
@@ -173,6 +185,30 @@ private fun MonthGrid(
     }
 }
 
+/**
+ * The week-of-year gutter.
+ *
+ * Numbered from the user's own first day of the week with a four-day minimum, so with the
+ * Monday default these are ISO-8601 week numbers - the ones a Cambodian workplace using a
+ * planner or a shipping schedule would recognise.
+ */
+@Composable
+private fun WeekNumberCell(week: List<DayCellState>, weekStart: DayOfWeek, height: Int) {
+    val anchor = week.firstOrNull()?.date ?: return
+    Box(
+        Modifier.width(WEEK_NUMBER_WIDTH).height(height.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = localeNumber(CalendarWeek.weekOfYear(anchor, weekStart)),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+private val WEEK_NUMBER_WIDTH = 24.dp
+
 @Composable
 private fun DayCell(
     cell: DayCellState,
@@ -184,7 +220,7 @@ private fun DayCell(
 ) {
     val settings = LocalAppSettings.current
     val scheme = MaterialTheme.colorScheme
-    val weekend = cell.date.dayOfWeek == DayOfWeek.SATURDAY || cell.date.dayOfWeek == DayOfWeek.SUNDAY
+    val weekend = CalendarWeek.isWeekend(cell.date)
 
     val dayColor = when {
         !cell.inCurrentMonth -> scheme.onSurfaceVariant.copy(alpha = 0.38f)
@@ -364,8 +400,11 @@ fun EventRow(
             val time = if (event.allDay) {
                 "ពេញមួយថ្ងៃ"
             } else {
-                localeNumber("%02d:%02d".format(event.start.hour, event.start.minute)) + " – " +
-                    localeNumber("%02d:%02d".format(event.end.hour, event.end.minute))
+                localeTimeRange(
+                    event.start.toLocalTime(),
+                    event.end.toLocalTime(),
+                    LocalAppSettings.current,
+                )
             }
             Text(
                 text = listOfNotNull(time, event.location?.takeIf { it.isNotBlank() }).joinToString(" · "),
