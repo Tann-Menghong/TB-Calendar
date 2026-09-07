@@ -1,11 +1,11 @@
 {
-  "versionCode": 2,
-  "versionName": "1.1.0",
-  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v1.1.0/TB-Calendar-1.1.0.apk",
-  "apkSizeBytes": 60045276,
-  "apkSha256": "f83866570b475763514be9642c6a40c773848920a5b9f9c49cdbe5ec6a24738a",
+  "versionCode": 3,
+  "versionName": "1.2.0",
+  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v1.2.0/TB-Calendar-1.2.0.apk",
+  "apkSizeBytes": 60062008,
+  "apkSha256": "40e91d1ea5ba55ca27173580450a60794f60f84dc3780b93ec39fe01eca7fad9",
   "minSdk": 26,
-  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v1.1.0",
-  "releaseNotesKm": "ជួសជុលការគាំងពេលទាញយកម៉ូដែល AI។ ថ្ងៃច័ន្ទជាថ្ងៃដំបូងនៃសប្តាហ៍តាមលំនាំដើម។ បន្ថែមទម្រង់ម៉ោង ១២/២៤ លេខសប្តាហ៍ ម៉ោងធ្វើការ និងការគ្រប់គ្រងបច្ចុប្បន្នភាពកម្មវិធី។",
-  "releaseNotesEn": "Fixes the crash when downloading an AI model. Monday is now the default first day of the week. Adds 12/24-hour clock, week numbers, working hours, and in-app update checking."
+  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v1.2.0",
+  "releaseNotesKm": "ជំនួយការអាចអានសេចក្តីជូនដំណឹងវែងៗ ហើយបង្កើតចំណងជើងខ្លី ដោយមិនប្រឌិតព័ត៌មានដែលអត្ថបទមិនបានបញ្ជាក់។ បន្ថែមការរាប់ថយក្រោយម៉ោងធ្វើការ កាលវិភាគការងារដែលកែបាន និងផ្ទាំងដើមដែលអាចរៀបចំបាន។ ជួសជុលការបាត់ទីតាំង លេខខ្មែរដែលប្តូរទៅជាលេខឡាតាំង និងប្រអប់ជ្រើសម៉ោងដែលមិនតាមផ្ទាំងងងឹត។",
+  "releaseNotesEn": "The assistant now reads a long pasted announcement, writes a short title from it, and leaves out anything the text did not state rather than inventing it. Adds a live work-time countdown with a fully editable schedule, and a dashboard you can rearrange and hide cards on. Fixes lost locations, Khmer numerals coming back as Latin ones, and date and time pickers that ignored dark mode."
 }

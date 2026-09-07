@@ -1,5 +1,143 @@
 # Changelog
 
+## 1.2.0 — 2026-09-07
+
+### The assistant understands a pasted announcement
+
+Before this release the assistant could read a short command — "ថ្ងៃស្អែក ម៉ោង ២ រសៀល ប្រជុំ" —
+but not a paragraph. Given one it produced a title that was the whole paragraph, because the
+title was built by deleting the date and time from the input and keeping whatever was left.
+
+`LongTextEventExtractor` treats a paragraph as a paragraph: it splits the text into
+sentences, scores each for event signal, parses only the one making the announcement, and
+builds the title *around the event noun* instead of from the leftovers. Everything else
+becomes the description.
+
+Pasting the announcement below now yields the title កិច្ចប្រជុំប្រចាំសប្តាហ៍, tomorrow's date,
+2:00 PM, the room បន្ទប់ប្រជុំ A, and the discussion as the description:
+
+> សួស្តីក្រុមការងារ នៅថ្ងៃស្អែកយើងនឹងមានកិច្ចប្រជុំប្រចាំសប្តាហ៍នៅម៉ោង ២ រសៀល នៅបន្ទប់ប្រជុំ A
+> ដើម្បីពិភាក្សាអំពីផែនការការងារប្រចាំខែ …
+
+Nothing is invented. "ប្រជុំជាមួយក្រុមការងារថ្ងៃស្អែក" gets tomorrow's date and **no time at
+all** — the proposal says ម៉ោងមិនបានបញ្ជាក់ rather than guessing 9:00. Every field the text did
+not state is listed back to the user instead of filled in.
+
+The extractor is pure and needs no model: it costs microseconds, works on a device that could
+never host a language model, and cannot hallucinate. When a model *is* loaded it is asked as
+well, and its answer is validated — title capped at eight words, dates outside a sane window
+rejected, malformed output discarded — before it can reach the screen.
+
+Long text is handled by scoring sentences and narrowing to the region around the strongest
+one, so a meeting buried in a long email does not take its date from an unrelated line three
+paragraphs away. Input is capped rather than allowed to grow without bound.
+
+Text can now reach the assistant by **Share** and **Process Text** from any other app, which
+is how a pasted announcement actually arrives.
+
+### Fixed: a whole class of bug caused by Khmer word spacing
+
+Khmer is written without spaces between words. "កិច្ចប្រជុំប្រចាំសប្តាហ៍នៅម៉ោង" is a single
+whitespace token holding a noun, a preposition and the word for "hour", so every "take the
+next four words" heuristic in the parser silently swallowed an entire clause.
+
+Two visible symptoms, one cause:
+
+- Event titles ran on into the meeting time.
+- The room in a pasted announcement was lost. The sentence contains នៅ three times; the first
+  introduces a date and the second a time, and only the third is a place. The parser took the
+  first one and produced a "location" so long it was then discarded.
+
+`TextBoundaries` cuts by character index at the next marker of a *different kind* — a time, a
+date, a place, a person, a purpose — and every affected site now uses it. Latin markers are
+only matched when the lexicon already spaces them out, so an English title is not cut in half
+at "May" or "at".
+
+### Fixed: Khmer numerals came back as Latin ones
+
+The parser matched against its own ASCII-normalised working string and then sliced values out
+of *that*, so a room written "សាលប្រជុំធំជាន់ទី ៣" came back as "…ទី 3" in a calendar that is
+otherwise entirely in Khmer numerals. Matching still runs on ASCII digits; the two views are
+now index-aligned, and anything handed back to the user is sliced from the string they typed.
+
+### New: the work-time countdown
+
+A live countdown for the working day, on the home dashboard. It knows six states — before
+work, working, break, finished, day off, disabled — and shows the time left in the current
+block, what comes next and when, the total left today, and a progress ring.
+
+Defaults match an ordinary Cambodian office week: Monday to Friday 7:30–11:30 and
+13:30–17:30, Saturday 7:30–11:30, Sunday off.
+
+Every day is editable in **Settings → កាលវិភាគការងារ**, including how many blocks it has: a
+shop that opens straight through and a teacher with three separate sessions are equally
+ordinary, and neither is expressible if the screen only offers "morning" and "afternoon".
+Inverted ranges are refused rather than saved.
+
+Optional notifications at each shift change, off by default. They are inexact alarms on
+purpose — a shift notice a minute late costs nothing, and an exact alarm would spend a
+battery-relevant resource that event reminders need more.
+
+The card only ticks while it is on screen and the app is in the foreground, and stops
+entirely on a day with nothing left to count down to.
+
+### The dashboard is now yours to arrange
+
+Nine cards — today, work, Khmer lunar date, upcoming events, holidays, countdowns, tasks,
+today's note, quick actions — each of which can be hidden and moved. A saved order from an
+earlier version is kept, and cards added by a newer version are appended to it rather than
+replacing it.
+
+Quick actions adds a row for the five things people open the app to do: new event, new task,
+new note, assistant, search.
+
+### Fixed: two dialogs that ignored the theme
+
+A platform dialog inherits the *Activity's* theme, and the Activity theme is a fixed light one
+because every pixel after the first frame is drawn by Compose. So a user with the app set to
+dark got a white date or time picker, and everyone got Material's default teal on a screen
+with no teal anywhere else. A `values-night` resource cannot fix it either — that follows the
+*system*, and the app's own light/dark setting may disagree with it.
+
+The theme is now chosen in code from the same flag the Compose theme uses, and the buttons are
+tinted with the user's live accent.
+
+Separately, the event time picker asked the *device* for 12- or 24-hour rather than the app's
+preference, so choosing a clock format in settings changed every time in the calendar except
+the one being typed into.
+
+### One shape scale for the whole app
+
+`MaterialTheme.shapes` was never set, so Material's own cards, chips and dialogs rounded to
+their defaults while hand-drawn surfaces used ten different radii — on the same screens.
+`Tokens.kt` holds the scale that was missing (spacing, radius, elevation) and the theme feeds
+the radii to Material so both halves of a screen agree. Gradients moved into the theme under
+names that say what they mean — working, resting, done — rather than what colour they are.
+
+### The AI download crash fix moved to where it is enforced
+
+The `android:foregroundServiceType="dataSync"` declaration that fixed the 1.1.0 crash now
+lives in `:ai-core`, beside `ModelDownloadWorker`, the only thing that needs it. In the app
+module it was correct but unenforced; next to the worker, lint's
+`SpecifyForegroundServiceType` check verifies the pair, so the declaration cannot drift away
+from the code that depends on it. The merged manifest is unchanged.
+
+### Verified on device
+
+On an Android 15 (API 35) emulator, against this build:
+
+- Both pasted announcements from the specification, end to end through Share.
+- A full model download (547 MB), model load and on-device inference — process alive
+  throughout, no `FATAL EXCEPTION`.
+- The work countdown ticking, with its arithmetic checked against the clock.
+- The work schedule screen: display, edit, add a block, reset, and persistence across a
+  restart.
+- Dashboard reorder and hide.
+- The date and time pickers in dark mode.
+- **An upgrade from 1.1.0 in place**: an event with its title, times and location survived,
+  and so did a customised set of hidden dashboard cards — with the two new cards appended
+  rather than replacing them.
+
 ## 1.1.0 — 2026-09-07
 
 ### Fixed: the app closed when downloading an AI model
