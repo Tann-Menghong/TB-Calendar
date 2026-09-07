@@ -100,4 +100,44 @@ object KhmerLexicon {
 
     val NEXT_WORDS = listOf("ក្រោយ", "បន្ទាប់", "next", "coming")
     val EVERY_WORDS = listOf("រៀងរាល់", "រាល់", "every", "each")
+
+    /**
+     * Nouns that name the kind of thing being scheduled.
+     *
+     * These do two jobs in the long-text extractor: they mark which sentence of a paragraph
+     * is the one actually announcing an event, and they anchor the title. A title built by
+     * deleting the date from a whole paragraph is the entire paragraph; a title built around
+     * one of these is "កិច្ចប្រជុំប្រចាំសប្តាហ៍".
+     *
+     * Ordered longest-first so the more specific phrase wins the match.
+     */
+    val EVENT_NOUNS: List<String> = listOf(
+        "កិច្ចប្រជុំប្រចាំសប្តាហ៍", "កិច្ចប្រជុំប្រចាំខែ", "កិច្ចប្រជុំ",
+        "ការប្រជុំ", "ប្រជុំ", "សន្និសីទ", "សិក្ខាសាលា", "វគ្គបណ្តុះបណ្តាល",
+        "ការបណ្តុះបណ្តាល", "ការណែនាំ", "បទបង្ហាញ",
+        "ការប្រឡង", "ប្រឡង", "ថ្នាក់រៀន", "ការរៀន", "រៀន",
+        "ការណាត់ជួប", "ណាត់ជួប", "ណាត់", "ជួបជាមួយ", "ជួប",
+        "ពិធីមង្គលការ", "ពិធីបុណ្យ", "ពិធី", "ពិធីជប់លៀង", "ជប់លៀង",
+        "ការធ្វើដំណើរ", "ដំណើរកម្សាន្ត", "ការពិនិត្យសុខភាព", "ជួបវេជ្ជបណ្ឌិត",
+        "ថ្ងៃកំណើត", "ខួបកំណើត", "ខួប",
+        "meeting", "standup", "stand-up", "conference", "workshop", "training",
+        "presentation", "interview", "appointment", "class", "lecture", "exam",
+        "party", "wedding", "birthday", "anniversary", "call", "review", "deadline",
+    )
+
+    /** Introduces the people involved: "ជាមួយក្រុមការងារ", "with the design team". */
+    val PARTICIPANT_MARKERS = listOf("ជាមួយនឹង", "ជាមួយ", "រួមជាមួយ", " with ")
+
+    /**
+     * Openers and pleasantries that carry no scheduling information.
+     *
+     * Stripped from a candidate title only - never from the description, where a greeting is
+     * harmless and removing it would distort what the user actually wrote.
+     */
+    val PLEASANTRIES = listOf(
+        "សួស្តី", "ជម្រាបសួរ", "សូមជម្រាបជូន", "សូមជម្រាប", "សូមអញ្ជើញ", "សូម",
+        "អរគុណ", "សូមអរគុណ", "hello", "hi", "dear", "good morning", "good afternoon",
+        "please", "thanks", "thank you", "regards",
+    )
+
 }

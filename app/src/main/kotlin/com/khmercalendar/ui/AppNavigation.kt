@@ -51,6 +51,7 @@ import com.khmercalendar.ui.home.HomeViewModel
 import com.khmercalendar.ui.settings.AboutScreen
 import com.khmercalendar.ui.settings.UpdateViewModel
 import com.khmercalendar.ui.settings.UpdateScreen
+import com.khmercalendar.ui.settings.WorkScheduleScreen
 import com.khmercalendar.ui.settings.AiModelScreen
 import com.khmercalendar.ui.settings.AiModelViewModel
 import com.khmercalendar.ui.settings.AppearanceScreen
@@ -60,6 +61,8 @@ import com.khmercalendar.ui.settings.CategoriesViewModel
 import com.khmercalendar.ui.settings.NotificationSettingsScreen
 import com.khmercalendar.ui.settings.SettingsScreen
 import java.time.LocalDate
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 
 private data class TopLevel(
     val route: String,
@@ -97,6 +100,10 @@ fun KhmerCalendarNavHost(
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
 
+    // Held here rather than in the route arguments: a pasted announcement can be thousands
+    // of characters, and a navigation argument is a URL.
+    var sharedText by remember { mutableStateOf<String?>(null) }
+
     LaunchedEffect(external) {
         val destination = external ?: return@LaunchedEffect
         when (destination) {
@@ -116,6 +123,11 @@ fun KhmerCalendarNavHost(
             }
 
             ExternalDestination.Assistant -> navController.navigateTopLevel(Routes.ASSISTANT)
+
+            is ExternalDestination.TextToEvent -> {
+                sharedText = destination.text
+                navController.navigateTopLevel(Routes.ASSISTANT)
+            }
 
             is ExternalDestination.ImportIcs ->
                 navController.navigate("${Routes.SETTINGS_BACKUP}?import=${destination.uri}")
@@ -212,6 +224,7 @@ fun KhmerCalendarNavHost(
                 val vm: AssistantViewModel = viewModel(factory = factory)
                 AssistantScreen(
                     viewModel = vm,
+                    sharedText = sharedText,
                     onOpenEvent = { id, date -> navController.navigate(Routes.eventDetail(id, date.toString())) },
                     onManageModels = { navController.navigate(Routes.SETTINGS_AI) },
                 )
@@ -269,6 +282,14 @@ fun KhmerCalendarNavHost(
             composable(Routes.SETTINGS_AI) {
                 val vm: AiModelViewModel = viewModel(factory = factory)
                 AiModelScreen(viewModel = vm, onBack = navController::popBackStack)
+            }
+
+            composable(Routes.SETTINGS_WORK) {
+                WorkScheduleScreen(
+                    settingsFlow = container.settings,
+                    settingsStore = container.settingsStore,
+                    onBack = navController::popBackStack,
+                )
             }
 
             composable(Routes.SETTINGS_UPDATE) {

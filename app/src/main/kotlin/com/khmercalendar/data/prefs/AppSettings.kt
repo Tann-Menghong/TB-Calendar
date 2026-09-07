@@ -1,6 +1,7 @@
 package com.khmercalendar.data.prefs
 
 import com.khmercalendar.core.khmer.CalendarWeek
+import com.khmercalendar.core.work.WorkSchedule
 import java.time.DayOfWeek
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
@@ -44,12 +45,14 @@ enum class StartScreen(val route: String, val labelKm: String) {
 /** A card on the dashboard the user can show, hide or reorder. */
 enum class DashboardCard(val key: String, val labelKm: String) {
     TODAY("today", "ថ្ងៃនេះ"),
+    WORK("work", "ម៉ោងធ្វើការ"),
     LUNAR("lunar", "ចន្ទគតិខ្មែរ"),
     UPCOMING("upcoming", "ព្រឹត្តិការណ៍ខាងមុខ"),
     HOLIDAYS("holidays", "បុណ្យជាតិខាងមុខ"),
     COUNTDOWN("countdown", "រាប់ថយក្រោយ"),
     TASKS("tasks", "កិច្ចការ"),
     NOTE("note", "កំណត់ចំណាំថ្ងៃនេះ"),
+    QUICK_ACTIONS("quick", "សកម្មភាពរហ័ស"),
 }
 
 /**
@@ -97,6 +100,17 @@ data class AppSettings(
     val defaultEventDurationMinutes: Int = 60,
     val dashboardCards: List<DashboardCard> = DashboardCard.entries.toList(),
     val hiddenDashboardCards: Set<String> = emptySet(),
+
+    // --- work schedule ---
+    /**
+     * The working week, decoded from its stored form.
+     *
+     * Held as the real object rather than the encoded string so no screen has to know the
+     * storage format; [com.khmercalendar.core.work.WorkScheduleCodec] is the only place that
+     * does.
+     */
+    val workSchedule: WorkSchedule = WorkSchedule.DEFAULT,
+    val workNotifications: Boolean = false,
 
     // --- home-screen widgets ---
     val widgetTheme: ThemeMode = ThemeMode.SYSTEM,

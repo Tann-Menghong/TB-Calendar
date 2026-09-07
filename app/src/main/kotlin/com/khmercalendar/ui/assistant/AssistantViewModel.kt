@@ -10,7 +10,7 @@ import com.khmercalendar.ai.AssistantReply
 import com.khmercalendar.ai.model.ModelCatalog
 import com.khmercalendar.ai.model.ModelStore
 import com.khmercalendar.ai.tools.AiEventView
-import com.khmercalendar.core.nlu.EventDraft
+import com.khmercalendar.core.nlu.EventProposal
 import com.khmercalendar.data.prefs.AppSettings
 import com.khmercalendar.data.repo.EventRepository
 import com.khmercalendar.domain.EventDraftModel
@@ -38,7 +38,7 @@ sealed interface ChatItem {
     /** A proposed event. Nothing is written until the user accepts it. */
     data class Proposal(
         override val id: Long,
-        val draft: EventDraft,
+        val proposal: EventProposal,
         val clashes: List<AiEventView>,
         val source: AnswerSource,
         val savedEventId: Long? = null,
@@ -157,6 +157,30 @@ class AssistantViewModel(
         respond(text)
     }
 
+    /**
+     * Analyses text shared in from another app.
+     *
+     * Submitted straight away rather than dropped into the input box: the user already chose
+     * this text and chose to send it here, so making them tap send again is one step for no
+     * decision. Guarded against re-running when the screen is recreated on rotation.
+     */
+    fun analyseSharedText(text: String) {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty() || trimmed == lastSharedText) return
+        lastSharedText = trimmed
+        if (_state.value.busy) return
+        _state.update {
+            it.copy(
+                items = it.items + ChatItem.User(nextId++, trimmed),
+                input = "",
+                busy = true,
+            )
+        }
+        respond(trimmed)
+    }
+
+    private var lastSharedText: String? = null
+
     fun quickAction(action: QuickAction) {
         if (_state.value.busy) return
         _state.update {
@@ -235,7 +259,7 @@ class AssistantViewModel(
     private fun emit(reply: AssistantReply) {
         val item = when (reply) {
             is AssistantReply.Draft ->
-                ChatItem.Proposal(nextId++, reply.draft, reply.clashes, reply.source)
+                ChatItem.Proposal(nextId++, reply.proposal, reply.clashes, reply.source)
 
             is AssistantReply.Text -> ChatItem.Reply(nextId++, reply.text, reply.source)
             is AssistantReply.Failure -> ChatItem.Reply(nextId++, reply.message, reply.source)
@@ -244,19 +268,33 @@ class AssistantViewModel(
     }
 
     /** Writes a proposed event, after the user has confirmed it. */
-    fun accept(proposal: ChatItem.Proposal) {
+    /**
+     * Saves a proposal the user has accepted.
+     *
+     * Where the text said nothing, the user's own defaults fill in rather than anything the
+     * extractor guessed: an event with no stated time becomes all-day, and one with no stated
+     * end runs for the user's default duration. That keeps "the app never invents" true right
+     * through to what is written to the database.
+     */
+    fun accept(item: ChatItem.Proposal) {
+        val proposal = item.proposal
+        val date = proposal.date ?: return
         viewModelScope.launch {
             val prefs = settings.value
+            val start = proposal.startTime
+            val end = proposal.endTime
+                ?: start?.plusMinutes(prefs.defaultEventDurationMinutes.toLong())
             val model = EventDraftModel(
-                title = proposal.draft.title,
-                location = proposal.draft.location.orEmpty(),
-                date = proposal.draft.start.toLocalDate(),
-                startTime = proposal.draft.start.toLocalTime(),
-                endTime = proposal.draft.end.toLocalTime(),
-                endDate = proposal.draft.end.toLocalDate(),
-                allDay = proposal.draft.allDay,
-                recurrence = proposal.draft.recurrence,
-                reminderMinutes = proposal.draft.reminderMinutes.ifEmpty {
+                title = proposal.title,
+                description = proposal.description.orEmpty(),
+                location = proposal.location.orEmpty(),
+                date = date,
+                startTime = start ?: java.time.LocalTime.of(0, 0),
+                endTime = end ?: java.time.LocalTime.of(23, 59),
+                endDate = date,
+                allDay = proposal.allDay,
+                recurrence = proposal.recurrence,
+                reminderMinutes = proposal.reminderMinutes.ifEmpty {
                     listOf(prefs.defaultReminderMinutes)
                 },
             )
@@ -265,7 +303,7 @@ class AssistantViewModel(
             _state.update { s ->
                 s.copy(
                     items = s.items.map {
-                        if (it.id == proposal.id && it is ChatItem.Proposal) {
+                        if (it.id == item.id && it is ChatItem.Proposal) {
                             it.copy(savedEventId = id)
                         } else {
                             it

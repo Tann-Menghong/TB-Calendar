@@ -82,6 +82,14 @@ class ReminderScheduler(
                 armed++
             }
         }
+        // Work-shift notices ride the same daily re-arm as event reminders, so they renew
+        // themselves without a second scheduler.
+        WorkScheduleNotifier.reschedule(
+            context = context,
+            schedule = settings.workSchedule,
+            enabled = settings.workNotifications && settings.notificationsEnabled,
+        )
+
         if (settings.holidayNotifications) {
             armed += armHolidayReminders(alarmManager, now, zone, armed)
         }

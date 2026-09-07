@@ -329,7 +329,8 @@ class ModelDownloadWorker(
      */
     private fun fallbackForegroundInfo(percent: Int): ForegroundInfo {
         val manager = applicationContext.getSystemService<NotificationManager>()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && manager != null) {
+        // minSdk is 26, so the channel API is always present; only the service lookup can fail.
+        if (manager != null) {
             runCatching {
                 manager.createNotificationChannel(
                     NotificationChannel(

@@ -52,7 +52,15 @@ class NaturalLanguageEventParser(
     private data class Span(val range: IntRange, val label: String)
 
     fun parse(rawText: String, now: LocalDateTime): EventDraft? {
-        val text = KhmerNumerals.toAscii(KhmerNumerals.composeVowels(rawText))
+        // Two views of the same string, deliberately index-aligned.
+        //
+        // Matching needs ASCII digits, but anything handed back to the user - a title, a room
+        // name - has to read the way they wrote it: "សាលប្រជុំធំជាន់ទី ៣", not "...ទី 3".
+        // normalizeForMatching does the length-changing work (invisibles, decomposed vowels)
+        // once, and toAscii on its result is then a pure one-for-one digit substitution, so a
+        // span found in `text` slices the same characters out of `source`.
+        val source = KhmerNumerals.normalizeForMatching(rawText)
+        val text = KhmerNumerals.toAscii(source)
         if (text.isBlank()) return null
         val lower = text.lowercase()
         val spans = mutableListOf<Span>()
@@ -63,7 +71,7 @@ class NaturalLanguageEventParser(
         val time = parseTime(text, lower, spans, notes)
         val durationMinutes = parseDuration(lower, spans)
         val reminders = parseReminders(lower, spans)
-        val location = parseLocation(text, spans)
+        val location = parseLocation(text, source, spans)
 
         // A bare title with no date and no time is not an event request; refusing is better
         // than filing something on an arbitrary day.
@@ -83,7 +91,7 @@ class NaturalLanguageEventParser(
             else -> start.plus(defaultDuration)
         }
 
-        val title = buildTitle(text, spans).ifBlank { defaultTitle(rawText) }
+        val title = buildTitle(source, spans).ifBlank { defaultTitle(rawText) }
 
         var confidence = 0f
         if (date != null) confidence += 0.4f
@@ -336,17 +344,34 @@ class NaturalLanguageEventParser(
         }?.also { spans += Span(everyIdx until minOf(lower.length, everyIdx + head.length), "recurrence") }
     }
 
-    private fun parseLocation(text: String, spans: MutableList<Span>): String? {
+    /**
+     * The place, when one is written down.
+     *
+     * "នៅ" introduces a place, but it equally introduces a time ("នៅម៉ោង ២") and a date
+     * ("នៅថ្ងៃស្អែក"), and an announcement usually contains all three in that order. So every
+     * occurrence is tried rather than only the first, the ones followed by a time or date word
+     * are skipped, and the place runs to the next clause boundary rather than for a fixed
+     * number of words - Khmer writes no spaces between words, so counting them would take in
+     * the rest of the sentence.
+     */
+    private fun parseLocation(text: String, source: String, spans: MutableList<Span>): String? {
         for (marker in KhmerLexicon.LOCATION_MARKERS) {
-            val idx = text.indexOf(marker, ignoreCase = true)
-            if (idx < 0) continue
-            val after = text.substring(idx + marker.length).trim()
-            // Take a short run of words; anything longer is almost certainly the rest of the
-            // sentence rather than a place name.
-            val place = after.split(WS).take(4).joinToString(" ").trim(',', '.', '។', ' ')
-            if (place.length in 2..48) {
-                spans += Span(idx until (idx + marker.length + place.length).coerceAtMost(text.length), "location")
-                return place
+            var from = 0
+            while (from < text.length) {
+                val idx = text.indexOf(marker, from, ignoreCase = true)
+                if (idx < 0) break
+                val after = idx + marker.length
+                from = after
+
+                val tail = text.substring(after)
+                if (TextBoundaries.startsWithAny(tail, TextBoundaries.NOT_A_PLACE)) continue
+
+                val end = after + TextBoundaries.endOfPhrase(tail)
+                val place = source.substring(after, end).trim(',', '.', '។', ':', ' ')
+                if (place.length in 2..48) {
+                    spans += Span(idx until end.coerceAtMost(text.length), "location")
+                    return place
+                }
             }
         }
         return null

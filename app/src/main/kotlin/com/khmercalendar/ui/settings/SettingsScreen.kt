@@ -13,6 +13,7 @@ import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material.icons.outlined.Celebration
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.WorkOutline
 import androidx.compose.material.icons.outlined.SystemUpdateAlt
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Notifications
@@ -147,6 +148,17 @@ fun SettingsScreen(
                     subtitle = "នាំចេញ/នាំចូល JSON និង .ics",
                     icon = Icons.Outlined.Backup,
                     onClick = { onNavigate(Routes.SETTINGS_BACKUP) },
+                )
+            }
+
+            HorizontalDivider()
+
+            SettingsGroup("ការងារ") {
+                SettingsRow(
+                    title = "កាលវិភាគការងារ",
+                    subtitle = "ម៉ោងចូល ចេញ សម្រាក និងការរាប់ថយក្រោយ",
+                    icon = Icons.Outlined.WorkOutline,
+                    onClick = { onNavigate(Routes.SETTINGS_WORK) },
                 )
             }
 

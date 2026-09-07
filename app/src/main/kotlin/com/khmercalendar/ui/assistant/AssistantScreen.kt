@@ -43,11 +43,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.khmercalendar.ai.AnswerSource
 import com.khmercalendar.core.khmer.KhmerTerms
-import com.khmercalendar.core.nlu.EventDraft
+import com.khmercalendar.core.nlu.EventProposal
 import com.khmercalendar.ui.components.localeNumber
 import com.khmercalendar.ui.theme.LocalAppSettings
 import java.time.LocalDate
@@ -64,9 +65,15 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun AssistantScreen(
     viewModel: AssistantViewModel,
+    sharedText: String? = null,
     onOpenEvent: (Long, LocalDate) -> Unit,
     onManageModels: () -> Unit,
 ) {
+    // Text shared in from another app is analysed once, keyed so a rotation does not resend it.
+    LaunchedEffect(sharedText) {
+        sharedText?.let { viewModel.analyseSharedText(it) }
+    }
+
     val state by viewModel.state.collectAsStateWithLifecycle()
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
@@ -134,7 +141,7 @@ fun AssistantScreen(
                             item = item,
                             onAccept = { viewModel.accept(item) },
                             onDismiss = { viewModel.dismiss(item) },
-                            onOpen = { id -> onOpenEvent(id, item.draft.start.toLocalDate()) },
+                            onOpen = { id -> item.proposal.date?.let { d -> onOpenEvent(id, d) } },
                         )
                     }
                 }
@@ -270,21 +277,48 @@ private fun ProposalCard(
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(14.dp)) {
-            Text("ព្រឹត្តិការណ៍ដែលស្នើ", style = MaterialTheme.typography.labelLarge)
+            val proposal = item.proposal
+            val khmerDigits = LocalAppSettings.current.useKhmerNumerals
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("ព្រឹត្តិការណ៍ដែលស្នើ", style = MaterialTheme.typography.labelLarge)
+                Spacer(Modifier.weight(1f))
+                Text(
+                    if (proposal.fromModel) "ពីម៉ូដែល" else "ពីការវិភាគអត្ថបទ",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Spacer(Modifier.height(6.dp))
             Text(
-                item.draft.title,
+                proposal.title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
-            Text(draftWhen(item.draft), style = MaterialTheme.typography.bodyMedium)
-            item.draft.location?.takeIf { it.isNotBlank() }?.let {
+            Text(proposalWhen(proposal), style = MaterialTheme.typography.bodyMedium)
+
+            proposal.location?.takeIf { it.isNotBlank() }?.let {
                 Text("ទីតាំង៖ $it", style = MaterialTheme.typography.bodySmall)
             }
-            if (item.draft.reminderMinutes.isNotEmpty()) {
-                val khmerDigits = LocalAppSettings.current.useKhmerNumerals
+            if (proposal.participants.isNotEmpty()) {
                 Text(
-                    "រំលឹក៖ " + item.draft.reminderMinutes.joinToString(", ") { minutes ->
+                    "អ្នកចូលរួម៖ ${proposal.participants.joinToString(", ")}",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            proposal.description?.takeIf { it.isNotBlank() }?.let {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 4,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (proposal.reminderMinutes.isNotEmpty()) {
+                Text(
+                    "រំលឹក៖ " + proposal.reminderMinutes.joinToString(", ") { minutes ->
                         if (minutes == 0) {
                             "ពេលចាប់ផ្តើម"
                         } else {
@@ -294,14 +328,23 @@ private fun ProposalCard(
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-            if (item.draft.explanation.isNotBlank()) {
+
+            // What the text did not say. Shown rather than quietly filled in, because a gap
+            // the user can see gets corrected and a plausible guess gets accepted.
+            if (proposal.missing.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
                 Text(
-                    item.draft.explanation,
+                    "មិនបានបញ្ជាក់៖ " + proposal.missing.joinToString(", ") { it.labelKm },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp),
+                )
+                Text(
+                    "អ្នកអាចបំពេញបន្ថែមក្រោយពេលរក្សាទុក",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+
             if (item.clashes.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 Surface(
@@ -396,14 +439,22 @@ private fun InputRow(
 
 private val TIME = DateTimeFormatter.ofPattern("HH:mm")
 
+/**
+ * When the proposal is for, saying so plainly when the text did not give a time.
+ *
+ * "ម៉ោងមិនបានបញ្ជាក់" rather than a default hour: the point of the whole extraction path is
+ * that a value nobody wrote is never presented as though somebody did.
+ */
 @Composable
-private fun draftWhen(draft: EventDraft): String {
-    val date = draft.start.toLocalDate()
+private fun proposalWhen(proposal: EventProposal): String {
+    val date = proposal.date ?: return "កាលបរិច្ឆេទមិនបានបញ្ជាក់"
     val day = "${KhmerTerms.dayOfWeek(date.dayOfWeek)} ${localeNumber(date.dayOfMonth)} " +
         "${KhmerTerms.solarMonth(date.monthValue)} ${localeNumber(date.year)}"
-    return if (draft.allDay) {
-        "$day · ពេញមួយថ្ងៃ"
+    val start = proposal.startTime ?: return "$day · ម៉ោងមិនបានបញ្ជាក់"
+    val end = proposal.endTime
+    return if (end == null) {
+        "$day · ${localeNumber(start.format(TIME))}"
     } else {
-        "$day · ${localeNumber(draft.start.format(TIME))} - ${localeNumber(draft.end.format(TIME))}"
+        "$day · ${localeNumber(start.format(TIME))} - ${localeNumber(end.format(TIME))}"
     }
 }

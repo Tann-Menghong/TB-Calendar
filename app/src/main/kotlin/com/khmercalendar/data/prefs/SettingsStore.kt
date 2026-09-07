@@ -12,6 +12,8 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.khmercalendar.core.khmer.CalendarWeek
+import com.khmercalendar.core.work.WorkSchedule
+import com.khmercalendar.core.work.WorkScheduleCodec
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
@@ -73,6 +75,11 @@ class SettingsStore(context: Context) {
             ?.let { saved -> saved + DashboardCard.entries.filterNot { it in saved } }
             ?: DashboardCard.entries.toList(),
         hiddenDashboardCards = this[Keys.DASHBOARD_HIDDEN] ?: emptySet(),
+
+        workSchedule = WorkScheduleCodec
+            .decode(this[Keys.WORK_SCHEDULE])
+            .copy(enabled = this[Keys.WORK_ENABLED] ?: true),
+        workNotifications = this[Keys.WORK_NOTIFICATIONS] ?: false,
 
         widgetTheme = enumOf(this[Keys.WIDGET_THEME], ThemeMode.SYSTEM),
         widgetOpacity = this[Keys.WIDGET_OPACITY] ?: 0.92f,
@@ -136,6 +143,19 @@ class SettingsStore(context: Context) {
         put(Keys.DASHBOARD_ORDER, cards.joinToString(",") { it.key })
 
     suspend fun setDashboardHidden(keys: Set<String>) = put(Keys.DASHBOARD_HIDDEN, keys)
+
+    suspend fun setWorkSchedule(schedule: WorkSchedule) {
+        // The blocks and the on/off switch are separate keys but one user action, so they are
+        // written in one edit: a crash between two writes must not leave the countdown
+        // enabled against a schedule that was never saved.
+        store.edit {
+            it[Keys.WORK_SCHEDULE] = WorkScheduleCodec.encode(schedule)
+            it[Keys.WORK_ENABLED] = schedule.enabled
+        }
+    }
+
+    suspend fun setWorkCountdownEnabled(on: Boolean) = put(Keys.WORK_ENABLED, on)
+    suspend fun setWorkNotifications(on: Boolean) = put(Keys.WORK_NOTIFICATIONS, on)
 
     suspend fun setWidgetTheme(mode: ThemeMode) = put(Keys.WIDGET_THEME, mode.name)
     suspend fun setWidgetOpacity(value: Float) = put(Keys.WIDGET_OPACITY, value.coerceIn(0.2f, 1f))
@@ -231,6 +251,10 @@ class SettingsStore(context: Context) {
         val DEFAULT_DURATION = intPreferencesKey("default_duration")
         val DASHBOARD_ORDER = stringPreferencesKey("dashboard_order")
         val DASHBOARD_HIDDEN = stringSetPreferencesKey("dashboard_hidden")
+
+        val WORK_SCHEDULE = stringPreferencesKey("work_schedule")
+        val WORK_ENABLED = booleanPreferencesKey("work_enabled")
+        val WORK_NOTIFICATIONS = booleanPreferencesKey("work_notifications")
 
         val WIDGET_THEME = stringPreferencesKey("widget_theme")
         val WIDGET_OPACITY = floatPreferencesKey("widget_opacity")

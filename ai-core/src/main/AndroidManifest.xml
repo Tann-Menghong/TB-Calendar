@@ -1,9 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Reaching the network is needed only to fetch a model bundle. Inference itself never
          leaves the device, and the calendar never uses the network at all. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!--
+      Required so a long download may hold a foreground service on Android 14 and later.
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
+    <application>
+
+        <!--
+          WorkManager's foreground service, re-declared to add the type.
+
+          From Android 14 the system rejects startForeground() with a type the <service>
+          element does not declare, and it throws inside onStartCommand on the main thread -
+          where no try/catch in the worker can reach it, so the process dies. WorkManager's
+          own manifest entry declares no type, so a worker calling setForeground() with
+          FOREGROUND_SERVICE_TYPE_DATA_SYNC takes the whole app down with it. This is the
+          crash that closed the app partway through an AI model download.
+
+          It is declared here rather than in the app module because ModelDownloadWorker - the
+          only caller - lives here. Manifest merging carries it into any app that depends on
+          this module, and lint's SpecifyForegroundServiceType check verifies the pair from
+          this side, so the declaration cannot drift away from the code that needs it.
+        -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
+
+    </application>
 
 </manifest>

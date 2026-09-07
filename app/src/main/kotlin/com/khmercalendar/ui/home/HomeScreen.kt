@@ -119,6 +119,23 @@ fun HomeScreen(
                         com.khmercalendar.data.prefs.DashboardCard.COUNTDOWN ->
                             CountdownCard(state.countdowns)
 
+                        com.khmercalendar.data.prefs.DashboardCard.WORK ->
+                            WorkCountdownCard(
+                                schedule = settings.workSchedule,
+                                onOpenSettings = {
+                                    onNavigate(com.khmercalendar.ui.Routes.SETTINGS_WORK)
+                                },
+                            )
+
+                        com.khmercalendar.data.prefs.DashboardCard.QUICK_ACTIONS ->
+                            QuickActionsCard(
+                                onAddEvent = { onAdd(state.today) },
+                                onAddTask = { onAdd(state.today) },
+                                onAddNote = { onOpenDay(state.today) },
+                                onAssistant = { onNavigate(Routes.ASSISTANT) },
+                                onSearch = { onNavigate(Routes.SEARCH) },
+                            )
+
                         com.khmercalendar.data.prefs.DashboardCard.TASKS ->
                             TaskCard(state, viewModel::setTaskCompleted, onOpenEvent)
 

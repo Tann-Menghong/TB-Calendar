@@ -56,6 +56,9 @@ import com.khmercalendar.core.khmer.CalendarWeek
 import com.khmercalendar.core.khmer.KhmerTerms
 import com.khmercalendar.data.prefs.DateFormat
 import com.khmercalendar.data.prefs.TimeFormat
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
+import androidx.compose.material3.Switch
 
 /**
  * Appearance and customization.
@@ -371,19 +374,33 @@ fun AppearanceScreen(
 
             SettingsGroup("ផ្ទាំងដើម") {
                 Text(
-                    "ជ្រើសរើសកាតដែលចង់បង្ហាញ",
+                    "ជ្រើសរើស និងរៀបលំដាប់កាតដែលចង់បង្ហាញ",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
-                DashboardCard.entries.forEach { card ->
-                    SwitchRow(
-                        title = card.labelKm,
-                        checked = card.key !in settings.hiddenDashboardCards,
-                        onChange = { visible ->
+                // The saved order, then anything a newer version added. Reordering writes the
+                // whole list, so a card can never end up in the order twice or not at all.
+                val ordered = settings.dashboardCards
+                ordered.forEachIndexed { index, card ->
+                    DashboardCardRow(
+                        card = card,
+                        visible = card.key !in settings.hiddenDashboardCards,
+                        canMoveUp = index > 0,
+                        canMoveDown = index < ordered.lastIndex,
+                        onToggle = { visible ->
                             val hidden = settings.hiddenDashboardCards.toMutableSet()
                             if (visible) hidden.remove(card.key) else hidden.add(card.key)
                             scope.launch { settingsStore.setDashboardHidden(hidden) }
+                        },
+                        onMove = { delta ->
+                            val next = ordered.toMutableList()
+                            val target = index + delta
+                            if (target in next.indices) {
+                                next[index] = next[target]
+                                next[target] = card
+                                scope.launch { settingsStore.setDashboardOrder(next) }
+                            }
                         },
                     )
                 }
@@ -421,5 +438,45 @@ private fun SliderRow(
             valueRange = range,
             steps = steps,
         )
+    }
+}
+
+/**
+ * One dashboard card: whether it shows, and where it sits.
+ *
+ * Move buttons rather than drag-and-drop. Dragging inside an already-scrolling settings list
+ * is fiddly on a small screen and needs a gesture the user has to discover; two arrows are
+ * obvious, reachable one-handed, and work with a screen reader.
+ */
+@Composable
+private fun DashboardCardRow(
+    card: DashboardCard,
+    visible: Boolean,
+    canMoveUp: Boolean,
+    canMoveDown: Boolean,
+    onToggle: (Boolean) -> Unit,
+    onMove: (Int) -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            card.labelKm,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f),
+            color = if (visible) {
+                MaterialTheme.colorScheme.onSurface
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        )
+        IconButton(onClick = { onMove(-1) }, enabled = canMoveUp) {
+            Icon(Icons.Outlined.KeyboardArrowUp, contentDescription = "ផ្លាស់ឡើងលើ")
+        }
+        IconButton(onClick = { onMove(1) }, enabled = canMoveDown) {
+            Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = "ផ្លាស់ចុះក្រោម")
+        }
+        Switch(checked = visible, onCheckedChange = onToggle)
     }
 }

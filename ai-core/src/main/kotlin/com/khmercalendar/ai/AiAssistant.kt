@@ -4,8 +4,13 @@ import com.khmercalendar.ai.tools.AiEventView
 import com.khmercalendar.ai.tools.CalendarQuery
 import com.khmercalendar.ai.tools.CalendarTools
 import com.khmercalendar.core.khmer.KhmerNumerals
-import com.khmercalendar.core.nlu.EventDraft
+import com.khmercalendar.core.nlu.EventProposal
+import com.khmercalendar.core.nlu.ExtractedFact
+import com.khmercalendar.core.nlu.FactSource
+import com.khmercalendar.core.nlu.KhmerLexicon
+import com.khmercalendar.core.nlu.LongTextEventExtractor
 import com.khmercalendar.core.nlu.NaturalLanguageEventParser
+import com.khmercalendar.core.nlu.ProposalField
 import com.khmercalendar.core.recurrence.Frequency
 import com.khmercalendar.core.recurrence.RecurrenceRule
 import kotlinx.coroutines.flow.Flow
@@ -13,7 +18,6 @@ import kotlinx.coroutines.flow.flow
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
-import java.time.format.DateTimeParseException
 
 /** How an answer was produced, so the UI can say so honestly. */
 enum class AnswerSource {
@@ -29,7 +33,7 @@ sealed interface AssistantReply {
 
     /** A proposed event for the user to confirm; nothing is written until they do. */
     data class Draft(
-        val draft: EventDraft,
+        val proposal: EventProposal,
         val clashes: List<AiEventView>,
         override val source: AnswerSource,
     ) : AssistantReply
@@ -60,31 +64,87 @@ class AiAssistant(
     private val engine: AiEngine,
     private val calendar: CalendarQuery,
     private val parser: NaturalLanguageEventParser = NaturalLanguageEventParser(),
+    private val extractor: LongTextEventExtractor = LongTextEventExtractor(parser),
 ) {
 
     val modelReady: Boolean get() = engine.isReady
 
     /**
-     * Turns a request such as "ថ្ងៃស្អែកម៉ោង ២ រសៀល ប្រជុំជាមួយក្រុមការងារ" into a proposed event.
+     * Turns text into a proposed event.
+     *
+     * Handles both a one-line command ("ថ្ងៃស្អែកម៉ោង ២ រសៀល ប្រជុំជាមួយក្រុមការងារ") and a whole
+     * pasted announcement, because users do both and the difference is not something they
+     * should have to declare. [LongTextEventExtractor] segments the input, finds the sentence
+     * that is actually announcing something, and builds a short title around the event noun
+     * in it - so a pasted paragraph produces "កិច្ចប្រជុំប្រចាំសប្តាហ៍" rather than the paragraph.
+     *
+     * The model is asked only when the rules find nothing, and its answer is validated the
+     * same way. Neither path may invent: a value the text did not state comes back null and
+     * named in [EventProposal.missing].
      */
     suspend fun proposeEvent(text: String, now: LocalDateTime = LocalDateTime.now()): AssistantReply {
-        parser.parse(text, now)
-            ?.takeIf { it.confidence >= NaturalLanguageEventParser.MIN_CONFIDENCE }
-            ?.let { return withClashes(it, AnswerSource.RULES) }
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) {
+            return AssistantReply.Failure("សូមបញ្ចូលអត្ថបទជាមុនសិន")
+        }
+
+        // runCatching, not because a failure is expected, but because this is the one place
+        // user-supplied text of arbitrary shape meets the parser: a crash here would take
+        // the calendar with it, and the whole design says it must not.
+        val extracted = runCatching { extractor.extract(trimmed, now) }.getOrNull()
+        if (extracted != null && extracted.confidence >= MIN_RULE_CONFIDENCE) {
+            return withClashes(extracted, AnswerSource.RULES, now)
+        }
 
         if (!engine.isReady) {
+            // Even a low-confidence rule result beats nothing: it is at least drawn from the
+            // user's own words, and they confirm it before anything is saved.
+            extracted?.let { return withClashes(it, AnswerSource.RULES, now) }
             return AssistantReply.Failure(
-                "មិនអាចយល់សំណើនេះទេ។ សូមសរសេរកាលបរិច្ឆេទ និងម៉ោង ឧទាហរណ៍ «ស្អែក ម៉ោង ២ រសៀល ប្រជុំ»"
+                "មិនអាចយល់សំណើនេះទេ។ សូមសរសេរកាលបរិច្ឆេទ និងម៉ោង " +
+                    "ឧទាហរណ៍ «ស្អែក ម៉ោង ២ រសៀល ប្រជុំ»",
             )
         }
 
-        val prompt = extractionPrompt(text, now)
-        val raw = engine.generate(prompt, maxTokens = 256).getOrElse {
+        val prompt = extractionPrompt(condenseForModel(trimmed), now)
+        val raw = engine.generate(prompt, maxTokens = 320).getOrElse {
+            extracted?.let { fallback -> return withClashes(fallback, AnswerSource.RULES, now) }
             return AssistantReply.Failure("គំរូ AI មិនអាចដំណើរការបានទេ")
         }
-        val draft = parseModelJson(raw, now)
+        val fromModel = runCatching { parseModelJson(raw, now) }.getOrNull()
+            ?: extracted
             ?: return AssistantReply.Failure("មិនអាចបង្កើតព្រឹត្តិការណ៍ពីអត្ថបទនេះទេ")
-        return withClashes(draft, AnswerSource.LOCAL_MODEL)
+        return withClashes(fromModel, AnswerSource.LOCAL_MODEL, now)
+    }
+
+    /**
+     * Shortens text before it reaches the model.
+     *
+     * A small model given three thousand characters spends its whole context on them and
+     * answers worse than it would on the relevant paragraph. The rule extractor has already
+     * located the announcing region, so the model is given a bounded window rather than the
+     * document - which also keeps inference on a mid-range phone to a few seconds.
+     */
+    internal fun condenseForModel(text: String): String {
+        if (text.length <= MODEL_INPUT_BUDGET) return text
+        val sentences = text.split(Regex("(?<=[។!?])|\n+"))
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+        val ranked = sentences.sortedByDescending { sentence ->
+            val lower = KhmerNumerals.toAscii(sentence).lowercase()
+            var score = 0
+            if (KhmerLexicon.EVENT_NOUNS.any { lower.contains(it.lowercase()) }) score += 4
+            if (KhmerLexicon.RELATIVE_DAYS.keys.any { lower.contains(it) }) score += 3
+            if (KhmerLexicon.WEEKDAYS.keys.any { lower.contains(it) }) score += 3
+            if (KhmerLexicon.HOUR_MARKERS.any { lower.contains(it) }) score += 3
+            score
+        }
+        val kept = StringBuilder()
+        for (sentence in ranked) {
+            if (kept.length + sentence.length > MODEL_INPUT_BUDGET) break
+            kept.append(sentence).append(' ')
+        }
+        return kept.toString().trim().ifBlank { text.take(MODEL_INPUT_BUDGET) }
     }
 
     /** Everything in the next [days] days, summarised exactly. */
@@ -163,24 +223,55 @@ class AiAssistant(
 
     // ---------------------------------------------------------------------------------
 
-    private suspend fun withClashes(draft: EventDraft, source: AnswerSource): AssistantReply {
-        val sameWindow = calendar.eventsBetween(draft.start.minusHours(12), draft.end.plusHours(12))
+    /**
+     * Attaches any events the proposal would collide with.
+     *
+     * A proposal with no date cannot clash with anything, and a proposal with no time is an
+     * all-day entry that is checked across the whole day rather than an hour of it.
+     */
+    private suspend fun withClashes(
+        proposal: EventProposal,
+        source: AnswerSource,
+        now: LocalDateTime,
+    ): AssistantReply {
+        val date = proposal.date
+            ?: return AssistantReply.Draft(proposal, emptyList(), source)
+
+        val start = proposal.startTime?.let { LocalDateTime.of(date, it) } ?: date.atStartOfDay()
+        val end = proposal.endTime?.let { LocalDateTime.of(date, it) }
+            ?: if (proposal.startTime == null) date.plusDays(1).atStartOfDay() else start.plusHours(1)
+
+        val sameWindow = runCatching {
+            calendar.eventsBetween(start.minusHours(12), end.plusHours(12))
+        }.getOrDefault(emptyList())
+
         return AssistantReply.Draft(
-            draft = draft,
-            clashes = CalendarTools.clashesWith(sameWindow, draft.start, draft.end),
+            proposal = proposal,
+            clashes = CalendarTools.clashesWith(sameWindow, start, end),
             source = source,
         )
     }
 
     private fun extractionPrompt(text: String, now: LocalDateTime): String = """
-        You convert a Khmer or English request into one calendar event.
+        You extract ONE calendar event from a Khmer or English message.
         Today is ${now.toLocalDate()} (${now.dayOfWeek}), the time is ${now.toLocalTime().withSecond(0).withNano(0)}.
-        Reply with JSON only, no explanation, in exactly this shape:
-        {"title":"","start":"YYYY-MM-DDTHH:MM","end":"YYYY-MM-DDTHH:MM","allDay":false,"location":null,"repeat":null,"remindMinutes":[]}
-        "repeat" is one of null, "DAILY", "WEEKLY", "MONTHLY", "YEARLY".
-        Keep the title in the language the user wrote it in.
 
-        Request: $text
+        Rules:
+        - Reply with JSON only. No explanation, no markdown.
+        - "title" must be a SHORT name for the event, at most 8 words. Never copy the whole
+          message into the title. Summarise it.
+        - Use null for anything the message does not state. NEVER invent a date, a time, a
+          place or a person. A missing time must be null, not a guess.
+        - Put remaining context in "description", not in the title.
+        - Keep the text in the language the user wrote.
+
+        Shape:
+        {"title":"","date":"YYYY-MM-DD","startTime":"HH:MM","endTime":"HH:MM",
+         "location":null,"description":null,"participants":[],"repeat":null,"remindMinutes":[]}
+
+        "repeat" is one of null, "DAILY", "WEEKLY", "MONTHLY", "YEARLY".
+
+        Message: $text
     """.trimIndent()
 
     private fun questionPrompt(question: String, events: List<AiEventView>, now: LocalDateTime): String = """
@@ -202,49 +293,101 @@ class AiAssistant(
      * end, or a date it invented, produces no draft at all rather than a wrong entry in
      * someone's calendar.
      */
-    internal fun parseModelJson(raw: String, now: LocalDateTime): EventDraft? {
+    internal fun parseModelJson(raw: String, now: LocalDateTime): EventProposal? {
         val json = raw.substringAfter('{', "").substringBeforeLast('}', "")
             .let { if (it.isBlank()) return null else "{$it}" }
 
         fun field(name: String): String? =
-            Regex("\"$name\"\\s*:\\s*\"([^\"]*)\"").find(json)?.groupValues?.get(1)?.takeIf { it.isNotBlank() }
+            Regex("\"$name\"\\s*:\\s*\"([^\"]*)\"").find(json)
+                ?.groupValues?.get(1)
+                ?.trim()
+                ?.takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
 
-        val title = field("title") ?: return null
-        val start = field("start")?.let { parseDateTime(it) } ?: return null
-        val allDay = Regex("\"allDay\"\\s*:\\s*true").containsMatchIn(json)
-        val end = field("end")?.let { parseDateTime(it) }
-            ?: if (allDay) start.plusDays(1) else start.plusHours(1)
-        if (!end.isAfter(start)) return null
-        // A model that proposes something years away has almost certainly misread the date.
-        if (start.isBefore(now.minusYears(1)) || start.isAfter(now.plusYears(5))) return null
+        // A title is the one thing a proposal cannot do without, and a model that returns the
+        // whole message as its title has failed the instruction; cap it rather than accept it.
+        val title = field("title")?.let { capTitle(it) } ?: return null
+        val date = field("date")?.let { parseDate(it) } ?: return null
 
-        val repeat = field("repeat")?.uppercase()?.let { r ->
-            Frequency.entries.firstOrNull { it.name == r }
-        }?.let { RecurrenceRule(it) }
+        // A date the model placed years away has almost certainly been misread.
+        if (date.isBefore(now.toLocalDate().minusYears(1)) ||
+            date.isAfter(now.toLocalDate().plusYears(5))
+        ) {
+            return null
+        }
+
+        val startTime = field("startTime")?.let { parseTimeOfDay(it) }
+        val endTime = field("endTime")?.let { parseTimeOfDay(it) }
+            ?.takeIf { startTime == null || it.isAfter(startTime) }
+
+        val repeat = field("repeat")?.uppercase()
+            ?.let { r -> Frequency.entries.firstOrNull { it.name == r } }
+            ?.let { RecurrenceRule(it) }
 
         val reminders = Regex("\"remindMinutes\"\\s*:\\s*\\[([^]]*)]").find(json)
             ?.groupValues?.get(1).orEmpty()
             .split(',').mapNotNull { it.trim().toIntOrNull() }.filter { it in 0..40_320 }
 
-        return EventDraft(
-            title = title.trim(),
-            start = start,
-            end = end,
-            allDay = allDay,
+        val participants = Regex("\"participants\"\\s*:\\s*\\[([^]]*)]").find(json)
+            ?.groupValues?.get(1).orEmpty()
+            .split(',')
+            .mapNotNull { it.trim().trim('"').takeIf { p -> p.isNotBlank() } }
+            .take(10)
+
+        val missing = buildList {
+            if (startTime == null) add(ProposalField.START_TIME)
+            if (field("location") == null) add(ProposalField.LOCATION)
+            if (reminders.isEmpty()) add(ProposalField.REMINDER)
+        }
+
+        val facts = buildList {
+            add(ExtractedFact(ProposalField.TITLE, title, FactSource.INFERRED))
+            add(ExtractedFact(ProposalField.DATE, date.toString(), FactSource.EXPLICIT))
+            startTime?.let {
+                add(ExtractedFact(ProposalField.START_TIME, it.toString(), FactSource.EXPLICIT))
+            }
+        }
+
+        return EventProposal(
+            title = title,
+            date = date,
+            startTime = startTime,
+            endTime = endTime,
+            durationMinutes = if (startTime != null && endTime != null) {
+                java.time.Duration.between(startTime, endTime).toMinutes().toInt()
+            } else {
+                null
+            },
             location = field("location"),
+            description = field("description"),
+            participants = participants,
             recurrence = repeat,
             reminderMinutes = reminders,
             confidence = 0.6f,
-            explanation = "បង្កើតដោយគំរូ AI ក្នុងឧបករណ៍",
+            facts = facts,
+            missing = missing,
+            fromModel = true,
         )
     }
 
-    private fun parseDateTime(value: String): LocalDateTime? = try {
-        when {
-            value.contains('T') -> LocalDateTime.parse(value.take(16))
-            else -> LocalDate.parse(value.take(10)).atStartOfDay()
-        }
-    } catch (_: DateTimeParseException) {
-        null
+    /** Keeps a model title to a name, however much it wanted to write. */
+    private fun capTitle(raw: String): String {
+        val words = raw.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+        return words.take(MODEL_TITLE_MAX_WORDS).joinToString(" ").take(80)
+    }
+
+    private fun parseDate(value: String): LocalDate? =
+        runCatching { LocalDate.parse(value.take(10)) }.getOrNull()
+
+    private fun parseTimeOfDay(value: String): LocalTime? =
+        runCatching { LocalTime.parse(value.trim().take(5)) }.getOrNull()
+
+    companion object {
+        /** Below this the model is asked, if one is loaded. */
+        const val MIN_RULE_CONFIDENCE = 0.55f
+
+        /** Characters of context the model is given. Beyond it, the text is condensed. */
+        const val MODEL_INPUT_BUDGET = 1_200
+
+        private const val MODEL_TITLE_MAX_WORDS = 8
     }
 }

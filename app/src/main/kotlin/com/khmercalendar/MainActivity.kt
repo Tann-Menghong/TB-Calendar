@@ -106,10 +106,26 @@ class MainActivity : ComponentActivity() {
             ACTION_VIEW_DAY -> ExternalDestination.Day(dateExtra(intent) ?: LocalDate.now())
             ACTION_NEW_EVENT -> ExternalDestination.NewEvent(dateExtra(intent))
             ACTION_ASSISTANT -> ExternalDestination.Assistant
+
+            // Text shared in from another app - a message, an email, a notice. This is the
+            // realistic way a long announcement reaches the calendar: the user long-presses
+            // it where they read it rather than retyping it here.
+            Intent.ACTION_SEND, Intent.ACTION_PROCESS_TEXT ->
+                sharedText(intent)?.let { ExternalDestination.TextToEvent(it) }
+
             Intent.ACTION_VIEW -> intent.data?.let { ExternalDestination.ImportIcs(it.toString()) }
             else -> null
         }
     }
+
+    /** Text arrives under different extras depending on which share surface sent it. */
+    private fun sharedText(intent: Intent): String? = sequenceOf(
+        Intent.EXTRA_TEXT,
+        "android.intent.extra.PROCESS_TEXT",
+        Intent.EXTRA_SUBJECT,
+    ).mapNotNull { intent.getCharSequenceExtra(it)?.toString() }
+        .firstOrNull { it.isNotBlank() }
+        ?.take(MAX_SHARED_TEXT)
 
     private fun dateExtra(intent: Intent): LocalDate? =
         intent.getStringExtra(EXTRA_DATE)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
@@ -119,6 +135,9 @@ class MainActivity : ComponentActivity() {
         const val ACTION_VIEW_DAY = "com.khmercalendar.action.VIEW_DAY"
         const val ACTION_NEW_EVENT = "com.khmercalendar.action.NEW_EVENT"
         const val ACTION_ASSISTANT = "com.khmercalendar.action.ASSISTANT"
+
+        /** Beyond this, a share is not an announcement, it is a document. */
+        private const val MAX_SHARED_TEXT = 20_000
 
         const val EXTRA_EVENT_ID = "eventId"
         const val EXTRA_DATE = "date"
@@ -154,4 +173,7 @@ sealed interface ExternalDestination {
     data class NewEvent(val date: LocalDate?) : ExternalDestination
     data class ImportIcs(val uri: String) : ExternalDestination
     data object Assistant : ExternalDestination
+
+    /** Text shared in from another app, to be turned into an event. */
+    data class TextToEvent(val text: String) : ExternalDestination
 }

@@ -63,6 +63,22 @@
                 <action android:name="com.khmercalendar.action.VIEW_DAY" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <!--
+              Lets any app share text here - a message, an email, a notice - which the
+              assistant turns into a proposed event. Sharing is how a long announcement
+              actually reaches a calendar; retyping it is not.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.PROCESS_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+
             <!-- Lets another app hand this one an .ics file to import. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -131,19 +147,10 @@
         </provider>
 
         <!--
-          WorkManager's foreground service, re-declared to add the type.
-
-          From Android 14 the system rejects startForeground() with a type that the <service>
-          element does not declare, and it throws inside onStartCommand on the main thread -
-          where no try/catch in the worker can reach it, so the process dies. WorkManager's
-          own manifest entry declares no type, so any worker calling setForeground() with
-          FOREGROUND_SERVICE_TYPE_DATA_SYNC would take the whole app down with it. Merging
-          the attribute in here is the fix; ModelDownloadWorker is the only user.
+          WorkManager's foreground service is re-declared with android:foregroundServiceType
+          in :ai-core, next to the worker that needs it, and merged in from there. See the
+          comment on that manifest for why the app crashed without it.
         -->
-        <service
-            android:name="androidx.work.impl.foreground.SystemForegroundService"
-            android:foregroundServiceType="dataSync"
-            tools:node="merge" />
 
         <!--
           WorkManager's own initializer is removed so it starts on demand rather than on every
