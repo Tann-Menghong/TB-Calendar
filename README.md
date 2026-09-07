@@ -148,6 +148,10 @@ so swapping the runtime or the model does not touch the calendar. See
 - [docs/HOLIDAYS.md](docs/HOLIDAYS.md) — which holidays are computed, which are gazetted,
   and how to correct a year.
 - [docs/AI_MODELS.md](docs/AI_MODELS.md) — how to replace, add or sideload a model.
+- [docs/DESIGN.md](docs/DESIGN.md) — the UI/UX specification: screens, states, typography,
+  accessibility.
+- [docs/ROADMAP.md](docs/ROADMAP.md) — what was done for performance and why, and what comes
+  next.
 
 ## Licence and attribution
 

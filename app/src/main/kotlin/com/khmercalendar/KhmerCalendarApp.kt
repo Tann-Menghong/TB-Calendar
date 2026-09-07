@@ -8,9 +8,11 @@ import com.khmercalendar.ai.model.foregroundInfoCompat
 import com.khmercalendar.core.khmer.KhmerNumerals
 import com.khmercalendar.notify.NotificationChannels
 import com.khmercalendar.notify.ReminderSyncWorker
+import com.khmercalendar.widget.refreshWidgets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 
 class KhmerCalendarApp : Application(), Configuration.Provider {
@@ -55,9 +57,31 @@ class KhmerCalendarApp : Application(), Configuration.Provider {
             runCatching { container.reminderScheduler.rescheduleAll() }
             ReminderSyncWorker.enqueue(this@KhmerCalendarApp)
         }
+
+        observeDataForWidgets()
+    }
+
+    /**
+     * Redraws the home-screen widgets when calendar data changes.
+     *
+     * Watching the tables rather than hooking each write path means a save, a delete, an
+     * .ics import and a restore all reach the widgets, and none of them has to remember to.
+     * The debounce collapses the burst of table notifications a bulk import produces into a
+     * single redraw.
+     */
+    private fun observeDataForWidgets() {
+        appScope.launch {
+            runCatching {
+                container.database.invalidationTracker
+                    .createFlow("events", "event_exceptions", "day_notes", emitInitialState = false)
+                    .debounce(WIDGET_REFRESH_DEBOUNCE_MS)
+                    .collect { refreshWidgets(this@KhmerCalendarApp) }
+            }
+        }
     }
 
     private companion object {
         const val DOWNLOAD_NOTIFICATION_ID = 4201
+        const val WIDGET_REFRESH_DEBOUNCE_MS = 400L
     }
 }
