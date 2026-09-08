@@ -3,7 +3,6 @@ package com.khmercalendar.ui.home
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,7 +15,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -672,11 +674,17 @@ fun UpNextStrip(
     Column(modifier.fillMaxWidth()) {
         ModuleLabel("UP NEXT", color = calendarAccent)
         Spacer(Modifier.height(Spacing.md))
-        Row(
-            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        // A snapping rail rather than free scrolling. The cards are all one width and are
+        // read one at a time, so a flick that stops halfway through a card leaves the user
+        // looking at two halves; snapping means a flick always lands on something readable.
+        val railState = rememberLazyListState()
+        LazyRow(
+            state = railState,
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+            flingBehavior = rememberSnapFlingBehavior(railState),
         ) {
-            items.forEach { item ->
+            itemsIndexed(items, key = { index, item -> "$index:${item.title}" }) { _, item ->
                 Column(
                     Modifier
                         .width(152.dp)

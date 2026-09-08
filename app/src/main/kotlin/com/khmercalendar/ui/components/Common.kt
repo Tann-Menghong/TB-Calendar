@@ -138,7 +138,7 @@ fun EmptyState(
 }
 
 @Composable
-fun ColorDot(color: Color, size: Int = 10, modifier: Modifier = Modifier) {
+fun ColorDot(color: Color, modifier: Modifier = Modifier, size: Int = 10) {
     Box(
         modifier
             .size(size.dp)

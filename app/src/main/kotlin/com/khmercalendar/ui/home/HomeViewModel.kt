@@ -4,11 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.khmercalendar.core.holiday.Holiday
 import com.khmercalendar.core.holiday.KhmerHolidays
+import com.khmercalendar.core.khmer.CalendarWeek
 import com.khmercalendar.core.khmer.Chhankitek
 import com.khmercalendar.core.khmer.KhmerLunarDate
 import com.khmercalendar.data.prefs.AppSettings
 import com.khmercalendar.data.repo.EventRepository
+import com.khmercalendar.domain.DayLoad
 import com.khmercalendar.domain.EventOccurrence
+import com.khmercalendar.domain.WeekOverview
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,7 +19,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -49,6 +54,9 @@ data class HomeState(
     val tasks: List<EventOccurrence> = emptyList(),
     val holidays: List<Holiday> = emptyList(),
     val countdowns: List<Countdown> = emptyList(),
+    /** The seven days of the current week, including the ones already behind today. */
+    val week: List<DayLoad> = emptyList(),
+    val weekTotals: WeekOverview.Totals = WeekOverview.Totals(0, 0, 0, null),
     val stats: HomeStats = HomeStats(),
     val note: String = "",
     val isLoading: Boolean = true,
@@ -90,10 +98,27 @@ class HomeViewModel(
     /** The note text being typed, which must not be overwritten by the stored value. */
     val noteDraft: StateFlow<String?> = _noteDraft.asStateFlow()
 
-    val state: StateFlow<HomeState> = today
-        .flatMapLatest { day ->
+    /**
+     * What the query window depends on.
+     *
+     * The first day of the week is in here rather than read inside [build] because it moves
+     * the *start* of the range: the week module needs the days already behind today, which the
+     * old window (today onwards) never loaded. Only the week-start is watched, not the whole
+     * settings object - re-running the database query every time the accent colour changes
+     * would be a query per tap of a colour swatch.
+     */
+    private val window = combine(
+        today,
+        settings.map { it.weekStart }.distinctUntilChanged(),
+    ) { day, weekStart -> day to weekStart }
+
+    val state: StateFlow<HomeState> = window
+        .flatMapLatest { (day, weekStart) ->
             combine(
-                repository.observeOccurrences(day, day.plusDays(WINDOW_DAYS)),
+                repository.observeOccurrences(
+                    CalendarWeek.startOfWeek(day, weekStart),
+                    day.plusDays(WINDOW_DAYS),
+                ),
                 repository.observeNote(day),
                 settings,
             ) { byDate, note, prefs ->
@@ -110,7 +135,13 @@ class HomeViewModel(
     ): HomeState = withContext(Dispatchers.Default) {
         val now = LocalDateTime.now()
         val todayEvents = byDate[day].orEmpty().sortedBy { it.start }
+
+        // Everything below "what is coming up" is deliberately clamped to today onwards. The
+        // window now reaches back to the start of the week for the week module, and without
+        // this clamp Monday's finished meetings would reappear in the upcoming list on a
+        // Thursday.
         val flat = byDate.entries
+            .filterNot { it.key.isBefore(day) }
             .sortedBy { it.key }
             .flatMap { entry -> entry.value.sortedBy { it.start } }
 
@@ -144,6 +175,20 @@ class HomeViewModel(
             }
         }
 
+        val week = WeekOverview.build(
+            today = day,
+            weekStart = prefs.weekStart,
+            byDate = byDate,
+            holidayDates = if (prefs.showHolidays) {
+                KhmerHolidays.inRange(
+                    CalendarWeek.startOfWeek(day, prefs.weekStart),
+                    CalendarWeek.startOfWeek(day, prefs.weekStart).plusDays(6),
+                ).map { it.date }.toSet()
+            } else {
+                emptySet()
+            },
+        )
+
         val monthEnd = day.withDayOfMonth(day.lengthOfMonth())
         HomeState(
             today = day,
@@ -153,8 +198,12 @@ class HomeViewModel(
             tasks = tasks,
             holidays = holidays,
             countdowns = countdowns,
+            week = week,
+            weekTotals = WeekOverview.totals(week),
             stats = HomeStats(
-                eventsThisMonth = byDate.filterKeys { !it.isAfter(monthEnd) }.values.sumOf { it.size },
+                eventsThisMonth = byDate
+                    .filterKeys { !it.isBefore(day) && !it.isAfter(monthEnd) }
+                    .values.sumOf { it.size },
                 openTasks = flat.count { it.isTask && !it.isCompleted },
                 doneTasks = flat.count { it.isTask && it.isCompleted },
                 todayTasksDone = todayEvents.count { it.isTask && it.isCompleted },

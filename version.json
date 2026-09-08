@@ -1,11 +1,11 @@
 {
-  "versionCode": 10,
-  "versionName": "1.6.0",
-  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v1.6.0/TB-Calendar-1.6.0.apk",
-  "apkSizeBytes": 60094776,
-  "apkSha256": "1881d668812feaf3ed6aff0903eb80b134984b91117779c545b1bbdc95b0fe62",
+  "versionCode": 11,
+  "versionName": "1.7.0",
+  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v1.7.0/TB-Calendar-1.7.0.apk",
+  "apkSizeBytes": 60182940,
+  "apkSha256": "693f10bbd36e8b9a1859414942663295ec10e56d6ddbc2909376eb04c64165c6",
   "minSdk": 26,
-  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v1.6.0",
-  "releaseNotesKm": "ការកំណត់ចលនាថ្មី។ តិចបំផុត ធម្មតា ឬ ច្រើន។ កាតស្ថានភាពការងារប្តូរពណ៌យឺតៗ និងកាលវិភាគចូលមកជាលំដាប់។",
-  "releaseNotesEn": "An animation setting you control, and one gate every animation in the app goes through - including your phone's own reduced-motion switch, which still wins. The work card crossfades between states, the timeline arrives as a sequence, figures count to their new value, and the next event says when it is starting soon."
+  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v1.7.0",
+  "releaseNotesKm": "ផ្ទាំងទិដ្ឋភាពសប្តាហ៍ថ្មី។ អេក្រង់រៀបចំផ្ទាំងដើមដោយឡែក មានគំរូ ការអូស និងព្រួញ។ ចុចឱ្យយូរលើផ្ទាំងណាមួយដើម្បីលាក់ ឬផ្លាស់ទី។",
+  "releaseNotesEn": "The week as seven bars, so you can see which day is going to be busy before you get there. A dashboard editor of its own with four presets, drag-to-reorder and the arrows kept beside it, and a long press on any module to hide or move it without leaving the screen. The header greets you and sheds two lines as you scroll."
 }

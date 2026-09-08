@@ -2,6 +2,7 @@ package com.khmercalendar.ui.components
 
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
@@ -62,6 +63,20 @@ object AppMotion {
     fun <T> tweenOf(base: Int, easing: androidx.compose.animation.core.Easing = FastOutSlowInEasing): AnimationSpec<T> {
         val duration = durationOf(base)
         return if (duration <= 0) snap() else tween(durationMillis = duration, easing = easing)
+    }
+
+    /**
+     * The same tween, typed as finite.
+     *
+     * [fadeIn][androidx.compose.animation.fadeIn] and the other enter/exit transitions will
+     * not accept an open-ended spec, and an animation that cannot take the gate's spec is an
+     * animation that ends up ungated.
+     */
+    @Composable
+    @ReadOnlyComposable
+    fun <T> finiteTweenOf(base: Int): FiniteAnimationSpec<T> {
+        val duration = durationOf(base)
+        return if (duration <= 0) snap() else tween(durationMillis = duration, easing = FastOutSlowInEasing)
     }
 
     /** The spec for something entering the screen: slightly softer than a state change. */

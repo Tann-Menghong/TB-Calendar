@@ -147,6 +147,20 @@ class SettingsStore(context: Context) {
 
     suspend fun setDashboardHidden(keys: Set<String>) = put(Keys.DASHBOARD_HIDDEN, keys)
 
+    /**
+     * Writes an order and a hidden set together.
+     *
+     * Applying a preset or resetting the dashboard changes both, and they are one user action.
+     * Two separate writes would let a crash in between leave a module ordered into a position
+     * it is also hidden from - recoverable only by finding the editor the user was already in.
+     */
+    suspend fun setDashboardArrangement(cards: List<DashboardCard>, hidden: Set<String>) {
+        store.edit {
+            it[Keys.DASHBOARD_ORDER] = cards.joinToString(",") { card -> card.key }
+            it[Keys.DASHBOARD_HIDDEN] = hidden
+        }
+    }
+
     suspend fun setDashboardDensity(density: DashboardDensity) =
         put(Keys.DASHBOARD_DENSITY, density.name)
 

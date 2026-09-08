@@ -1,26 +1,43 @@
 package com.khmercalendar.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.khmercalendar.data.prefs.DashboardCard
+import com.khmercalendar.data.prefs.SettingsStore
+import com.khmercalendar.domain.DashboardArrangement
 import com.khmercalendar.domain.DayTimeline
 import com.khmercalendar.ui.Routes
 import com.khmercalendar.ui.components.DashboardSkeleton
@@ -31,6 +48,7 @@ import com.khmercalendar.ui.theme.CardAccent
 import com.khmercalendar.ui.theme.LocalAppSettings
 import com.khmercalendar.ui.theme.Spacing
 import com.khmercalendar.ui.theme.color
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -58,6 +76,7 @@ import java.time.LocalTime
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
+    settingsStore: SettingsStore,
     onOpenEvent: (Long, LocalDate) -> Unit,
     onOpenDay: (LocalDate) -> Unit,
     onAdd: (LocalDate) -> Unit,
@@ -67,6 +86,21 @@ fun HomeScreen(
     val noteDraft by viewModel.noteDraft.collectAsStateWithLifecycle()
     val settings = LocalAppSettings.current
     val density = settings.dashboardDensity
+    val scope = rememberCoroutineScope()
+    val haptics = LocalHapticFeedback.current
+
+    val listState = rememberLazyListState()
+    // derivedStateOf, not a plain read: the scroll offset changes on every frame of a fling,
+    // and a boolean recomputed there would recompose the header sixty times a second to hand
+    // it the same value.
+    val compactHeader by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 24
+        }
+    }
+
+    /** The module whose long-press menu is open, if any. */
+    var sheetFor by remember { mutableStateOf<DashboardCard?>(null) }
 
     Column(
         Modifier
@@ -77,9 +111,11 @@ fun HomeScreen(
             date = state.today,
             onSearch = { onNavigate(Routes.SEARCH) },
             onSettings = { onNavigate(Routes.SETTINGS) },
+            compact = compactHeader,
         )
 
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
                 start = Spacing.lg,
@@ -95,16 +131,42 @@ fun HomeScreen(
 
             settings.visibleDashboardCards().forEach { card ->
                 item(key = card.key) {
-                    DashboardModule(
-                        card = card,
-                        state = state,
-                        noteDraft = noteDraft,
-                        viewModel = viewModel,
-                        onOpenEvent = onOpenEvent,
-                        onOpenDay = onOpenDay,
-                        onAdd = onAdd,
-                        onNavigate = onNavigate,
-                    )
+                    Column(
+                        Modifier
+                            // Long-press opens the module's own menu. The gesture sits on the
+                            // wrapper rather than inside each module: a child that handles
+                            // taps consumes the press first, so opening an event still opens
+                            // the event, and the long press is available everywhere else.
+                            .pointerInput(card) {
+                                detectTapGestures(
+                                    onLongPress = {
+                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        sheetFor = card
+                                    },
+                                )
+                            }
+                            // A long press is invisible to a screen reader, so the same menu
+                            // is offered as a named action on the module.
+                            .semantics {
+                                customActions = listOf(
+                                    CustomAccessibilityAction(EDIT_MODULE_ACTION) {
+                                        sheetFor = card
+                                        true
+                                    },
+                                )
+                            },
+                    ) {
+                        DashboardModule(
+                            card = card,
+                            state = state,
+                            noteDraft = noteDraft,
+                            viewModel = viewModel,
+                            onOpenEvent = onOpenEvent,
+                            onOpenDay = onOpenDay,
+                            onAdd = onAdd,
+                            onNavigate = onNavigate,
+                        )
+                    }
                 }
             }
 
@@ -123,7 +185,52 @@ fun HomeScreen(
             item { Spacer(Modifier.height(Spacing.lg)) }
         }
     }
+
+    sheetFor?.let { card ->
+        // The order to move within is the saved one, not the visible one: moving a module up
+        // past a hidden neighbour has to move it past that neighbour, or unhiding it later
+        // would put it somewhere the user never placed it.
+        val order = settings.dashboardCards
+        val rows = DashboardArrangement.arrangeable(order)
+        val index = rows.indexOf(card)
+        ModuleSheet(
+            card = card,
+            canMoveUp = index > 0,
+            canMoveDown = index >= 0 && index < rows.lastIndex,
+            bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding(),
+            onDismiss = { sheetFor = null },
+            onHide = {
+                sheetFor = null
+                scope.launch {
+                    settingsStore.setDashboardHidden(settings.hiddenDashboardCards + card.key)
+                }
+            },
+            onMove = { delta ->
+                sheetFor = null
+                val target = index + delta
+                if (target in rows.indices) {
+                    scope.launch {
+                        settingsStore.setDashboardOrder(
+                            DashboardArrangement.move(
+                                order,
+                                order.indexOf(rows[index]),
+                                order.indexOf(rows[target]),
+                            ),
+                        )
+                    }
+                }
+            },
+            onEdit = {
+                sheetFor = null
+                onNavigate(Routes.SETTINGS_DASHBOARD)
+            },
+        )
+    }
 }
+
+/** Named once so the sheet's title and the accessibility action cannot drift apart. */
+internal const val EDIT_MODULE_ACTION = "កែផ្ទាំង"
+
 
 /**
  * One module, chosen by its key.
@@ -169,6 +276,12 @@ private fun DashboardModule(
             eventsToday = state.todayEvents.size,
             onOpenEvent = onOpenEvent,
             onOpenTasks = { onNavigate(Routes.AGENDA) },
+        )
+
+        DashboardCard.WEEK -> WeekModule(
+            days = state.week,
+            totals = state.weekTotals,
+            onOpenDay = onOpenDay,
         )
 
         DashboardCard.TIMELINE -> {

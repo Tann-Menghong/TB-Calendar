@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.Category
+import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Celebration
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.WorkOutline
@@ -67,6 +68,12 @@ fun SettingsScreen(
                     subtitle = "ពណ៌ ទំហំអក្សរ និងអ្វីដែលបង្ហាញ",
                     icon = Icons.Outlined.Palette,
                     onClick = { onNavigate(Routes.SETTINGS_APPEARANCE) },
+                )
+                SettingsRow(
+                    title = "ផ្ទាំងដើម",
+                    subtitle = "លំដាប់ គំរូ និងផ្ទាំងដែលបង្ហាញ",
+                    icon = Icons.Outlined.Dashboard,
+                    onClick = { onNavigate(Routes.SETTINGS_DASHBOARD) },
                 )
                 SettingsRow(
                     title = "ប្រភេទព្រឹត្តិការណ៍",

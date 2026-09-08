@@ -1,5 +1,73 @@
 # Changelog
 
+## 1.7.0 — 2026-09-08
+
+1.6.0 made the dashboard move. This one makes it **yours** — and adds the view it was missing.
+
+### ទិដ្ឋភាពសប្តាហ៍ · The week, as seven bars
+
+The dashboard could tell you about today, and about the next sixty days, and had nothing to say about the week you are actually in — which is the horizon most people plan against. Seven bars answer *is Thursday going to be bad* in one glance, which no amount of scrolling a list does.
+
+**Events and tasks stack in different tones** rather than adding up into one bar. Eight events is a full day; eight tasks is a full week. One bar would say they were the same thing.
+
+Height is never the only signal: every bar keeps its date under it, today is a filled pill rather than merely a taller bar, and a free day draws a baseline stub so the week reads as seven days one of which is empty — not as six days.
+
+A week with a single event does not draw one full-height bar and six empty ones. A bar chart's job is to compare, and there is nothing to compare one value against, so the scale has a floor.
+
+Tap any bar to open that day.
+
+#### The query had to move first
+
+The dashboard loaded events from today onwards, so Monday and Tuesday were simply not in memory by Thursday and the first bars would have been empty. The window now starts at the first day of *your* week — the week-start preference, not Monday — and everything that means "what is coming up" is clamped back to today, so no existing figure on the dashboard changed.
+
+### រៀបចំផ្ទាំងដើម · The dashboard editor
+
+Which modules appear, and in what order, was a block at the bottom of the appearance screen, below the wallpaper opacity slider. The one control that decides what the app's main screen contains was the last thing on a long page. It is now its own screen — **ការកំណត់ → ផ្ទាំងដើម** — with three ways to arrange it, on purpose:
+
+**គំរូ · Presets.** One tap: **សាមញ្ញ**, **ផ្តោតលើការងារ**, **រៀបចំផែនការ**, **ទាំងអស់**. Each is a starting point, not a mode — everything stays editable afterwards. A preset *hides* what it does not name rather than dropping it, so no module ever becomes unrecoverable, and the row tells you honestly when your layout is your own rather than showing a preset that no longer matches your screen.
+
+**Dragging**, by the grip on the left, for rearranging several modules at once.
+
+**The arrows**, which are not a fallback. They are reachable one-handed, they work with a screen reader, and they need no gesture you have to discover first. Drag was added *alongside* them for exactly that reason. The drag deliberately does not auto-scroll: a list being reordered under a finger while it scrolls itself is where this kind of control usually starts losing items, so a long move is still an arrows job.
+
+Applying a preset or resetting writes the order and the hidden set in one operation. Half of an arrangement would leave a module ordered into a place it is also hidden from.
+
+### ចុចឱ្យយូរលើផ្ទាំងណាមួយ · Long-press any module
+
+Hide it, move it up, move it down, or open the editor — without leaving the dashboard, with the module you are changing under your finger. A long press is invisible to a screen reader, so the same menu is offered there as a named action on each module.
+
+Hiding says where to get it back from, because it is reversible and should not need a confirmation dialog.
+
+### The header
+
+**A greeting instead of the app's own name.** Someone who has just tapped the ប្រតិទិនខ្មែរ icon does not need telling which app opened. Four bands, not the usual three, because Khmer distinguishes រសៀល from ល្ងាច.
+
+**It sheds two lines as you scroll** — the date, which the card below repeats, and the offline badge, which is a statement rather than a live value. The greeting, the clock and the two controls never move: the time and the way to search are wanted at any depth of the dashboard.
+
+### ព្រឹត្តិការណ៍ខាងមុខ snaps
+
+The up-next rail now settles on a card instead of stopping wherever the flick ran out. The cards are one width and read one at a time; a flick that halts between two of them leaves you looking at two halves.
+
+### Fixed on the device
+
+The long-press menu opened at half height, which was shorter than its own four actions — the last one sat under the navigation bar on an **Android 8.0** phone with three buttons, where it could not be tapped. Found by tapping it on that phone, not by reading the code.
+
+A free day's baseline stub was drawn too faint to see, which made an empty week look like a broken chart.
+
+### Tested
+
+**207 unit tests** pass and lint is clean, including 27 new ones covering the week's arithmetic, the reorder rules and the greeting bands. Checked on an **Android 8.0 (API 26)** emulator with a seeded uneven week: the bars against the actual data, the preset applying and the dashboard changing to match, the reset restoring it, the arrows, the compact header, and the long-press menu clearing the navigation bar.
+
+One thing was not: the drag-to-reorder gesture itself. `adb` on API 26 cannot express hold-then-drag, so it was not exercised on the device — the arrows do the same job and were.
+
+### Privacy
+
+Unchanged: no account, no analytics, no tracking, no ads. Your calendar never leaves the device. The AI is optional, off by default, and runs entirely on-device.
+
+### Install
+
+Android 8.0 (API 26) or later. Download `TB-Calendar-1.7.0.apk` below. Upgrading keeps your events, tasks, notes and settings — including your dashboard layout, which gains the week module at the end of it.
+
 ## 1.6.0 — 2026-09-08
 
 1.5.0 built the dashboard's structure. This one makes it move — and puts every animation in the app behind one switch you control.

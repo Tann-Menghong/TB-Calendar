@@ -62,6 +62,7 @@ import com.khmercalendar.ui.settings.AppearanceScreen
 import com.khmercalendar.ui.settings.BackupScreen
 import com.khmercalendar.ui.settings.CategoriesScreen
 import com.khmercalendar.ui.settings.CategoriesViewModel
+import com.khmercalendar.ui.settings.DashboardEditorScreen
 import com.khmercalendar.ui.settings.NotificationSettingsScreen
 import com.khmercalendar.ui.settings.SettingsScreen
 import java.time.LocalDate
@@ -185,6 +186,7 @@ fun KhmerCalendarNavHost(
                 val vm: HomeViewModel = viewModel(factory = factory)
                 HomeScreen(
                     viewModel = vm,
+                    settingsStore = container.settingsStore,
                     onOpenEvent = { id, date -> navController.navigate(Routes.eventDetail(id, date.toString())) },
                     onOpenDay = { date ->
                         calendarViewModel.select(date)
@@ -264,6 +266,15 @@ fun KhmerCalendarNavHost(
 
             composable(Routes.SETTINGS_APPEARANCE) {
                 AppearanceScreen(
+                    settings = settings,
+                    settingsStore = container.settingsStore,
+                    onOpenDashboard = { navController.navigate(Routes.SETTINGS_DASHBOARD) },
+                    onBack = navController::popBackStack,
+                )
+            }
+
+            composable(Routes.SETTINGS_DASHBOARD) {
+                DashboardEditorScreen(
                     settings = settings,
                     settingsStore = container.settingsStore,
                     onBack = navController::popBackStack,

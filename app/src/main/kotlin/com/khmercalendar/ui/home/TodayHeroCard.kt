@@ -1,5 +1,11 @@
 package com.khmercalendar.ui.home
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -37,6 +43,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.khmercalendar.core.khmer.KhmerTerms
+import com.khmercalendar.domain.DayGreeting
+import com.khmercalendar.ui.components.AppMotion
 import com.khmercalendar.ui.components.CalendarFormats
 import com.khmercalendar.ui.components.LocalUses24Hour
 import com.khmercalendar.ui.components.localeNumber
@@ -45,6 +53,7 @@ import com.khmercalendar.ui.theme.AppType
 import com.khmercalendar.ui.theme.CardAccent
 import com.khmercalendar.ui.theme.IconSize
 import com.khmercalendar.ui.theme.LocalAppSettings
+import com.khmercalendar.ui.theme.Motion
 import com.khmercalendar.ui.theme.Radius
 import com.khmercalendar.ui.theme.Spacing
 import com.khmercalendar.ui.theme.Stroke
@@ -63,6 +72,16 @@ import java.time.LocalDateTime
  * ប្រតិទិនខ្មែរ icon. On the screen whose whole job is to answer *what is happening now*, that
  * is the least useful row available. It is replaced by a status strip that spends the same
  * height on the date, a running clock and the app's offline state.
+ *
+ * ## Compact
+ *
+ * The header does not scroll away, because the time and the way back to search are wanted at
+ * any depth of the dashboard. What it does instead is shed the two lines that are only worth
+ * reading at the top - the date, which the hero card repeats, and the offline badge, which is
+ * a statement rather than a live value - so the strip costs about half its height once the
+ * user has started reading. The greeting, the clock and the two controls never move.
+ *
+ * @param compact set by the screen from its scroll position.
  */
 @Composable
 fun DashboardHeader(
@@ -70,25 +89,52 @@ fun DashboardHeader(
     onSearch: () -> Unit,
     onSettings: () -> Unit,
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
 ) {
     val settings = LocalAppSettings.current
     val uses24Hour = LocalUses24Hour.current
     val now = rememberCurrentSecond()
     val scheme = MaterialTheme.colorScheme
 
-    Column(modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.md)) {
+    val verticalPadding by animateDpAsState(
+        targetValue = if (compact) Spacing.sm else Spacing.md,
+        animationSpec = AppMotion.tweenOf(Motion.MEDIUM),
+        label = "headerPadding",
+    )
+
+    Column(modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = verticalPadding)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                ModuleLabel("ប្រតិទិនខ្មែរ")
-                Spacer(Modifier.height(2.dp))
+                // The greeting rather than the app's own name. Someone who has just tapped
+                // the ប្រតិទិនខ្មែរ icon does not need to be told which app opened.
                 Text(
-                    text = "ថ្ងៃ${KhmerTerms.dayOfWeek(date.dayOfWeek)} · " +
-                        "${localeNumber(date.dayOfMonth)} ${KhmerTerms.solarMonth(date.monthValue)}",
+                    text = DayGreeting.of(now.toLocalTime()),
                     style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
                     color = scheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                AnimatedVisibility(
+                    visible = !compact,
+                    enter = fadeIn(AppMotion.finiteTweenOf(Motion.SMALL)) +
+                        expandVertically(AppMotion.finiteTweenOf(Motion.SMALL)),
+                    exit = fadeOut(AppMotion.finiteTweenOf(Motion.MICRO)) +
+                        shrinkVertically(AppMotion.finiteTweenOf(Motion.MICRO)),
+                ) {
+                    Column {
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = "ថ្ងៃ${KhmerTerms.dayOfWeek(date.dayOfWeek)} · " +
+                                "${localeNumber(date.dayOfMonth)} " +
+                                KhmerTerms.solarMonth(date.monthValue),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = scheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
             }
             // A running clock with seconds. This is the one place in the app that ticks at
             // that rate, and it is confined to a single Text so the second does not
@@ -113,8 +159,18 @@ fun DashboardHeader(
                 Icon(Icons.Outlined.Settings, contentDescription = "ការកំណត់")
             }
         }
-        Spacer(Modifier.height(Spacing.sm))
-        OfflineChip()
+        AnimatedVisibility(
+            visible = !compact,
+            enter = fadeIn(AppMotion.finiteTweenOf(Motion.SMALL)) +
+                expandVertically(AppMotion.finiteTweenOf(Motion.SMALL)),
+            exit = fadeOut(AppMotion.finiteTweenOf(Motion.MICRO)) +
+                shrinkVertically(AppMotion.finiteTweenOf(Motion.MICRO)),
+        ) {
+            Column {
+                Spacer(Modifier.height(Spacing.sm))
+                OfflineChip()
+            }
+        }
     }
 }
 

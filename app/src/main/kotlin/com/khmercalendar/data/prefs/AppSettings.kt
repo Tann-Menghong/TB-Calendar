@@ -89,6 +89,7 @@ enum class DashboardCard(val key: String, val labelKm: String) {
     WORK("work", "ស្ថានភាពការងារ"),
     STATS("stats", "បន្ទាប់ និងវឌ្ឍនភាព"),
     TIMELINE("timeline", "កាលវិភាគថ្ងៃនេះ"),
+    WEEK("week", "ទិដ្ឋភាពសប្តាហ៍"),
     TASKS("tasks", "កិច្ចការសំខាន់"),
     LUNAR("lunar", "ចន្ទគតិខ្មែរ"),
     UPCOMING("upcoming", "ព្រឹត្តិការណ៍ខាងមុខ"),

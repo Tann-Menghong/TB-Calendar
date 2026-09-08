@@ -19,6 +19,7 @@ object Routes {
 
     const val SETTINGS = "settings"
     const val SETTINGS_APPEARANCE = "settings/appearance"
+    const val SETTINGS_DASHBOARD = "settings/dashboard"
     const val SETTINGS_NOTIFICATIONS = "settings/notifications"
     const val SETTINGS_CATEGORIES = "settings/categories"
     const val SETTINGS_BACKUP = "settings/backup"
