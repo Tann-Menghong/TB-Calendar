@@ -1,11 +1,11 @@
 {
-  "versionCode": 12,
-  "versionName": "1.8.0",
-  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v1.8.0/TB-Calendar-1.8.0.apk",
-  "apkSizeBytes": 60215708,
-  "apkSha256": "14bd9e134a5b886fc5426027a074fb585eb8f029b902a88797fea52ef5ed4e71",
+  "versionCode": 13,
+  "versionName": "1.9.0",
+  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v1.9.0/TB-Calendar-1.9.0.apk",
+  "apkSizeBytes": 60232092,
+  "apkSha256": "5b231ab4736255edd4a192d084fd19f7e4a1282cbcc4d06988be0d0fc5fba5bc",
   "minSdk": 26,
-  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v1.8.0",
-  "releaseNotesKm": "បញ្ជីកិច្ចការថ្មី ភ្ជាប់ជាមួយប្រតិទិន៖ ហួសកំណត់ ថ្ងៃនេះ សប្តាហ៍នេះ និងកម្រិតសំខាន់។ ផ្ទាំងទិដ្ឋភាពខែថ្មី។ ជ្រើសរើសប៊ូតុងរហ័ស និងដាក់ឈ្មោះក្នុងការស្វាគមន៍។",
-  "releaseNotesEn": "A to-do list that lives inside the calendar - overdue, today, this week, with three levels of urgency - so a task you add is a day on your calendar, not a second list to keep in step. A month heatmap for the dashboard, a quick-action row you choose yourself, and an optional name in the greeting."
+  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v1.9.0",
+  "releaseNotesKm": "ប្រតិទិនមួយ មើលបានបួនបែប៖ ខែ សប្តាហ៍ ថ្ងៃ និងបញ្ជី ដោយប្តូរនៅលើអេក្រង់តែម្តង។ លោតទៅកាលបរិច្ឆេទណាមួយ។ ព្រឹត្តិការណ៍ត្រួតគ្នាបង្ហាញនៅថ្ងៃដែលវាកើតឡើង។ ជួសជុល៖ អេក្រង់ចាប់ផ្តើមដែលមិនដំណើរការ។",
+  "releaseNotesEn": "One calendar you can read four ways - month, week, day and list - with a switcher on the screen itself. Three of those views had existed since early versions and were all but unreachable. Jump to any date from the header, see a double-booking marked on the day it happens, and get the start screen you actually chose when the app opens cold."
 }

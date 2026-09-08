@@ -7,6 +7,8 @@ import com.khmercalendar.core.holiday.KhmerHolidays
 import com.khmercalendar.core.khmer.Chhankitek
 import com.khmercalendar.data.prefs.AppSettings
 import com.khmercalendar.data.repo.EventRepository
+import com.khmercalendar.domain.CalendarNavigation
+import com.khmercalendar.domain.CalendarViewMode
 import com.khmercalendar.domain.EventOccurrence
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -43,6 +45,17 @@ class CalendarViewModel(
 
     private val _selectedDate = MutableStateFlow(LocalDate.now())
     val selectedDate: StateFlow<LocalDate> = _selectedDate.asStateFlow()
+
+    private val _viewMode = MutableStateFlow(CalendarViewMode.MONTH)
+
+    /**
+     * Which of the four views the calendar is showing.
+     *
+     * State on the view model rather than a route argument, so that the calendar is one entry
+     * in the back stack however the user has it set, and so that switching to the day view and
+     * back to the month keeps the date you were looking at.
+     */
+    val viewMode: StateFlow<CalendarViewMode> = _viewMode.asStateFlow()
 
     val monthState: StateFlow<MonthState> = combine(
         _visibleMonth,
@@ -85,6 +98,30 @@ class CalendarViewModel(
 
     fun showMonth(month: YearMonth) {
         _visibleMonth.value = month
+    }
+
+    fun show(mode: CalendarViewMode) {
+        _viewMode.value = mode
+    }
+
+    /**
+     * Move one unit of the current view.
+     *
+     * The month steps the *visible month* and leaves the selection where it is, which is what
+     * the month header always did: browsing forward a few months to see what is there should
+     * not silently move the day whose events are listed underneath. The week and day views
+     * have no separate notion of what is visible, so for them the selection is the position.
+     */
+    fun step(forward: Boolean) {
+        when (_viewMode.value) {
+            CalendarViewMode.MONTH ->
+                showMonth(if (forward) _visibleMonth.value.plusMonths(1) else _visibleMonth.value.minusMonths(1))
+
+            CalendarViewMode.WEEK, CalendarViewMode.DAY ->
+                select(CalendarNavigation.step(_viewMode.value, _selectedDate.value, forward))
+
+            CalendarViewMode.AGENDA -> Unit
+        }
     }
 
     fun select(date: LocalDate) {

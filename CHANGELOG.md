@@ -1,5 +1,61 @@
 # Changelog
 
+## 1.9.0 — 2026-09-08
+
+The calendar had four views. Three of them were nearly impossible to find.
+
+### ខែ · សប្តាហ៍ · ថ្ងៃ · បញ្ជី
+
+The month, the week, the day and the agenda are now one screen with a switcher across the top.
+
+They have all existed since early versions and all four were written, tested and shipped — but only the month was a tab. The day opened if you tapped a date. The week view could be reached in exactly one way: by going into settings and making it the screen the app *starts* on. The agenda was behind a small link on two other screens. For most people the app had a month grid and nothing else, which is not what it was.
+
+**One header drives all four.** Where you are, one step back, one step forward, and a way back to today. "Next" means the next month in the month view, the next week in the week view and tomorrow in the day view, because the header steps in whatever unit is on screen rather than in whichever unit somebody wrote first.
+
+**ថ្ងៃនេះ appears only when today is off screen** — and it asks that of the whole visible span, not of the selected date. In the month view you can be looking at September with the 3rd selected while today is the 20th; offering to jump somewhere that would not move the grid is worse than offering nothing.
+
+**Jump to a date.** The calendar icon in the header opens a date picker and takes the whole calendar there. Getting to March 2028 no longer means swiping eighteen times.
+
+**The agenda has no arrows**, because it is a rolling list that starts at today rather than a window onto a date. It gets the search button instead. A control that is shown but does nothing teaches people not to trust the other controls.
+
+**A day in the week view opens that day.** The week is a way into the day now rather than a dead end.
+
+### The month grid gives way to the day beneath it
+
+The panel under the month grid — the events of whatever day you just tapped — was being squeezed to nothing on an ordinary phone. Six rows at the comfortable density plus the weekday captions plus the app's own chrome is more than a 640dp screen has, and the panel is the last thing in the column, so it got whatever was left: on the test device, zero pixels. Tapping a date appeared to do nothing at all.
+
+The density setting is a preference, not a promise. The cells now shrink until the panel has room for a day's headline and an event, and stop at a size that is still a comfortable target.
+
+### Double-booking, marked where it happens
+
+The assistant could already answer "find my conflicts" when asked. That is the wrong moment to learn about a clash — it matters on the day it falls on, not when you think to ask. Overlapping events are now marked in the day view: a count at the top, and a mark on each event involved.
+
+An icon and a word, never colour alone, because the row is already tinted with the event's own colour, which you chose and which says nothing about clashes.
+
+All-day entries are not counted — an all-day event covers everything else on the day, so flagging it would mark the whole screen. Nor are completed items, or tasks: a to-do due at three o'clock is not a booking at three o'clock, and treating it as one would flag every deadline that landed during a meeting.
+
+### The start-screen setting never worked on a cold start
+
+Choosing "ប្រតិទិនសប្តាហ៍" as the screen the app opens on did nothing. The navigation host reads its start destination exactly once, on the first frame; the stored settings arrive from disk a moment after that, so the first frame always saw the defaults. The theme flashed the default accent for the same reason.
+
+The first frame now waits for the settings, behind the splash screen that was already there. A failed read reports "loaded" and the app opens on defaults, so this cannot strand anybody on a splash screen.
+
+Found by reading the code while wiring the four views together, then reproduced on the device: set the week view as the start screen, force-stop, reopen, and you got the dashboard.
+
+### Tested
+
+**270 unit tests** pass and lint is clean, including 18 new ones covering the header's stepping in each view, the week span under both week starts, and what does and does not count as a conflict.
+
+Checked on an **Android 8.0 (API 26)** emulator: all four views and the switcher, stepping a week forward and the "today" button appearing, jump-to-date across a month boundary, a real double-booking marked in the day view, a day opened from the week view, the widget's day link, and the start-screen setting surviving a cold start.
+
+### Privacy
+
+Unchanged: no account, no analytics, no tracking, no ads. Your calendar never leaves the device. The AI is optional, off by default, and runs entirely on-device.
+
+### Install
+
+Android 8.0 (API 26) or later. Download `TB-Calendar-1.9.0.apk` below. Upgrading keeps your events, tasks, notes and settings; the database is unchanged from 1.8.0.
+
 ## 1.8.0 — 2026-09-08
 
 A to-do list that lives inside the calendar, a month you can read at a glance, and a dashboard that finally lets you name it.

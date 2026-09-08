@@ -10,9 +10,6 @@ import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.ChecklistRtl
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.ViewAgenda
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -42,10 +39,9 @@ import com.khmercalendar.ui.agenda.AgendaViewModel
 import com.khmercalendar.ui.agenda.SearchScreen
 import com.khmercalendar.ui.assistant.AssistantScreen
 import com.khmercalendar.ui.assistant.AssistantViewModel
+import com.khmercalendar.domain.CalendarViewMode
+import com.khmercalendar.ui.calendar.CalendarScreen
 import com.khmercalendar.ui.calendar.CalendarViewModel
-import com.khmercalendar.ui.calendar.DayScreen
-import com.khmercalendar.ui.calendar.MonthScreen
-import com.khmercalendar.ui.calendar.WeekScreen
 import com.khmercalendar.ui.event.EventDetailScreen
 import com.khmercalendar.ui.event.EventEditScreen
 import com.khmercalendar.ui.event.EventEditViewModel
@@ -86,7 +82,7 @@ private data class TopLevel(
  */
 private val TOP_LEVEL = listOf(
     TopLevel(Routes.HOME, "ដើម", Icons.Outlined.Dashboard),
-    TopLevel(Routes.MONTH, "ប្រតិទិន", Icons.Outlined.CalendarMonth),
+    TopLevel(Routes.CALENDAR, "ប្រតិទិន", Icons.Outlined.CalendarMonth),
     TopLevel(Routes.TASKS, "កិច្ចការ", Icons.Outlined.ChecklistRtl),
     TopLevel(Routes.ASSISTANT, "AI", Icons.Outlined.AutoAwesome),
     TopLevel(Routes.SETTINGS, "ផ្សេងៗ", Icons.Outlined.Tune),
@@ -111,6 +107,14 @@ fun KhmerCalendarNavHost(
 
     val calendarViewModel: CalendarViewModel = viewModel(factory = factory)
 
+    // The start screen setting carries a view as well as a destination, and the four calendar
+    // entries all land on the same route now. Applied once, on the first composition with real
+    // settings - MainActivity holds the first frame until they have loaded - so that choosing
+    // the week view as your start screen still opens the week view.
+    LaunchedEffect(Unit) {
+        settings.startScreen.view?.let(calendarViewModel::show)
+    }
+
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
 
@@ -128,7 +132,8 @@ fun KhmerCalendarNavHost(
 
             is ExternalDestination.Day -> {
                 calendarViewModel.select(destination.date)
-                navController.navigateTopLevel(Routes.DAY)
+                calendarViewModel.show(CalendarViewMode.DAY)
+                navController.navigateTopLevel(Routes.CALENDAR)
             }
 
             is ExternalDestination.NewEvent -> {
@@ -192,37 +197,37 @@ fun KhmerCalendarNavHost(
                     onOpenEvent = { id, date -> navController.navigate(Routes.eventDetail(id, date.toString())) },
                     onOpenDay = { date ->
                         calendarViewModel.select(date)
-                        navController.navigateTopLevel(Routes.DAY)
+                        calendarViewModel.show(CalendarViewMode.DAY)
+                        navController.navigateTopLevel(Routes.CALENDAR)
                     },
                     onAdd = { date -> navController.navigate(Routes.eventEdit(0L, date.toString())) },
+                    onOpenCalendar = { mode ->
+                        calendarViewModel.show(mode)
+                        navController.navigateTopLevel(Routes.CALENDAR)
+                    },
                     onNavigate = navController::navigate,
                 )
             }
 
-            composable(Routes.MONTH) {
-                MonthScreen(
-                    viewModel = calendarViewModel,
-                    onOpenDay = { date ->
-                        calendarViewModel.select(date)
-                        navController.navigate(Routes.DAY)
-                    },
-                    onOpenEvent = { id, date -> navController.navigate(Routes.eventDetail(id, date.toString())) },
-                )
-            }
-
-            composable(Routes.WEEK) {
-                WeekScreen(
+            composable(Routes.CALENDAR) {
+                CalendarScreen(
                     viewModel = calendarViewModel,
                     onOpenEvent = { id, date -> navController.navigate(Routes.eventDetail(id, date.toString())) },
-                    onAddOn = { date -> navController.navigate(Routes.eventEdit(0L, date.toString())) },
-                )
-            }
-
-            composable(Routes.DAY) {
-                DayScreen(
-                    viewModel = calendarViewModel,
-                    onOpenEvent = { id, date -> navController.navigate(Routes.eventDetail(id, date.toString())) },
-                )
+                    onAdd = { date -> navController.navigate(Routes.eventEdit(0L, date.toString())) },
+                    onSearch = { navController.navigate(Routes.SEARCH) },
+                ) {
+                    // The agenda keeps its own view model - it pages a rolling window that
+                    // has nothing to do with the month grid's - and is scoped to this entry,
+                    // so it is built the first time somebody opens the agenda view rather
+                    // than every time the calendar tab is.
+                    val agendaViewModel: AgendaViewModel = viewModel(factory = factory)
+                    AgendaScreen(
+                        viewModel = agendaViewModel,
+                        onOpenEvent = { id, date ->
+                            navController.navigate(Routes.eventDetail(id, date.toString()))
+                        },
+                    )
+                }
             }
 
             composable(Routes.TASKS) {
@@ -232,20 +237,13 @@ fun KhmerCalendarNavHost(
                     onOpenTask = { id, date ->
                         navController.navigate(Routes.eventDetail(id, date.toString()))
                     },
-                    onOpenAgenda = { navController.navigate(Routes.AGENDA) },
+                    onOpenAgenda = {
+                        calendarViewModel.show(CalendarViewMode.AGENDA)
+                        navController.navigateTopLevel(Routes.CALENDAR)
+                    },
                     onFullEditor = { date ->
                         navController.navigate(Routes.eventEdit(0L, date.toString()))
                     },
-                )
-            }
-
-            composable(Routes.AGENDA) {
-                val vm: AgendaViewModel = viewModel(factory = factory)
-                AgendaScreen(
-                    viewModel = vm,
-                    onOpenEvent = { id, date -> navController.navigate(Routes.eventDetail(id, date.toString())) },
-                    onAdd = { navController.navigate(Routes.eventEdit(0L, LocalDate.now().toString())) },
-                    onSearch = { navController.navigate(Routes.SEARCH) },
                 )
             }
 

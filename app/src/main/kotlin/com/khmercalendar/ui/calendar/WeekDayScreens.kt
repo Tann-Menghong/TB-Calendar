@@ -11,13 +11,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.EventNote
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,19 +35,26 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.khmercalendar.core.khmer.KhmerTerms
+import com.khmercalendar.domain.DayConflicts
 import com.khmercalendar.ui.components.EmptyState
 import com.khmercalendar.ui.components.localeNumber
 import java.time.LocalDate
-import com.khmercalendar.ui.components.localeTime
 import com.khmercalendar.ui.components.localeTimeRange
 import com.khmercalendar.ui.theme.LocalAppSettings
 
-/** Seven day columns as stacked rows, which reads better one-handed than a grid of columns. */
+/**
+ * Seven day columns as stacked rows, which reads better one-handed than a grid of columns.
+ *
+ * Each day's heading opens that day, so the week is a way *into* the day view rather than a
+ * dead end you have to back out of. That only became worth wiring up once the two views sat
+ * behind one switcher.
+ */
 @Composable
 fun WeekScreen(
     viewModel: CalendarViewModel,
     onOpenEvent: (Long, LocalDate) -> Unit,
     onAddOn: (LocalDate) -> Unit,
+    onOpenDay: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val week by viewModel.weekState.collectAsStateWithLifecycle()
@@ -65,7 +75,13 @@ fun WeekScreen(
                     .background(MaterialTheme.colorScheme.surface)
                     .padding(12.dp),
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onOpenDay(date) },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Text(
                         text = KhmerTerms.dayOfWeek(date.dayOfWeek),
                         style = MaterialTheme.typography.titleSmall,
@@ -136,6 +152,11 @@ fun DayScreen(
     val timed = events.filterNot { it.allDay }
     val settings = LocalAppSettings.current
 
+    // Double-booking, marked where it happens. The assistant could already answer "find my
+    // conflicts" when asked; a clash matters on the day it falls on, not when you think to
+    // ask about it.
+    val clashing = remember(timed) { DayConflicts.overlapping(timed) }
+
     // The preferred window, widened to whatever the day actually holds.
     val hours = remember(timed, settings.dayStartHour, settings.dayEndHour) {
         val starts = timed.map { it.start.hour }
@@ -150,6 +171,7 @@ fun DayScreen(
     ) {
         item {
             DayHeadline(date, Modifier.padding(horizontal = 16.dp, vertical = 12.dp))
+            if (clashing.isNotEmpty()) ConflictBanner(clashing.size)
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         }
 
@@ -227,6 +249,10 @@ fun DayScreen(
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
+                                    // Icon and word, never colour alone: the row is already
+                                    // tinted with the event's own colour, which the user
+                                    // chose and which carries no meaning about clashes.
+                                    if (event.eventId in clashing) ConflictTag()
                                 }
                             }
                         }
@@ -237,3 +263,58 @@ fun DayScreen(
     }
 }
 
+
+/**
+ * The day has a double-booking.
+ *
+ * Counted in events rather than in pairs: "three events clash" is what you can act on, and
+ * "two conflicts" for the same three events is a number nobody can map back onto the screen.
+ */
+@Composable
+private fun ConflictBanner(count: Int) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .padding(bottom = 10.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(MaterialTheme.colorScheme.errorContainer)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.WarningAmber,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onErrorContainer,
+            modifier = Modifier.size(16.dp),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = "ព្រឹត្តិការណ៍ ${localeNumber(count)} ត្រួតគ្នា",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onErrorContainer,
+        )
+    }
+}
+
+/** The same warning on the row it belongs to. */
+@Composable
+private fun ConflictTag() {
+    Row(
+        modifier = Modifier.padding(top = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.WarningAmber,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.error,
+            modifier = Modifier.size(13.dp),
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+            text = "ត្រួតគ្នា",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.error,
+        )
+    }
+}

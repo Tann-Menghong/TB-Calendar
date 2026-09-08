@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,14 +23,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.EventNote
-import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -51,7 +47,6 @@ import com.khmercalendar.ui.components.EmptyState
 import com.khmercalendar.ui.components.localeNumber
 import com.khmercalendar.ui.components.localeWrittenDate
 import com.khmercalendar.ui.theme.LocalAppSettings
-import com.khmercalendar.ui.theme.Spacing
 import com.khmercalendar.core.khmer.CalendarWeek
 import java.time.DayOfWeek
 import java.time.YearMonth
@@ -94,14 +89,19 @@ fun MonthScreen(
         if (target != pagerState.currentPage) pagerState.scrollToPage(target)
     }
 
-    Column(modifier.fillMaxSize()) {
-        MonthHeader(
-            month = visibleMonth,
-            isCurrentMonth = visibleMonth == java.time.YearMonth.now(),
-            onPrevious = { viewModel.showMonth(visibleMonth.minusMonths(1)) },
-            onNext = { viewModel.showMonth(visibleMonth.plusMonths(1)) },
-            onToday = viewModel::goToToday,
-        )
+    BoxWithConstraints(modifier.fillMaxSize()) {
+        // The density setting is a preference, not a promise. Six rows at the spacious
+        // setting are 432dp, which on a 640dp phone leaves nothing at all for the panel
+        // underneath - and the panel is where the events of the day you just tapped appear,
+        // so a grid that squeezes it out has answered a question nobody asked. The cell
+        // height gives way until the panel has room, and stops at a size that is still a
+        // comfortable touch target.
+        val cellHeight = minOf(
+            settings.density.cellHeightDp.dp,
+            (maxHeight - WeekdayHeaderHeight - PanelFloor) / MonthRows,
+        ).coerceAtLeast(MinCellHeight)
+
+        Column(Modifier.fillMaxSize()) {
         WeekdayHeader(settings.weekStart, settings.showWeekNumbers)
 
         HorizontalPager(
@@ -115,12 +115,13 @@ fun MonthScreen(
             if (month == state.yearMonth) {
                 MonthGrid(
                     state = state,
+                    cellHeight = cellHeight,
                     onSelect = viewModel::select,
                     onOpenDay = onOpenDay,
                 )
             } else {
                 // The neighbouring page during a swipe, before its data arrives.
-                Box(Modifier.fillMaxWidth().height(settings.density.cellHeightDp.dp * 6))
+                Box(Modifier.fillMaxWidth().height(cellHeight * MonthRows))
             }
         }
 
@@ -140,73 +141,22 @@ fun MonthScreen(
             events = selectedEvents,
             onOpenEvent = onOpenEvent,
             onOpenDay = onOpenDay,
+            modifier = Modifier.weight(1f),
         )
+        }
     }
 }
 
-/**
- * Which month you are looking at.
- *
- * This did not exist. The screen opened straight into the weekday captions and the grid, so
- * after two swipes there was nothing anywhere on it that said which month was on screen -
- * the single most important label a month view has. The day numbers alone cannot tell you:
- * every month has a 14th.
- *
- * The arrows are here as well as the swipe because a swipe is invisible, and "today" because
- * getting back after browsing forward a year otherwise means swiping twelve times. It is
- * disabled rather than hidden when you are already on this month, so the control does not
- * move around under the thumb.
- */
-@Composable
-private fun MonthHeader(
-    month: java.time.YearMonth,
-    isCurrentMonth: Boolean,
-    onPrevious: () -> Unit,
-    onNext: () -> Unit,
-    onToday: () -> Unit,
-) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(start = Spacing.lg, end = Spacing.sm, top = Spacing.lg, bottom = Spacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = KhmerTerms.solarMonth(month.monthValue),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-            )
-            // A hair of space between the two lines. Khmer stacks a subscript below the
-            // baseline, so two Texts set directly on top of each other collide even at a
-            // 1.55x line height.
-            Spacer(Modifier.height(Spacing.xs))
-            Text(
-                text = "\u1786\u17d2\u1793\u17b6\u17c6" + localeNumber(month.year),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-            )
-        }
-        if (!isCurrentMonth) {
-            TextButton(onClick = onToday) { Text("\u1790\u17d2\u1784\u17c3\u1793\u17c1\u17c7") }
-        }
-        IconButton(onClick = onPrevious) {
-            Icon(
-                Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
-                contentDescription = "\u1781\u17c2\u1798\u17bb\u1793",
-            )
-        }
-        IconButton(onClick = onNext) {
-            Icon(
-                Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-                contentDescription = "\u1781\u17c2\u1794\u1793\u17d2\u1791\u17b6\u1794\u17cb",
-            )
-        }
-    }
-}
+/** Six rows, always: a month grid that reflows by height is a month grid you cannot scan. */
+private const val MonthRows = 6
+
+/** Enough for the day's headline and one event, which is the least the panel can be useful at. */
+private val PanelFloor = 128.dp
+
+/** Below this a cell stops being a touch target. */
+private val MinCellHeight = 40.dp
+
+private val WeekdayHeaderHeight = 34.dp
 
 @Composable
 private fun WeekdayHeader(weekStart: DayOfWeek, showWeekNumbers: Boolean) {
@@ -234,6 +184,7 @@ private fun WeekdayHeader(weekStart: DayOfWeek, showWeekNumbers: Boolean) {
 @Composable
 private fun MonthGrid(
     state: MonthState,
+    cellHeight: androidx.compose.ui.unit.Dp,
     onSelect: (java.time.LocalDate) -> Unit,
     onOpenDay: (java.time.LocalDate) -> Unit,
 ) {
@@ -245,14 +196,14 @@ private fun MonthGrid(
                     WeekNumberCell(
                         week = week,
                         weekStart = settings.weekStart,
-                        height = settings.density.cellHeightDp,
+                        height = cellHeight,
                     )
                 }
                 week.forEach { cell ->
                     DayCell(
                         cell = cell,
                         isSelected = cell.date == state.selected,
-                        height = settings.density.cellHeightDp,
+                        height = cellHeight,
                         modifier = Modifier.weight(1f),
                         onClick = { onSelect(cell.date) },
                         onDoubleClick = { onOpenDay(cell.date) },
@@ -271,10 +222,10 @@ private fun MonthGrid(
  * planner or a shipping schedule would recognise.
  */
 @Composable
-private fun WeekNumberCell(week: List<DayCellState>, weekStart: DayOfWeek, height: Int) {
+private fun WeekNumberCell(week: List<DayCellState>, weekStart: DayOfWeek, height: androidx.compose.ui.unit.Dp) {
     val anchor = week.firstOrNull()?.date ?: return
     Box(
-        Modifier.width(WEEK_NUMBER_WIDTH).height(height.dp),
+        Modifier.width(WEEK_NUMBER_WIDTH).height(height),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -291,7 +242,7 @@ private val WEEK_NUMBER_WIDTH = 24.dp
 private fun DayCell(
     cell: DayCellState,
     isSelected: Boolean,
-    height: Int,
+    height: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
     onDoubleClick: () -> Unit,
@@ -309,7 +260,7 @@ private fun DayCell(
 
     Box(
         modifier = modifier
-            .height(height.dp)
+            .height(height)
             .padding(1.5.dp)
             .clip(RoundedCornerShape(10.dp))
             .then(
@@ -382,8 +333,9 @@ private fun SelectedDayPanel(
     events: List<EventOccurrence>,
     onOpenEvent: (Long, java.time.LocalDate) -> Unit,
     onOpenDay: (java.time.LocalDate) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Column(Modifier.fillMaxSize()) {
+    Column(modifier.fillMaxWidth()) {
         DayHeadline(date, Modifier.padding(horizontal = 16.dp, vertical = 10.dp).clickable { onOpenDay(date) })
         if (events.isEmpty()) {
             EmptyState(

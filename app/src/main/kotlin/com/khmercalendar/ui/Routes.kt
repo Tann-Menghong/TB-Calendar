@@ -9,10 +9,18 @@ package com.khmercalendar.ui
  */
 object Routes {
     const val HOME = "home"
-    const val MONTH = "month"
-    const val WEEK = "week"
-    const val DAY = "day"
-    const val AGENDA = "agenda"
+
+    /**
+     * The calendar, in whichever of its four views is currently chosen.
+     *
+     * The month, week, day and agenda used to be four routes. They are one destination with a
+     * switcher now, and the chosen view is state on the shared
+     * [com.khmercalendar.ui.calendar.CalendarViewModel] rather than a route argument: a tab
+     * that is sometimes "calendar?view=week" and sometimes "calendar?view=month" is two
+     * entries in the back stack as far as the navigator is concerned, and the bottom bar
+     * would stop highlighting it.
+     */
+    const val CALENDAR = "calendar"
     const val TASKS = "tasks"
     const val SEARCH = "search"
     const val ASSISTANT = "assistant"

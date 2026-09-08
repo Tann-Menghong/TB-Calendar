@@ -17,6 +17,8 @@ import com.khmercalendar.update.UpdateRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.time.LocalDateTime
 
@@ -103,6 +105,24 @@ class AppContainer(
         settingsStore.settings.stateIn(scope, SharingStarted.Eagerly, AppSettings())
 
     val cachedSettings: AppSettings get() = settings.value
+
+    /**
+     * Whether the stored settings have been read at least once.
+     *
+     * [settings] is a hot flow seeded with the *defaults*, because a receiver needs a value
+     * synchronously and there is nothing else to give it before the first disk read lands.
+     * That seed is fine for a receiver and wrong for the first frame: the navigation host
+     * captures its start destination once, so a user whose start screen was the week view
+     * got the dashboard, every time, and the theme flashed the default accent on the way.
+     *
+     * The UI waits on this instead of on the settings themselves. It cannot deadlock on a
+     * failed read - a failure reports "loaded" and the app opens on the defaults, which is
+     * the same outcome as before and better than a splash screen that never leaves.
+     */
+    val settingsLoaded: StateFlow<Boolean> = settingsStore.settings
+        .map { true }
+        .catch { emit(true) }
+        .stateIn(scope, SharingStarted.Eagerly, false)
 
     private fun repositoryAsCalendarQuery(): CalendarQuery = object : CalendarQuery {
         override suspend fun eventsBetween(from: LocalDateTime, to: LocalDateTime): List<AiEventView> {

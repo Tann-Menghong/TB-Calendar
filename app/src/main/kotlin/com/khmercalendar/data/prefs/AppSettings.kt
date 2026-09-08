@@ -2,6 +2,7 @@ package com.khmercalendar.data.prefs
 
 import com.khmercalendar.core.khmer.CalendarWeek
 import com.khmercalendar.core.work.WorkSchedule
+import com.khmercalendar.domain.CalendarViewMode
 import com.khmercalendar.domain.DockLayout
 import com.khmercalendar.domain.DockSlot
 import java.time.DayOfWeek
@@ -69,13 +70,20 @@ enum class AnimationLevel(val scale: Float, val labelKm: String) {
     ENHANCED(1.3f, "ច្រើន"),
 }
 
-/** Which screen the app opens on. */
-enum class StartScreen(val route: String, val labelKm: String) {
-    HOME("home", "ផ្ទាំងដើម"),
-    MONTH("month", "ប្រតិទិនខែ"),
-    WEEK("week", "ប្រតិទិនសប្តាហ៍"),
-    DAY("day", "ប្រតិទិនថ្ងៃ"),
-    AGENDA("agenda", "កាលវិភាគ"),
+/**
+ * Which screen the app opens on, and which calendar view it opens in.
+ *
+ * The four calendar entries all land on the one calendar destination now; what still
+ * distinguishes them is [view], so somebody whose start screen was the week view still gets
+ * the week view. The stored names are unchanged, which is what keeps that promise across the
+ * upgrade.
+ */
+enum class StartScreen(val route: String, val labelKm: String, val view: CalendarViewMode?) {
+    HOME("home", "ផ្ទាំងដើម", null),
+    MONTH("calendar", "ប្រតិទិនខែ", CalendarViewMode.MONTH),
+    WEEK("calendar", "ប្រតិទិនសប្តាហ៍", CalendarViewMode.WEEK),
+    DAY("calendar", "ប្រតិទិនថ្ងៃ", CalendarViewMode.DAY),
+    AGENDA("calendar", "កាលវិភាគ", CalendarViewMode.AGENDA),
 }
 
 /** A card on the dashboard the user can show, hide or reorder. */

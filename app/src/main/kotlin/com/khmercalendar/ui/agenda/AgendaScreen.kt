@@ -19,12 +19,10 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.EventBusy
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,7 +51,6 @@ import com.khmercalendar.core.khmer.KhmerTerms
 import com.khmercalendar.ui.calendar.EventRow
 import com.khmercalendar.ui.components.ColorDot
 import com.khmercalendar.ui.components.EmptyState
-import com.khmercalendar.ui.components.PrimaryFab
 import com.khmercalendar.ui.components.CalendarFormats
 import com.khmercalendar.ui.components.localeNumber
 import com.khmercalendar.ui.theme.LocalAppSettings
@@ -64,14 +61,16 @@ import java.time.LocalDate
  *
  * This is the view that answers "what have I got on", so days with nothing on them are
  * omitted entirely rather than shown as empty rows.
+ *
+ * It carries no bar and no button of its own. It is one of the calendar's four views now, and
+ * [com.khmercalendar.ui.calendar.CalendarScreen] owns the header, the search action and the
+ * add button for all four - two title bars stacked on one screen is what you get otherwise.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AgendaScreen(
     viewModel: AgendaViewModel,
     onOpenEvent: (Long, LocalDate) -> Unit,
-    onAdd: () -> Unit,
-    onSearch: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val days by viewModel.days.collectAsStateWithLifecycle()
     val categories by viewModel.categories.collectAsStateWithLifecycle()
@@ -88,61 +87,41 @@ fun AgendaScreen(
     }
     LaunchedEffect(nearEnd) { if (nearEnd) viewModel.extendRange() }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("កាលវិភាគ") },
-                actions = {
-                    IconButton(onClick = onSearch) {
-                        Icon(Icons.Outlined.Search, contentDescription = "ស្វែងរក")
-                    }
-                },
-            )
-        },
-        floatingActionButton = {
-            PrimaryFab(
-                onClick = onAdd,
-                icon = Icons.Outlined.Add,
-                contentDescription = "បន្ថែម",
-            )
-        },
-    ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            FilterBar(
-                categories = categories.map { it.id to it.name },
-                selectedCategory = filter.categoryId,
-                tasksOnly = filter.tasksOnly,
-                showCompleted = filter.showCompleted,
-                onCategory = viewModel::setCategory,
-                onTasksOnly = viewModel::setTasksOnly,
-                onShowCompleted = viewModel::setShowCompleted,
-            )
+    Column(modifier.fillMaxSize()) {
+        FilterBar(
+            categories = categories.map { it.id to it.name },
+            selectedCategory = filter.categoryId,
+            tasksOnly = filter.tasksOnly,
+            showCompleted = filter.showCompleted,
+            onCategory = viewModel::setCategory,
+            onTasksOnly = viewModel::setTasksOnly,
+            onShowCompleted = viewModel::setShowCompleted,
+        )
 
-            if (days.isEmpty()) {
-                EmptyState(
-                    icon = Icons.Outlined.EventBusy,
-                    title = "គ្មានព្រឹត្តិការណ៍",
-                    message = "ចុចប៊ូតុង + ដើម្បីបង្កើតព្រឹត្តិការណ៍ដំបូង",
-                )
-            } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                ) {
-                    days.forEach { day ->
-                        item(key = "h-${day.date}") { DayHeader(day.date) }
-                        items(day.events.size) { index ->
-                            val event = day.events[index]
-                            EventRow(
-                                event = event,
-                                modifier = Modifier.padding(start = 8.dp, bottom = 4.dp),
-                                onClick = { onOpenEvent(event.eventId, event.occurrenceDate) },
-                            )
-                        }
+        if (days.isEmpty()) {
+            EmptyState(
+                icon = Icons.Outlined.EventBusy,
+                title = "គ្មានព្រឹត្តិការណ៍",
+                message = "ចុចប៊ូតុង + ដើម្បីបង្កើតព្រឹត្តិការណ៍ដំបូង",
+            )
+        } else {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+            ) {
+                days.forEach { day ->
+                    item(key = "h-${day.date}") { DayHeader(day.date) }
+                    items(day.events.size) { index ->
+                        val event = day.events[index]
+                        EventRow(
+                            event = event,
+                            modifier = Modifier.padding(start = 8.dp, bottom = 4.dp),
+                            onClick = { onOpenEvent(event.eventId, event.occurrenceDate) },
+                        )
                     }
-                    item { Spacer(Modifier.height(80.dp)) }
                 }
+                item { Spacer(Modifier.height(80.dp)) }
             }
         }
     }

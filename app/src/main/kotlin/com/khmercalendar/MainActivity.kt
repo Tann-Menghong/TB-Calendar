@@ -43,7 +43,11 @@ class MainActivity : ComponentActivity() {
     ) { /* Declining is allowed. The calendar works; reminders simply stay in-app. */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
+        // Held until the stored settings arrive, so the first composition sees the user's
+        // theme and start screen rather than the defaults standing in for them.
+        installSplashScreen().setKeepOnScreenCondition {
+            !(application as KhmerCalendarApp).container.settingsLoaded.value
+        }
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
@@ -52,6 +56,12 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val settings by container.settings.collectAsStateWithLifecycle()
+            val settingsReady by container.settingsLoaded.collectAsStateWithLifecycle()
+
+            // Nothing at all rather than a screen drawn from the defaults: the navigation
+            // host reads its start destination once, and a frame drawn before the settings
+            // land is a frame that decides the wrong one.
+            if (!settingsReady) return@setContent
 
             KhmerCalendarTheme(settings) {
                 Surface(

@@ -39,6 +39,7 @@ import com.khmercalendar.data.prefs.DashboardCard
 import com.khmercalendar.data.prefs.SettingsStore
 import com.khmercalendar.domain.DashboardArrangement
 import com.khmercalendar.domain.DayTimeline
+import com.khmercalendar.domain.CalendarViewMode
 import com.khmercalendar.domain.DockSlot
 import com.khmercalendar.ui.Routes
 import com.khmercalendar.ui.components.DashboardSkeleton
@@ -81,6 +82,7 @@ fun HomeScreen(
     onOpenEvent: (Long, LocalDate) -> Unit,
     onOpenDay: (LocalDate) -> Unit,
     onAdd: (LocalDate) -> Unit,
+    onOpenCalendar: (CalendarViewMode) -> Unit,
     onNavigate: (String) -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -169,6 +171,7 @@ fun HomeScreen(
                             onOpenEvent = onOpenEvent,
                             onOpenDay = onOpenDay,
                             onAdd = onAdd,
+                            onOpenCalendar = onOpenCalendar,
                             onNavigate = onNavigate,
                         )
                     }
@@ -188,7 +191,7 @@ fun HomeScreen(
                             DockSlot.NOTE -> onOpenDay(state.today)
                             DockSlot.COUNTDOWN -> onNavigate(Routes.HOLIDAYS)
                             DockSlot.TASKS -> onNavigate(Routes.TASKS)
-                            DockSlot.CALENDAR -> onNavigate(Routes.MONTH)
+                            DockSlot.CALENDAR -> onOpenCalendar(CalendarViewMode.MONTH)
                             DockSlot.SEARCH -> onNavigate(Routes.SEARCH)
                             DockSlot.ASSISTANT -> onNavigate(Routes.ASSISTANT)
                         }
@@ -262,6 +265,7 @@ private fun DashboardModule(
     onOpenEvent: (Long, LocalDate) -> Unit,
     onOpenDay: (LocalDate) -> Unit,
     onAdd: (LocalDate) -> Unit,
+    onOpenCalendar: (CalendarViewMode) -> Unit,
     onNavigate: (String) -> Unit,
 ) {
     val settings = LocalAppSettings.current
@@ -303,7 +307,7 @@ private fun DashboardModule(
             totals = state.monthTotals,
             weekStart = settings.weekStart,
             onOpenDay = onOpenDay,
-            onOpenMonth = { onNavigate(Routes.MONTH) },
+            onOpenMonth = { onOpenCalendar(CalendarViewMode.MONTH) },
         )
 
         DashboardCard.TIMELINE -> {
@@ -315,7 +319,7 @@ private fun DashboardModule(
                 now = now.toLocalTime(),
                 isToday = state.today == now.toLocalDate(),
                 onOpenEvent = onOpenEvent,
-                onOpenAgenda = { onNavigate(Routes.AGENDA) },
+                onOpenAgenda = { onOpenCalendar(CalendarViewMode.AGENDA) },
             )
         }
 
