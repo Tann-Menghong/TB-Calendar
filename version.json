@@ -1,11 +1,11 @@
 {
-  "versionCode": 8,
-  "versionName": "1.4.1",
-  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v1.4.1/TB-Calendar-1.4.1.apk",
+  "versionCode": 9,
+  "versionName": "1.5.0",
+  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v1.5.0/TB-Calendar-1.5.0.apk",
   "apkSizeBytes": 60094776,
-  "apkSha256": "028b079db4e5d2bbb792c40874ff1c8b854b34ab2c1817a5077641242629e63b",
+  "apkSha256": "cf4868b8d8b362c3583997243458d02f5ac851fc2d8b4af8bd337cc01d23cafb",
   "minSdk": 26,
-  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v1.4.1",
-  "releaseNotesKm": "កាតទាំងអស់នៅផ្ទាំងដើមមានពណ៌តាមប្រភេទ។ កិច្ចការមានរបាររីកចម្រើន។ បុណ្យជាតិមានការរាប់ថយក្រោយ។ ទំហំកាតអាចកំណត់បាន។",
-  "releaseNotesEn": "Every dashboard card now goes through one card system, with a colour per category - cyan for the calendar, green for work and tasks, magenta for the assistant, gold for Cambodian holidays. Tasks show progress, holidays show a countdown, and card density is a setting."
+  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v1.5.0",
+  "releaseNotesKm": "ផ្ទាំងដើមថ្មីទាំងស្រុង។ កាលវិភាគថ្ងៃនេះជាខ្សែពេលវេលា មានចំណុចម៉ោងបច្ចុប្បន្ន។ មានម៉ោងរស់នៅ ស្ថានភាពការងារ និងកិច្ចការសំខាន់។",
+  "releaseNotesEn": "The Home tab is rebuilt as a command centre. The toolbar is replaced by a live status strip, today is set as a headline, and today's events are drawn as a timeline with your working day on the same line and a marker at the current minute. Adds a next/progress pair, a numbered focus list, an up-next strip and a quick-action dock in place of the floating button."
 }

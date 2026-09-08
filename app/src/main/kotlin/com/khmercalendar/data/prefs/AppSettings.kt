@@ -63,15 +63,31 @@ enum class StartScreen(val route: String, val labelKm: String) {
 }
 
 /** A card on the dashboard the user can show, hide or reorder. */
+/**
+ * The dashboard's modules, in their default order.
+ *
+ * The order here is the design: now, then today, then what is ahead. Entries are appended to
+ * a saved order rather than replacing it - see [SettingsStore] - so adding a module cannot
+ * discard a layout someone has already arranged.
+ */
 enum class DashboardCard(val key: String, val labelKm: String) {
     TODAY("today", "ថ្ងៃនេះ"),
-    WORK("work", "ម៉ោងធ្វើការ"),
+    WORK("work", "ស្ថានភាពការងារ"),
+    STATS("stats", "បន្ទាប់ និងវឌ្ឍនភាព"),
+    TIMELINE("timeline", "កាលវិភាគថ្ងៃនេះ"),
+    TASKS("tasks", "កិច្ចការសំខាន់"),
     LUNAR("lunar", "ចន្ទគតិខ្មែរ"),
     UPCOMING("upcoming", "ព្រឹត្តិការណ៍ខាងមុខ"),
     HOLIDAYS("holidays", "បុណ្យជាតិខាងមុខ"),
+    AI("ai", "ជំនួយការ AI"),
     COUNTDOWN("countdown", "រាប់ថយក្រោយ"),
-    TASKS("tasks", "កិច្ចការ"),
     NOTE("note", "កំណត់ចំណាំថ្ងៃនេះ"),
+
+    /**
+     * Superseded by the dock at the foot of the dashboard.
+     *
+     * Kept so that a saved order containing it still decodes; it simply draws nothing.
+     */
     QUICK_ACTIONS("quick", "សកម្មភាពរហ័ស"),
 }
 

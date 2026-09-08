@@ -6,6 +6,9 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Dashboard
+import androidx.compose.material.icons.outlined.ChecklistRtl
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Settings
@@ -71,12 +74,19 @@ private data class TopLevel(
     val icon: ImageVector,
 )
 
+/**
+ * The five destinations.
+ *
+ * Named for what they hold rather than for the view they happen to open with: the second tab
+ * is the calendar, not "the month", and the third is your tasks and schedule, not "the agenda
+ * view". A user picking a tab is choosing a subject.
+ */
 private val TOP_LEVEL = listOf(
-    TopLevel(Routes.HOME, "ដើម", Icons.Outlined.Home),
-    TopLevel(Routes.MONTH, "ខែ", Icons.Outlined.CalendarMonth),
-    TopLevel(Routes.AGENDA, "កាលវិភាគ", Icons.Outlined.ViewAgenda),
-    TopLevel(Routes.ASSISTANT, "ជំនួយការ", Icons.Outlined.AutoAwesome),
-    TopLevel(Routes.SETTINGS, "កំណត់", Icons.Outlined.Settings),
+    TopLevel(Routes.HOME, "ដើម", Icons.Outlined.Dashboard),
+    TopLevel(Routes.MONTH, "ប្រតិទិន", Icons.Outlined.CalendarMonth),
+    TopLevel(Routes.AGENDA, "កិច្ចការ", Icons.Outlined.ChecklistRtl),
+    TopLevel(Routes.ASSISTANT, "AI", Icons.Outlined.AutoAwesome),
+    TopLevel(Routes.SETTINGS, "ផ្សេងៗ", Icons.Outlined.Tune),
 )
 
 /**

@@ -1,5 +1,67 @@
 # Changelog
 
+## 1.5.0 — 2026-09-08
+
+The Home tab is a different screen. Not a restyle of the old one — a different composition, a different reading order, and a piece of information it never showed before.
+
+### The toolbar is gone
+
+The dashboard used to open with a Material top app bar: a fixed strip of screen saying **ប្រតិទិនខ្មែរ** to somebody who had just tapped the ប្រតិទិនខ្មែរ icon. On the one screen whose whole job is to answer *what is happening now*, that was the least useful row available.
+
+In its place is a status strip in the same height: the date, a clock running to the second, and the app's standing claim about itself — **OFFLINE · ទិន្នន័យនៅក្នុងឧបករណ៍**. That badge is static on purpose. It is not reporting a connection that might change; it is stating the design.
+
+### TODAY, set as a headline
+
+The old today card was tidy — greeting, clock, date, lunar line, summary, all at roughly one weight. Tidy was the problem: nothing in it was the answer, so you had to read all of it.
+
+Now the day of the month is set at display size with the month and weekday beside it, the lunar date under a rule, and everything else as supporting text. You can read the date from across a room, which is what a calendar's front page is for.
+
+### កាលវិភាគថ្ងៃនេះ · The day as a line, not a list
+
+This is the change that matters most.
+
+A list of today's events tells you *what is on*. A timeline tells you **where you are in it** — and that is the question the dashboard exists to answer. The day runs from clocking on to going home as one continuous rule, with your events threaded into it in clock order, everything already past dimmed, and a green marker at the current minute.
+
+Your working day and your calendar are on the same line for the first time. An 11:00 meeting means something different when lunch starts at 11:30, and now you can see that without doing the arithmetic.
+
+Twelve tests cover the awkward shapes: a day off, Saturday's single shift, an event landing exactly on a shift change, an all-day entry with no clock time to sit at.
+
+### NEXT and TODAY, side by side
+
+Two small modules in one row rather than another full-width card: what is coming, and how far through the day you are. A dashboard that is only ever one column deep reads as a list.
+
+### FOCUS · Only the few things that need doing
+
+Numbered, because a numbered list is a ranking and a bulleted one is a pile. Three at most, each with a tick to close it, and the full list one tap away. A dashboard that lists everything is a task manager.
+
+### UP NEXT · a horizontal strip
+
+What is coming after today — events and holidays as peers competing for a glance, scrolling sideways rather than pushing the rest of the dashboard off the screen.
+
+### AI, made small
+
+The assistant is a tool you reach for, not a thing you check, so it no longer takes a full card. It keeps the cyan-to-magenta sweep that marks it out as not-calendar-content, two verbs, and no more room than that.
+
+### The floating button is gone
+
+It had been covering whatever card happened to sit under it — a value one release, a quick action the next. In its place, a dock at the foot of the dashboard: **ព្រឹត្តិការណ៍ · កិច្ចការ · កំណត់ចំណាំ · រាប់ថយក្រោយ**. It blocks nothing, holds four actions instead of one, and reads as part of the dashboard rather than something dropped on top of it.
+
+### Navigation named for subjects
+
+**ដើម · ប្រតិទិន · កិច្ចការ · AI · ផ្សេងៗ** — named for what they hold rather than the view they open with. The second tab is the calendar, not "the month".
+
+### Your layout is still yours
+
+Every module can be reordered or hidden in **ការកំណត់ → រូបរាង → ផ្ទាំងដើម**, and the new ones are appended to a saved order rather than replacing it — so an arrangement you had made still stands, with the new modules added at the end.
+
+### Tested
+
+181 unit tests pass, up from 169, and lint is clean. Checked on an **Android 8.0 (API 26)** emulator with a seeded working day: the running clock, the timeline with its now-marker sitting between a 09:00 meeting and the 11:30 break, the two-up row, the focus list, the AI strip, the dock, and the customize list showing every new module. Verified in dark and in light, on the minified release build.
+
+### Privacy
+
+Unchanged: no account, no analytics, no tracking, no ads. Your calendar never leaves the device. The AI is optional, off by default, and runs entirely on-device.
+
 ## 1.4.1 — 2026-09-08
 
 A follow-through on the 1.4.0 redesign: the card system now actually runs the dashboard.
