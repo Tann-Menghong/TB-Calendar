@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.khmercalendar.core.recurrence.Frequency
+import com.khmercalendar.ui.components.ColorSwatch
 import com.khmercalendar.ui.components.localeDate
 import com.khmercalendar.ui.components.localeNumber
 import java.time.LocalTime
@@ -215,23 +216,12 @@ fun EventEditScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 state.categories.forEach { category ->
-                    Box(
-                        Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(Color(category.colorArgb))
-                            .clickable { viewModel.update { it.copy(categoryId = category.id) } },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        if (draft.categoryId == category.id) {
-                            Icon(
-                                Icons.Default.Check,
-                                contentDescription = category.name,
-                                tint = Color.White,
-                                modifier = Modifier.size(18.dp),
-                            )
-                        }
-                    }
+                    ColorSwatch(
+                        color = Color(category.colorArgb),
+                        label = category.name,
+                        selected = draft.categoryId == category.id,
+                        onClick = { viewModel.update { it.copy(categoryId = category.id) } },
+                    )
                 }
             }
             state.categories.firstOrNull { it.id == draft.categoryId }?.let {

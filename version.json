@@ -1,11 +1,11 @@
 {
-  "versionCode": 5,
-  "versionName": "1.3.1",
-  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v1.3.1/TB-Calendar-1.3.1.apk",
+  "versionCode": 6,
+  "versionName": "1.3.2",
+  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v1.3.2/TB-Calendar-1.3.2.apk",
   "apkSizeBytes": 60078392,
-  "apkSha256": "9e6f1f1b279dad3c6a009a44e28aac2b75095d777bd46bb2c56763cab5712f01",
+  "apkSha256": "3ce943a648e225069e3ed062a3413652b757e27c087978c83b28e9a0e75a5e20",
   "minSdk": 26,
-  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v1.3.1",
-  "releaseNotesKm": "ជួសជុលបញ្ហាមិនអាចបង្កើតព្រឹត្តិការណ៍បានបន្ទាប់ម៉ោង ១១ យប់។ ការកំណត់ទម្រង់កាលបរិច្ឆេទមានប្រសិទ្ធភាពហើយ។ ព្រឹត្តិការណ៍អាចហូរយល់អធ្រាត្របាន។",
-  "releaseNotesEn": "Fixes an event that could not be created after 11pm, a date-format setting that no screen read, and a search where % returned your whole calendar. An event may now run past midnight, and the editor says when it does."
+  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v1.3.2",
+  "releaseNotesKm": "ម៉ោងទំនេររបស់អ្នកមានប្រសិទ្ធភាពហើយ។ ទិដ្ឋភាពថ្ងៃបង្ហាញព្រឹត្តិការណ៍គ្រប់ម៉ោង។ ជួសជុលការនាំចូល .ics និងការជូនដំណឹង។",
+  "releaseNotesEn": "Fixes free-time suggestions that ignored your availability hours and offered hours already past, a day view that hid events outside 06:00-22:00, an event that clashed with itself, .ics import that shifted times across zones and dropped reminders, and colour pickers that a screen reader could not use. Arming reminders can no longer crash the app."
 }

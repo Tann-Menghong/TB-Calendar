@@ -1,5 +1,96 @@
 # Changelog
 
+## 1.3.2 — 2026-09-08
+
+Seven fixes, from continuing two lines of the audit: settings that nothing reads, and side
+effects that can take the app down with them.
+
+### The availability hours drove nothing
+
+**ការកំណត់ → រូបរាង → ម៉ោងធ្វើការ** has a start and an end hour, and the line underneath said they
+were used for free-time suggestions and the week display. Every reader of those two values was
+the settings screen editing its own copy. Free-slot search used a hard-coded 08:00–18:00 and
+the day ruler a hard-coded 06:00–22:00.
+
+Both read the setting now. That is the sixth setting found in this audit that was written and
+never read, and the first whose description made a claim about what it did.
+
+### "When am I free today" answered with this morning
+
+Asked at three in the afternoon, it offered 08:00 onwards — seven hours already gone. The
+window is now trimmed at the current moment, and once the day's hours are over it says so
+instead of returning an empty answer.
+
+### A timed event outside 06:00–22:00 was invisible in the day view
+
+It appeared in the month grid, the agenda, the dashboard, search and the widgets, and was
+simply absent from the one screen that lays a day out hour by hour. The ruler now covers your
+own hours *stretched to include every event on the day*, so nothing can fall outside it.
+
+This became easy to reach in 1.3.1, which fixed the editor so an event added late in the
+evening correctly starts at midnight — and then that event could not be seen here.
+
+### An event clashed with itself
+
+An event that runs past midnight is carried onto the second day so it shows in both grids, and
+the clash finder read the two rows as two events: **Late 11pm ⟷ Late 11pm — ជាន់គ្នា ៦០ នាទី**.
+Found by running the thing, not by reading it.
+
+### Two assistant replies printed ISO dates
+
+`2026-09-08`, in Latin digits, mid-sentence, inside otherwise entirely Khmer text. Both now
+read **ថ្ងៃអង្គារ ទី៨ ខែកញ្ញា**.
+
+### `.ics` import corrupted times and lost reminders
+
+Four separate defects in the file everyone else's calendar speaks:
+
+- A `TZID` parameter was parsed off the date and thrown away, so a 09:00 meeting exported from
+  New York arrived as 09:00 in Phnom Penh — eleven hours out.
+- `TRIGGER;VALUE=DURATION:-PT15M` and `-P1D`, which is what Google Calendar writes for a
+  day-before reminder, matched nothing. The reminder vanished without a word.
+- `-PT0M` — this app's own "at the time" reminder — was discarded for not being a positive
+  number, so it was lost on a round trip through a file the app had written itself.
+- Importing the same file twice silently doubled every event in it. Duplicates are now skipped
+  and counted in the message, so you are told which of the two happened.
+
+The writer also never folded lines at the 75-octet limit RFC 5545 sets. Khmer is three bytes
+per character, so a twenty-five character description already overran it, and strict parsers
+reject the file rather than guessing.
+
+### Arming alarms could kill the app
+
+Thirteen places re-arm reminders, and eleven of them do it as a side effect of something else
+you asked for: saving an event, deleting one, restoring a backup, changing a notification
+setting, finishing a boot. None had an exception handler, so a failure to arm an alarm did not
+fail the arming — it ended the process, and from `BOOT_COMPLETED` it ended it at boot.
+
+Failing to set a reminder is bad. Losing the calendar because a reminder could not be set,
+while you were doing something else entirely, is worse.
+
+### Colour choices were unusable with a screen reader
+
+The category circles in the event editor and the accent circles in Appearance were bare
+coloured dots with a tap handler: 32 and 34 dp, under the 48 dp minimum, and carrying no label
+at all. A screen reader met a row of identical unnamed nodes. Only the *selected* one was ever
+announced, which is backwards — you need the labels in order to choose.
+
+They look exactly the same. Each now announces its name — **ខៀវ**, **ស្វាយ**, **បៃតង** — reports
+whether it is chosen, and sits in a 48 dp target.
+
+### Tested
+
+169 unit tests pass, up from 130, and lint is clean. Everything above was checked on an
+Android 8.0 (API 26) emulator, with the clock moved to the hour that shows each one: the day
+ruler stretched to 04:00 and 23:00 around two events that used to be invisible, the free-time
+answer at 15:30, the clash list, and the touch targets measured at 126 px on a 420 dpi screen —
+exactly 48 dp.
+
+### Privacy
+
+Unchanged: no account, no analytics, no tracking, no ads. Your calendar never leaves the
+device. The AI is optional, off by default, and runs entirely on-device.
+
 ## 1.3.1 — 2026-09-07
 
 A patch release, from continuing to audit settings that are written and never read. Three of

@@ -1,6 +1,8 @@
 package com.khmercalendar.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +15,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,6 +26,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.khmercalendar.ui.theme.Elevation
@@ -130,3 +137,65 @@ fun ColorDot(color: Color, size: Int = 10, modifier: Modifier = Modifier) {
             .background(color),
     )
 }
+
+/**
+ * A colour you can pick, in a row of colours you can pick.
+ *
+ * Two screens drew these by hand as a 32dp or 34dp circle with a bare `clickable` on it, and
+ * both had the same pair of problems. The circle *was* the touch target, so it fell short of
+ * the 48dp minimum on a control that is already small and round. And nothing carried a label:
+ * a screen reader met a row of six identical unnamed nodes, with no way to tell which colour
+ * was which or which one was selected. Only the tick on the chosen one was ever announced,
+ * which is exactly backwards - you need the labels to choose.
+ *
+ * The circle keeps its size; the touch target around it does not.
+ */
+@Composable
+fun ColorSwatch(
+    color: Color,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    diameter: Int = 32,
+) {
+    Box(
+        modifier
+            .size(TOUCH_TARGET.dp)
+            .clip(CircleShape)
+            .selectable(
+                selected = selected,
+                role = Role.RadioButton,
+                onClick = onClick,
+            )
+            .semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            Modifier
+                .size(diameter.dp)
+                .clip(CircleShape)
+                .background(color)
+                .border(
+                    width = if (selected) 3.dp else 0.dp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    shape = CircleShape,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (selected) {
+                Icon(
+                    Icons.Default.Check,
+                    // The row already announces which one is selected, through the
+                    // selectable role; repeating it here would say it twice.
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size((diameter * 0.56f).dp),
+                )
+            }
+        }
+    }
+}
+
+/** Android's minimum comfortable touch target. */
+private const val TOUCH_TARGET = 48

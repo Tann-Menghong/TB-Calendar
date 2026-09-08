@@ -50,6 +50,7 @@ import com.khmercalendar.data.prefs.DashboardCard
 import com.khmercalendar.data.prefs.SettingsStore
 import com.khmercalendar.data.prefs.ThemeMode
 import com.khmercalendar.ui.components.CalendarFormats
+import com.khmercalendar.ui.components.ColorSwatch
 import com.khmercalendar.ui.components.localeNumber
 import com.khmercalendar.ui.theme.AccentPalette
 import kotlinx.coroutines.launch
@@ -142,34 +143,18 @@ fun AppearanceScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     AccentPalette.forEach { (name, argb) ->
-                        val selected = settings.accentArgb == argb && !settings.useDynamicColor
-                        Box(
-                            Modifier
-                                .size(34.dp)
-                                .clip(CircleShape)
-                                .background(Color(argb))
-                                .border(
-                                    width = if (selected) 3.dp else 0.dp,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    shape = CircleShape,
-                                )
-                                .clickable {
-                                    scope.launch {
-                                        settingsStore.setDynamicColor(false)
-                                        settingsStore.setAccent(argb)
-                                    }
-                                },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            if (selected) {
-                                Icon(
-                                    Icons.Outlined.Check,
-                                    contentDescription = name,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                            }
-                        }
+                        ColorSwatch(
+                            color = Color(argb),
+                            label = name,
+                            selected = settings.accentArgb == argb && !settings.useDynamicColor,
+                            diameter = 34,
+                            onClick = {
+                                scope.launch {
+                                    settingsStore.setDynamicColor(false)
+                                    settingsStore.setAccent(argb)
+                                }
+                            },
+                        )
                     }
                 }
             }
