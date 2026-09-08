@@ -1,11 +1,11 @@
 {
-  "versionCode": 6,
-  "versionName": "1.3.2",
-  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v1.3.2/TB-Calendar-1.3.2.apk",
-  "apkSizeBytes": 60078392,
-  "apkSha256": "3ce943a648e225069e3ed062a3413652b757e27c087978c83b28e9a0e75a5e20",
+  "versionCode": 7,
+  "versionName": "1.4.0",
+  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v1.4.0/TB-Calendar-1.4.0.apk",
+  "apkSizeBytes": 60094776,
+  "apkSha256": "1230e6b1b269adae4290daf1d8ad3a0987e51e5458805be0b86f3c18a8e7ee36",
   "minSdk": 26,
-  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v1.3.2",
-  "releaseNotesKm": "ម៉ោងទំនេររបស់អ្នកមានប្រសិទ្ធភាពហើយ។ ទិដ្ឋភាពថ្ងៃបង្ហាញព្រឹត្តិការណ៍គ្រប់ម៉ោង។ ជួសជុលការនាំចូល .ics និងការជូនដំណឹង។",
-  "releaseNotesEn": "Fixes free-time suggestions that ignored your availability hours and offered hours already past, a day view that hid events outside 06:00-22:00, an event that clashed with itself, .ics import that shifted times across zones and dropped reminders, and colour pickers that a screen reader could not use. Arming reminders can no longer crash the app."
+  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v1.4.0",
+  "releaseNotesKm": "រូបរាងថ្មី។ ពណ៌សំខាន់មួយឆ្លុះគ្រប់កន្លែងក្នុងកម្មវិធី។ ទំព័រប្រតិទិនខែមានចំណងជើងខែហើយ។ ការរាប់ថយក្រោយឆប់រំកិលហើយ។",
+  "releaseNotesEn": "A new visual identity: a dark theme designed as its own palette, a neon accent that now reaches every part of the app, and secondary colours derived from whichever accent you pick. The month screen finally shows which month it is. The countdown no longer shifts as its digits tick."
 }

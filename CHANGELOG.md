@@ -1,5 +1,65 @@
 # Changelog
 
+## 1.4.0 — 2026-09-08
+
+A visual identity, and the design system underneath it.
+
+### A dark app that was designed dark
+
+The dark theme was Material's default greys with the accent dropped in. It is now its own palette — a near-black with a blue bias, panels a step above it, and a hairline that separates a card without drawing a box around it. Light mode is designed as its own thing rather than an inversion: the neon accent is pulled down until it can carry white text, instead of being reused at a lightness that only works on black.
+
+### The accent now reaches the whole app
+
+`schemeFor()` filled thirteen of Material's colour roles and left the rest to the baseline — which is a purple. So the navigation bar's selected pill was baseline lavender sitting underneath a green accent, and Quick Actions asked for `tertiary` and got baseline pink. Neither had anything to do with the colour you had chosen.
+
+Every role is filled now, from one accent.
+
+### Green, cyan, magenta — from whichever colour you pick
+
+The identity wants three colours travelling together. Hard-coding cyan and magenta would have left the other nine accent choices sitting next to colours from somebody else's palette.
+
+So the partners are rotated off your accent's own hue. The new default — **បៃតងណេអុន**, neon green — produces very nearly the intended cyan and magenta. Pick **ស្វាយ** and you get a violet and a lime that belong to *it*. One rule, ten coherent palettes, and the navigation pill, the chips and the AI panel all follow.
+
+### ខែណា? · The month screen never said which month it was
+
+It opened straight into the weekday captions and the grid. After two swipes there was nothing anywhere on the screen that told you which month you were looking at — the single most important label a month view has. The day numbers cannot tell you; every month has a 14th.
+
+There is a header now, with arrows as well as the swipe, and a **ថ្ងៃនេះ** that appears only when you are not already on this month.
+
+### The countdown holds still
+
+The timer redraws every second, and its digits were proportional — so "០១:៤៨:២២" was a different width from "០១:៤៨:២៣" and the whole card shifted sideways once a second. It uses tabular figures now, so it stays where it is.
+
+There is a day-progress bar under it, and **ការងារនៅសល់ថ្ងៃនេះ** has moved off the bottom-right corner of the card, where the floating action button was sitting on top of it.
+
+No futuristic display face for it, deliberately: Orbitron and the fonts like it have no Khmer coverage at all, so the digits would have rendered in one face and the Khmer label beneath them in another. The timer earns its character from size, weight and figure spacing, which work in both scripts.
+
+### ទិដ្ឋភាពថ្ងៃនេះ · One card that says what day it is
+
+The Gregorian date, the weekday, the Khmer lunar date, today's holiday and a live clock now sit together on the card at the top, instead of being spread across three cards you had to assemble mentally as you scrolled. The lunar date in particular was three positions down — the wrong place for the thing that makes this a Khmer calendar.
+
+### A card system
+
+`SurfaceCard`, `HeroCard`, `GradientCard`, `TechCard`, `StatusBadge`, `MetricTile`, `SectionTitle`, `IconTile`, `PrimaryFab`. Before this a card was a `Card` on one screen and a clipped `Box` on the next, with paddings of 10, 12 and 16dp on screens that sit beside each other in the navigation bar — near-identical surfaces, which reads worse than surfaces that are obviously different.
+
+The angular cut-corner shape is reserved for surfaces that report on the machine rather than on your day — the AI panel — so that it keeps meaning something. The calendar itself stays rounded.
+
+### Smaller things
+
+The navigation bar shows every label rather than only the selected one; five Khmer words fit, and an icon-only tab asks you to learn what a sparkle means before you can find the assistant. The floating action button is the accent instead of a dark container tint. The empty state has a compact form for short panels — on the month screen it was putting its icon on screen and both lines of explanation below the fold, so a first launch showed one grey glyph and nothing else.
+
+### Tested before release
+
+169 unit tests pass and lint is clean. The redesign was checked on an **Android 8.0 (API 26)** emulator in dark mode, in light mode, and at **1.3× system font scale** — where the Khmer lunar date wraps to two lines rather than clipping and the dashboard scrolls rather than dropping anything. The minified release build was launched and exercised separately from the debug one.
+
+### What has not changed
+
+Every setting you had. The accent chooser still offers ten colours and every one of them still produces a complete scheme. Khmer numerals, the date format, the first day of the week, dashboard card order and visibility, work schedule, widgets — untouched.
+
+### Privacy
+
+Unchanged: no account, no analytics, no tracking, no ads. Your calendar never leaves the device. The AI is optional, off by default, and runs entirely on-device.
+
 ## 1.3.2 — 2026-09-08
 
 Seven fixes, from continuing two lines of the audit: settings that nothing reads, and side
