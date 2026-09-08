@@ -1,11 +1,11 @@
 {
-  "versionCode": 7,
-  "versionName": "1.4.0",
-  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v1.4.0/TB-Calendar-1.4.0.apk",
+  "versionCode": 8,
+  "versionName": "1.4.1",
+  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v1.4.1/TB-Calendar-1.4.1.apk",
   "apkSizeBytes": 60094776,
-  "apkSha256": "1230e6b1b269adae4290daf1d8ad3a0987e51e5458805be0b86f3c18a8e7ee36",
+  "apkSha256": "028b079db4e5d2bbb792c40874ff1c8b854b34ab2c1817a5077641242629e63b",
   "minSdk": 26,
-  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v1.4.0",
-  "releaseNotesKm": "រូបរាងថ្មី។ ពណ៌សំខាន់មួយឆ្លុះគ្រប់កន្លែងក្នុងកម្មវិធី។ ទំព័រប្រតិទិនខែមានចំណងជើងខែហើយ។ ការរាប់ថយក្រោយឆប់រំកិលហើយ។",
-  "releaseNotesEn": "A new visual identity: a dark theme designed as its own palette, a neon accent that now reaches every part of the app, and secondary colours derived from whichever accent you pick. The month screen finally shows which month it is. The countdown no longer shifts as its digits tick."
+  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v1.4.1",
+  "releaseNotesKm": "កាតទាំងអស់នៅផ្ទាំងដើមមានពណ៌តាមប្រភេទ។ កិច្ចការមានរបាររីកចម្រើន។ បុណ្យជាតិមានការរាប់ថយក្រោយ។ ទំហំកាតអាចកំណត់បាន។",
+  "releaseNotesEn": "Every dashboard card now goes through one card system, with a colour per category - cyan for the calendar, green for work and tasks, magenta for the assistant, gold for Cambodian holidays. Tasks show progress, holidays show a countdown, and card density is a setting."
 }

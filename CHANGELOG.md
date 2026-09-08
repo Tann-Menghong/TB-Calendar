@@ -1,5 +1,51 @@
 # Changelog
 
+## 1.4.1 — 2026-09-08
+
+A follow-through on the 1.4.0 redesign: the card system now actually runs the dashboard.
+
+### Every card, one system
+
+1.4.0 built the card system and used it on three surfaces. The other nine cards on the dashboard were still hand-rolled — which meant the app had *two* card implementations, exactly the thing the system existed to end.
+
+All nine go through one wrapper now, which owns the padding, the heading and the rule beside it. The old `SectionCard` is deleted rather than left lying around as a second way to do the same job.
+
+### ពណ៌តាមប្រភេទ · Cards say what kind of thing they are about
+
+Cards on a dashboard share a shape and a weight, so the eye needs another way to tell a work card from a holiday card while scanning. Calendar is cyan, work and tasks green, the assistant magenta, holidays gold.
+
+Most of those follow whichever accent you picked, through the same derived trio as everything else. **Holidays deliberately do not.** A Cambodian public holiday is a cultural thing rather than a system state, and gold is what it is — making Pchum Ben neon-whatever would be the moment the futuristic styling started overwriting the culture it is meant to serve.
+
+Colour is never the only signal. Every card still carries a heading in words, which is what a screen reader reads and what works for anyone who does not separate those hues.
+
+### កិច្ចការ · Tasks show progress
+
+A count and a bar, saying the same thing two ways on purpose: a bar alone is a shape you have to estimate, and a fraction alone is a number you have to picture.
+
+### Holidays carry a countdown
+
+**នៅ ១៦ ថ្ងៃ** beside each one, which is the thing you actually want from that row. The countdown card uses the same gold now — it was using the error colour, so the two cards described the same Pchum Ben in red on one and gold on the other, and red on a holiday reads as a warning.
+
+### ទំហំកាត · Card density is yours
+
+**ការកំណត់ → រូបរាង → ផ្ទាំងដើម → ទំហំកាត** — តូច, មធ្យម or ធំ. It changes the padding inside a card and the gap between cards, so five cards fit without scrolling if that is what you want, and nobody is forced into it if it feels cramped.
+
+### Reduced motion is honoured
+
+The progress ring and both progress bars check the system animator scale. One switch in accessibility settings stops all of it; nothing else changes.
+
+### Also fixed
+
+A flaky test added in 1.3.2 — a `runBlocking` inside a `runTest` scope parked the test dispatcher and leaked into the *next* test in the class, so the failure surfaced on a test that had nothing to do with it. A flaky test is worse than no test. Now suspend, and run three times to confirm.
+
+### Tested
+
+169 unit tests pass and lint is clean. Checked on an **Android 8.0 (API 26)** emulator with seeded tasks and events: the task progress bar, the gold holiday card with its Constitution Day and Pchum Ben countdowns, the quick-action row in its category colours, and compact density. The minified release build was launched separately.
+
+### Privacy
+
+Unchanged: no account, no analytics, no tracking, no ads. Your calendar never leaves the device. The AI is optional, off by default, and runs entirely on-device.
+
 ## 1.4.0 — 2026-09-08
 
 A visual identity, and the design system underneath it.
