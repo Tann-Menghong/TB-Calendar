@@ -39,6 +39,7 @@ import com.khmercalendar.data.prefs.DashboardCard
 import com.khmercalendar.data.prefs.SettingsStore
 import com.khmercalendar.domain.DashboardArrangement
 import com.khmercalendar.domain.DayTimeline
+import com.khmercalendar.domain.DockSlot
 import com.khmercalendar.ui.Routes
 import com.khmercalendar.ui.components.DashboardSkeleton
 import com.khmercalendar.ui.components.SectionTitle
@@ -50,7 +51,7 @@ import com.khmercalendar.ui.theme.Spacing
 import com.khmercalendar.ui.theme.color
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.time.LocalTime
+import java.time.LocalDateTime
 
 /**
  * The dashboard.
@@ -88,6 +89,9 @@ fun HomeScreen(
     val density = settings.dashboardDensity
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
+    // One ticking clock for the whole dashboard. Each module used to call LocalTime.now()
+    // during composition, which reads once and then never changes.
+    val now = rememberCurrentMinute()
 
     val listState = rememberLazyListState()
     // derivedStateOf, not a plain read: the scroll offset changes on every frame of a fling,
@@ -159,6 +163,7 @@ fun HomeScreen(
                         DashboardModule(
                             card = card,
                             state = state,
+                            now = now,
                             noteDraft = noteDraft,
                             viewModel = viewModel,
                             onOpenEvent = onOpenEvent,
@@ -176,10 +181,18 @@ fun HomeScreen(
             item(key = "dock") {
                 Spacer(Modifier.height(Spacing.sm))
                 QuickDock(
-                    onAddEvent = { onAdd(state.today) },
-                    onAddTask = { onAdd(state.today) },
-                    onAddNote = { onOpenDay(state.today) },
-                    onCountdown = { onNavigate(Routes.HOLIDAYS) },
+                    slots = settings.dockSlots,
+                    onAction = { slot ->
+                        when (slot) {
+                            DockSlot.ADD_EVENT, DockSlot.ADD_TASK -> onAdd(state.today)
+                            DockSlot.NOTE -> onOpenDay(state.today)
+                            DockSlot.COUNTDOWN -> onNavigate(Routes.HOLIDAYS)
+                            DockSlot.TASKS -> onNavigate(Routes.TASKS)
+                            DockSlot.CALENDAR -> onNavigate(Routes.MONTH)
+                            DockSlot.SEARCH -> onNavigate(Routes.SEARCH)
+                            DockSlot.ASSISTANT -> onNavigate(Routes.ASSISTANT)
+                        }
+                    },
                 )
             }
             item { Spacer(Modifier.height(Spacing.lg)) }
@@ -243,6 +256,7 @@ internal const val EDIT_MODULE_ACTION = "កែផ្ទាំង"
 private fun DashboardModule(
     card: DashboardCard,
     state: HomeState,
+    now: LocalDateTime,
     noteDraft: String?,
     viewModel: HomeViewModel,
     onOpenEvent: (Long, LocalDate) -> Unit,
@@ -269,13 +283,13 @@ private fun DashboardModule(
         )
 
         DashboardCard.STATS -> NextAndProgress(
-            next = state.nextEventToday,
-            now = LocalTime.now(),
+            next = state.nextEventToday(now),
+            now = now.toLocalTime(),
             tasksDone = state.stats.todayTasksDone,
             tasksTotal = state.stats.todayTasksTotal,
             eventsToday = state.todayEvents.size,
             onOpenEvent = onOpenEvent,
-            onOpenTasks = { onNavigate(Routes.AGENDA) },
+            onOpenTasks = { onNavigate(Routes.TASKS) },
         )
 
         DashboardCard.WEEK -> WeekModule(
@@ -284,14 +298,22 @@ private fun DashboardModule(
             onOpenDay = onOpenDay,
         )
 
+        DashboardCard.MONTH -> MonthModule(
+            weeks = state.month,
+            totals = state.monthTotals,
+            weekStart = settings.weekStart,
+            onOpenDay = onOpenDay,
+            onOpenMonth = { onNavigate(Routes.MONTH) },
+        )
+
         DashboardCard.TIMELINE -> {
             val entries = remember(state.todayEvents, settings.workSchedule, state.today) {
                 DayTimeline.build(state.today, state.todayEvents, settings.workSchedule)
             }
             TimelineModule(
                 entries = entries,
-                now = LocalTime.now(),
-                isToday = state.today == LocalDate.now(),
+                now = now.toLocalTime(),
+                isToday = state.today == now.toLocalDate(),
                 onOpenEvent = onOpenEvent,
                 onOpenAgenda = { onNavigate(Routes.AGENDA) },
             )
@@ -301,7 +323,7 @@ private fun DashboardModule(
             tasks = state.tasks,
             onToggle = viewModel::setTaskCompleted,
             onOpen = onOpenEvent,
-            onViewAll = { onNavigate(Routes.AGENDA) },
+            onViewAll = { onNavigate(Routes.TASKS) },
         )
 
         DashboardCard.LUNAR -> LunarModule(state, onOpenDay)
@@ -362,8 +384,13 @@ private fun LunarModule(state: HomeState, onOpenDay: (LocalDate) -> Unit) {
 
 @Composable
 private fun HolidayModule(state: HomeState, onNavigate: (String) -> Unit) {
-    if (state.holidays.isEmpty()) return
     val accent = CardAccent.HOLIDAY.color()
+    if (state.holidays.isEmpty()) {
+        SurfaceCard(padding = LocalAppSettings.current.dashboardDensity.cardPaddingDp.dp) {
+            ModuleEmpty("បុណ្យជាតិខាងមុខ", "គ្មានបុណ្យជាតិក្នុងរយៈពេលខាងមុខ", accent = accent)
+        }
+        return
+    }
     SurfaceCard(padding = LocalAppSettings.current.dashboardDensity.cardPaddingDp.dp) {
         SectionTitle(
             title = "បុណ្យជាតិខាងមុខ",
@@ -381,7 +408,12 @@ private fun HolidayModule(state: HomeState, onNavigate: (String) -> Unit) {
 
 @Composable
 private fun CountdownModule(state: HomeState) {
-    if (state.countdowns.isEmpty()) return
+    if (state.countdowns.isEmpty()) {
+        SurfaceCard(padding = LocalAppSettings.current.dashboardDensity.cardPaddingDp.dp) {
+            ModuleEmpty("រាប់ថយក្រោយ", "គ្មានអ្វីត្រូវរាប់ថយក្រោយ")
+        }
+        return
+    }
     SurfaceCard(padding = LocalAppSettings.current.dashboardDensity.cardPaddingDp.dp) {
         ModuleLabel("រាប់ថយក្រោយ")
         Spacer(Modifier.height(Spacing.md))

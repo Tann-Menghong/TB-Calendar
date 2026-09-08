@@ -22,8 +22,11 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ListAlt
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Celebration
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Event
 import androidx.compose.material.icons.outlined.EditNote
@@ -55,6 +58,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.khmercalendar.core.khmer.KhmerTerms
+import com.khmercalendar.domain.DockSlot
 import com.khmercalendar.domain.EventOccurrence
 import com.khmercalendar.domain.TimelineEntry
 import com.khmercalendar.ui.components.CalendarFormats
@@ -89,6 +93,36 @@ import java.time.LocalTime
  * The rule they still share is the one that matters: spacing, radius and colour all come from
  * the tokens, so "different" never becomes "unrelated".
  */
+
+/**
+ * What a module says when it has nothing to say.
+ *
+ * Modules used to return without drawing anything when they were empty, which reads as the
+ * app losing them - and it became actively confusing once the editor started saying "showing
+ * 12 of 12" next to a dashboard visibly showing nine. A module the user switched on is a
+ * module that answers, even when the answer is "nothing".
+ *
+ * The exception is a module whose data the user turned off elsewhere, such as the lunar date:
+ * that one is not empty, it is disabled, and drawing an empty shell for it would be arguing
+ * with a setting they already changed.
+ */
+@Composable
+fun ModuleEmpty(
+    label: String,
+    message: String,
+    modifier: Modifier = Modifier,
+    accent: Color? = null,
+) {
+    Column(modifier.fillMaxWidth()) {
+        ModuleLabel(label, color = accent)
+        Spacer(Modifier.height(Spacing.md))
+        Text(
+            message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
 
 /**
  * A small module heading.
@@ -669,7 +703,15 @@ fun UpNextStrip(
             )
         }
     }
-    if (items.isEmpty()) return
+    if (items.isEmpty()) {
+        ModuleEmpty(
+            label = "UP NEXT",
+            message = "គ្មានព្រឹត្តិការណ៍ខាងមុខ",
+            modifier = modifier,
+            accent = calendarAccent,
+        )
+        return
+    }
 
     Column(modifier.fillMaxWidth()) {
         ModuleLabel("UP NEXT", color = calendarAccent)
@@ -814,12 +856,11 @@ private fun AiChip(label: String, accent: Color, modifier: Modifier = Modifier, 
  */
 @Composable
 fun QuickDock(
-    onAddEvent: () -> Unit,
-    onAddTask: () -> Unit,
-    onAddNote: () -> Unit,
-    onCountdown: () -> Unit,
+    slots: List<DockSlot>,
+    onAction: (DockSlot) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    if (slots.isEmpty()) return
     Row(
         modifier
             .fillMaxWidth()
@@ -828,11 +869,42 @@ fun QuickDock(
             .padding(Spacing.sm),
         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        DockAction(Icons.Outlined.Event, "ព្រឹត្តិការណ៍", CardAccent.CALENDAR.color(), Modifier.weight(1f), onAddEvent)
-        DockAction(Icons.Outlined.CheckCircle, "កិច្ចការ", CardAccent.TASKS.color(), Modifier.weight(1f), onAddTask)
-        DockAction(Icons.Outlined.EditNote, "កំណត់ចំណាំ", CardAccent.NEUTRAL.color(), Modifier.weight(1f), onAddNote)
-        DockAction(Icons.Outlined.HourglassEmpty, "រាប់ថយក្រោយ", CardAccent.HOLIDAY.color(), Modifier.weight(1f), onCountdown)
+        slots.forEach { slot ->
+            DockAction(
+                icon = dockIcon(slot),
+                label = slot.labelKm,
+                accent = dockAccent(slot).color(),
+                modifier = Modifier.weight(1f),
+                onClick = { onAction(slot) },
+            )
+        }
     }
+}
+
+/**
+ * The icon for a dock button.
+ *
+ * A `when` over the enum rather than an icon stored on it: the enum lives in the domain,
+ * which has no business importing Compose, and an exhaustive `when` still means a new slot
+ * cannot be added without someone choosing an icon for it.
+ */
+private fun dockIcon(slot: DockSlot): ImageVector = when (slot) {
+    DockSlot.ADD_EVENT -> Icons.Outlined.Event
+    DockSlot.ADD_TASK -> Icons.Outlined.CheckCircle
+    DockSlot.NOTE -> Icons.Outlined.EditNote
+    DockSlot.COUNTDOWN -> Icons.Outlined.HourglassEmpty
+    DockSlot.TASKS -> Icons.AutoMirrored.Outlined.ListAlt
+    DockSlot.CALENDAR -> Icons.Outlined.CalendarMonth
+    DockSlot.SEARCH -> Icons.Outlined.Search
+    DockSlot.ASSISTANT -> Icons.Outlined.AutoAwesome
+}
+
+private fun dockAccent(slot: DockSlot): CardAccent = when (slot) {
+    DockSlot.ADD_EVENT, DockSlot.CALENDAR -> CardAccent.CALENDAR
+    DockSlot.ADD_TASK, DockSlot.TASKS -> CardAccent.TASKS
+    DockSlot.COUNTDOWN -> CardAccent.HOLIDAY
+    DockSlot.ASSISTANT -> CardAccent.AI
+    DockSlot.NOTE, DockSlot.SEARCH -> CardAccent.NEUTRAL
 }
 
 @Composable

@@ -2,6 +2,8 @@ package com.khmercalendar.data.prefs
 
 import com.khmercalendar.core.khmer.CalendarWeek
 import com.khmercalendar.core.work.WorkSchedule
+import com.khmercalendar.domain.DockLayout
+import com.khmercalendar.domain.DockSlot
 import java.time.DayOfWeek
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
@@ -90,6 +92,7 @@ enum class DashboardCard(val key: String, val labelKm: String) {
     STATS("stats", "បន្ទាប់ និងវឌ្ឍនភាព"),
     TIMELINE("timeline", "កាលវិភាគថ្ងៃនេះ"),
     WEEK("week", "ទិដ្ឋភាពសប្តាហ៍"),
+    MONTH("month", "ទិដ្ឋភាពខែ"),
     TASKS("tasks", "កិច្ចការសំខាន់"),
     LUNAR("lunar", "ចន្ទគតិខ្មែរ"),
     UPCOMING("upcoming", "ព្រឹត្តិការណ៍ខាងមុខ"),
@@ -165,6 +168,21 @@ data class AppSettings(
     val hiddenDashboardCards: Set<String> = emptySet(),
     val dashboardDensity: DashboardDensity = DashboardDensity.COMFORTABLE,
     val animationLevel: AnimationLevel = AnimationLevel.STANDARD,
+    /**
+     * The four buttons at the foot of the dashboard.
+     *
+     * Held as the decoded list rather than the stored keys so no screen has to know the
+     * storage format or re-apply the four-button limit;
+     * [com.khmercalendar.domain.DockLayout] is the only place that does.
+     */
+    val dockSlots: List<DockSlot> = DockLayout.DEFAULT,
+    /**
+     * What the header calls the user, or blank.
+     *
+     * Never leaves the device and is never required - it is typed into a settings field and
+     * read back by one Text. The app has no account and this does not create one.
+     */
+    val displayName: String = "",
 
     // --- work schedule ---
     /**

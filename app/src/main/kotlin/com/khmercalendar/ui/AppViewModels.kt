@@ -12,6 +12,7 @@ import com.khmercalendar.ui.home.HomeViewModel
 import com.khmercalendar.ui.settings.AiModelViewModel
 import com.khmercalendar.ui.settings.CategoriesViewModel
 import com.khmercalendar.ui.settings.UpdateViewModel
+import com.khmercalendar.ui.tasks.TaskListViewModel
 
 /**
  * One factory for every ViewModel in the app.
@@ -27,6 +28,7 @@ fun appViewModelFactory(container: AppContainer): ViewModelProvider.Factory = vi
     }
     initializer { HomeViewModel(container.eventRepository, container.settings) }
     initializer { AgendaViewModel(container.eventRepository) }
+    initializer { TaskListViewModel(container.eventRepository, container.settings) }
     initializer {
         AssistantViewModel(
             assistant = container.aiAssistant,

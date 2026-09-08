@@ -76,6 +76,14 @@ data class EventEntity(
     /** Tasks can be ticked off; ordinary events ignore this. */
     val isTask: Boolean = false,
     val isCompleted: Boolean = false,
+    /**
+     * How urgent a task is, as [com.khmercalendar.domain.TaskPriority.stored].
+     *
+     * An Int rather than the enum so that a value written by a newer version still reads
+     * back, and so the column can be added with a default rather than a data migration.
+     * Ordinary events carry it and ignore it, exactly as they do [isCompleted].
+     */
+    val priority: Int = 0,
     val completedAtMillis: Long? = null,
     val createdAtMillis: Long,
     val updatedAtMillis: Long,

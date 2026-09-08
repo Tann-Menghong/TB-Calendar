@@ -100,6 +100,9 @@ interface EventDao {
     )
     suspend fun setCompleted(id: Long, completed: Boolean, atMillis: Long)
 
+    @Query("UPDATE events SET priority = :priority, updatedAtMillis = :atMillis WHERE id = :id")
+    suspend fun setPriority(id: Long, priority: Int, atMillis: Long)
+
     @Query("SELECT COUNT(*) FROM events")
     suspend fun count(): Int
 

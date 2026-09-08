@@ -13,6 +13,7 @@ object Routes {
     const val WEEK = "week"
     const val DAY = "day"
     const val AGENDA = "agenda"
+    const val TASKS = "tasks"
     const val SEARCH = "search"
     const val ASSISTANT = "assistant"
     const val HOLIDAYS = "holidays"

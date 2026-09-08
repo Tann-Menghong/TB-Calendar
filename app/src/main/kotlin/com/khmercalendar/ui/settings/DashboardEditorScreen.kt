@@ -30,16 +30,20 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -60,10 +64,13 @@ import com.khmercalendar.data.prefs.DashboardDensity
 import com.khmercalendar.data.prefs.SettingsStore
 import com.khmercalendar.domain.DashboardArrangement
 import com.khmercalendar.domain.DashboardPreset
+import com.khmercalendar.domain.DockLayout
+import com.khmercalendar.domain.DockSlot
 import com.khmercalendar.ui.components.localeNumber
 import com.khmercalendar.ui.theme.Radius
 import com.khmercalendar.ui.theme.Spacing
 import com.khmercalendar.ui.theme.Stroke
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** Every row is this tall, which is what lets a drag be arithmetic rather than hit-testing. */
@@ -188,6 +195,52 @@ fun DashboardEditorScreen(
 
             HorizontalDivider()
 
+            SettingsGroup("ឈ្មោះរបស់អ្នក") {
+                Text(
+                    "បង្ហាញក្នុងការស្វាគមន៍ខាងលើ · ទុកទទេក៏បាន",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = Spacing.lg),
+                )
+                Spacer(Modifier.height(Spacing.sm))
+                NameField(
+                    value = settings.displayName,
+                    onChange = { scope.launch { settingsStore.setDisplayName(it) } },
+                )
+            }
+
+            HorizontalDivider()
+
+            SettingsGroup("ប៊ូតុងរហ័ស") {
+                Text(
+                    "ជ្រើសរើសរហូតដល់ ៤ សម្រាប់ជួរខាងក្រោមផ្ទាំងដើម",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = Spacing.lg),
+                )
+                DockSlot.entries.forEach { slot ->
+                    val on = slot in settings.dockSlots
+                    SwitchRow(
+                        title = slot.labelKm,
+                        subtitle = if (!on && DockLayout.wouldReplace(settings.dockSlots, slot)) {
+                            "នឹងជំនួសការជ្រើសរើសមុនគេ"
+                        } else {
+                            null
+                        },
+                        checked = on,
+                        onChange = {
+                            scope.launch {
+                                settingsStore.setDockSlots(
+                                    DockLayout.toggle(settings.dockSlots, slot),
+                                )
+                            }
+                        },
+                    )
+                }
+            }
+
+            HorizontalDivider()
+
             SettingsGroup("ទំហំកាត") {
                 DashboardDensity.entries.forEach { density ->
                     ChoiceRow(
@@ -283,6 +336,41 @@ fun DashboardEditorScreen(
         }
     }
 }
+
+/**
+ * The name field.
+ *
+ * ## Why the write is debounced
+ *
+ * The obvious version writes the preference on every keystroke and re-seeds the draft from
+ * whatever comes back. It drops characters: each write goes to DataStore, returns through the
+ * settings flow a moment later, and recomposes this screen while the next keystroke is
+ * arriving. Typing "Sophea" produced "Sohe", and then "Soph" - which is the kind of bug that
+ * only shows up on a device, because on paper the round trip looks instantaneous.
+ *
+ * So the field owns the draft outright, and the preference is written once the typing pauses.
+ * That also stops a name from costing one disk commit per letter.
+ */
+@Composable
+private fun NameField(value: String, onChange: (String) -> Unit) {
+    var draft by rememberSaveable { mutableStateOf(value) }
+    LaunchedEffect(draft) {
+        if (draft != value) {
+            delay(WRITE_DEBOUNCE_MS)
+            onChange(draft)
+        }
+    }
+    OutlinedTextField(
+        value = draft,
+        onValueChange = { draft = it },
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg),
+        placeholder = { Text("ឈ្មោះរបស់អ្នក") },
+        singleLine = true,
+    )
+}
+
+/** Long enough to cover typing, short enough that leaving the screen does not lose the name. */
+private const val WRITE_DEBOUNCE_MS = 400L
 
 /** The grip. Its own target, so a drag can never be mistaken for a tap on the switch. */
 @Composable

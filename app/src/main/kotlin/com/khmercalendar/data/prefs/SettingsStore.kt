@@ -14,6 +14,8 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.khmercalendar.core.khmer.CalendarWeek
 import com.khmercalendar.core.work.WorkSchedule
 import com.khmercalendar.core.work.WorkScheduleCodec
+import com.khmercalendar.domain.DockLayout
+import com.khmercalendar.domain.DockSlot
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
@@ -77,6 +79,8 @@ class SettingsStore(context: Context) {
         hiddenDashboardCards = this[Keys.DASHBOARD_HIDDEN] ?: emptySet(),
         dashboardDensity = enumOf(this[Keys.DASHBOARD_DENSITY], DashboardDensity.COMFORTABLE),
         animationLevel = enumOf(this[Keys.ANIMATION_LEVEL], AnimationLevel.STANDARD),
+        dockSlots = DockLayout.decode(this[Keys.DOCK_SLOTS]?.split(",").orEmpty()),
+        displayName = this[Keys.DISPLAY_NAME].orEmpty(),
 
         workSchedule = WorkScheduleCodec
             .decode(this[Keys.WORK_SCHEDULE])
@@ -166,6 +170,13 @@ class SettingsStore(context: Context) {
 
     suspend fun setAnimationLevel(level: AnimationLevel) =
         put(Keys.ANIMATION_LEVEL, level.name)
+
+    suspend fun setDockSlots(slots: List<DockSlot>) =
+        put(Keys.DOCK_SLOTS, slots.joinToString(",") { it.key })
+
+    /** Trimmed and capped: the header has one line for it, and no screen validates it. */
+    suspend fun setDisplayName(name: String) =
+        put(Keys.DISPLAY_NAME, name.trim().take(24))
 
     suspend fun setWorkSchedule(schedule: WorkSchedule) {
         // The blocks and the on/off switch are separate keys but one user action, so they are
@@ -280,6 +291,8 @@ class SettingsStore(context: Context) {
         val DASHBOARD_HIDDEN = stringSetPreferencesKey("dashboard_hidden")
         val DASHBOARD_DENSITY = stringPreferencesKey("dashboard_density")
         val ANIMATION_LEVEL = stringPreferencesKey("animation_level")
+        val DOCK_SLOTS = stringPreferencesKey("dock_slots")
+        val DISPLAY_NAME = stringPreferencesKey("display_name")
 
         val WORK_SCHEDULE = stringPreferencesKey("work_schedule")
         val WORK_ENABLED = booleanPreferencesKey("work_enabled")

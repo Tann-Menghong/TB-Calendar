@@ -30,6 +30,15 @@ class DayGreetingTest {
     }
 
     @Test
+    fun `a name is appended, and a blank one leaves a finished sentence`() {
+        assertEquals("អរុណសួស្តី សុភា", DayGreeting.of(LocalTime.of(7, 0), "សុភា"))
+        assertEquals("អរុណសួស្តី", DayGreeting.of(LocalTime.of(7, 0), ""))
+        // Whitespace is not a name. Without this the header reads "អរុណសួស្តី " with a
+        // trailing space the user never typed.
+        assertEquals("អរុណសួស្តី", DayGreeting.of(LocalTime.of(7, 0), "   "))
+    }
+
+    @Test
     fun `every hour of the day has a greeting`() {
         (0..23).forEach { hour ->
             assertTrue("$hour", DayGreeting.of(LocalTime.of(hour, 30)).isNotBlank())

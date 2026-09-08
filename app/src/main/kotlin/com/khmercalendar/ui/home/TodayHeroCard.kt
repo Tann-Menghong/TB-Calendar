@@ -108,7 +108,7 @@ fun DashboardHeader(
                 // The greeting rather than the app's own name. Someone who has just tapped
                 // the ប្រតិទិនខ្មែរ icon does not need to be told which app opened.
                 Text(
-                    text = DayGreeting.of(now.toLocalTime()),
+                    text = DayGreeting.of(now.toLocalTime(), settings.displayName),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = scheme.onSurface,
@@ -320,6 +320,31 @@ fun TodayHeroCard(
  * here it is one line of text. Bound to [Lifecycle.State.STARTED], so it stops when the app
  * does.
  */
+/**
+ * The current minute, for everything on the dashboard that is "now" but not a clock face.
+ *
+ * The modules were reading `LocalTime.now()` inside composition, which is not a state: the
+ * value was captured when the dashboard was first drawn and never changed again, so the
+ * "starting soon" badge and the timeline's now-marker were both frozen at whatever time the
+ * screen happened to open. This ticks once a minute, which is the resolution any of them
+ * shows, and stops with the lifecycle so a backgrounded app is not waking up to do nothing.
+ */
+@Composable
+internal fun rememberCurrentMinute(): LocalDateTime {
+    val owner = LocalLifecycleOwner.current
+    val state by produceState(initialValue = LocalDateTime.now(), owner) {
+        owner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                val now = LocalDateTime.now()
+                value = now
+                // Land on the next whole minute rather than drifting a second later each time.
+                delay(60_000L - (now.second * 1_000L + now.nano / 1_000_000L))
+            }
+        }
+    }
+    return state
+}
+
 @Composable
 private fun rememberCurrentSecond(): LocalDateTime {
     val owner = LocalLifecycleOwner.current

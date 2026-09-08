@@ -1,5 +1,71 @@
 # Changelog
 
+## 1.8.0 — 2026-09-08
+
+A to-do list that lives inside the calendar, a month you can read at a glance, and a dashboard that finally lets you name it.
+
+### កិច្ចការ · A to-do list, connected to the calendar
+
+The **កិច្ចការ** tab is now a real to-do list instead of a filtered agenda.
+
+**It is a view of your calendar, not a list beside it.** Every line here is an entry in the same table the month grid and the day timeline read. A task added at the top of this screen appears on its day everywhere else in the app a moment later; ticking one off changes the dashboard's progress ring. The alternative — a separate tasks table — is easier to write and worse to live with: two stores that have to agree about what a day contains, and a "sync" you only notice when it stops working.
+
+**The sections are relative, not dates.** **ហួសកំណត់** / **ថ្ងៃនេះ** / **ថ្ងៃស្អែក** / **សប្តាហ៍នេះ** / **ក្រោយៗ**. A to-do list answers *what do I have to do now*, and a date only answers that once you have worked out what today is. Overdue leads, because work you have already missed is the most useful thing the screen can tell you and the easiest thing for a forward-looking list to hide. "សប្តាហ៍នេះ" ends where *your* week ends — the week-start preference, not a Sunday somebody assumed.
+
+**ថ្ងៃនេះ is always there**, even empty. A list whose first heading is "ក្រោយៗ" reads as though today were already dealt with.
+
+**One-line add.** A title and a day — ថ្ងៃនេះ, ស្អែក, សប្តាហ៍ក្រោយ — and nothing else. The day and the urgency stay put after each add, so five things for Thursday means picking Thursday once. Anything needing a clock, a reminder, a category or a repeat is in the full editor, one tap away under **លម្អិត**.
+
+**Three levels of urgency: ធម្មតា, សំខាន់, ទាប.** Tap the dot on a row to cycle it. Three, because the difference between "high" and "normal" is a decision anyone can make in a second and the difference between a four and a three is not.
+
+**FOCUS on the dashboard is now ranked** — overdue first, then urgency — instead of showing whichever three tasks the query happened to return first.
+
+#### The database changed, and that was tested before it shipped
+
+Task urgency needed a new column, so the schema moved to version 2. This app has no destructive fallback configured, which is the right choice for somebody's calendar: a bad migration makes the app fail to open rather than quietly deleting everything. That is still a failure nobody should ship, so the migration is covered by a test that builds a database at the *old* version — from the exported v1 schema, not a transcription of it — writes events, reminders, categories and notes into it, migrates, and checks every field survived.
+
+It was then run again the way you will run it: installing over a real version-1 database on an Android 8.0 device. All eleven events survived, and the new column read back as ធម្មតា.
+
+### ទិដ្ឋភាពខែ · The month, at a glance
+
+A new dashboard module. The week module answers "is Thursday going to be bad"; this answers the question one step out — where the heavy stretches of the month are, and how much of it is still free. Seven columns and five rows fit in the height of two ordinary cards, which is why a heatmap earns a place on a dashboard where a month grid would not.
+
+Shade carries the load and the number carries the date, so a cell is still readable when the shade is not. Tap any day to open it.
+
+### More of the dashboard is yours
+
+**ប៊ូតុងរហ័ស.** The four buttons at the foot of the dashboard were chosen by whoever wrote them. Now you choose them, from eight. Turning on a fifth replaces the earliest rather than refusing — a switch that silently will not move is worse than one that explains itself, and the row tells you in advance which one is going.
+
+**ឈ្មោះរបស់អ្នក.** An optional name in the greeting. It never leaves the device, and it does not create an account — the app still has none.
+
+**Modules you switched on always draw something.** They used to vanish when empty, which reads as the app losing them, and became actively confusing once the editor started saying "showing 12 of 12" beside a dashboard visibly showing nine. The exception is a module whose data you turned off elsewhere, like the lunar date: that one is disabled, not empty, and drawing a shell for it would be arguing with a setting you already changed.
+
+### The dashboard's clock was stopped
+
+Every module was calling for the current time *during composition*, which is not a state: the value was captured when the dashboard first drew and never changed again. The "starting soon" badge and the timeline's now-marker were both frozen at whatever time the screen happened to open, and the "next event" card kept pointing at a meeting that had already finished. There is now one ticking clock for the whole dashboard, at the resolution any of them actually shows.
+
+### Two more things the device found
+
+**Typing a name lost letters.** The field wrote the preference on every keystroke; each write came back through the settings flow and reset the field to whatever had been saved by then. "Sophea" became "Sohe". The write is now debounced, which also stops a name costing one disk commit per letter.
+
+**Today's ring in the month grid was invisible** on a busy day — the ring was drawn in the accent colour, and on a busy day the cell *is* the accent colour.
+
+Neither of these is visible in the code. Both took looking at the screen.
+
+### Tested
+
+**252 unit tests** pass and lint is clean, including 45 new ones covering the to-do sections and ordering, the month grid's column alignment under both week starts, the dock's four-button limit, and the schema migration.
+
+Checked on an **Android 8.0 (API 26)** emulator: the upgrade over a real version-1 database, adding a task and watching it appear in the week bars and the month grid, the ranked focus list, the dock replacing a button, and the greeting.
+
+### Privacy
+
+Unchanged: no account, no analytics, no tracking, no ads. Your calendar never leaves the device. The AI is optional, off by default, and runs entirely on-device.
+
+### Install
+
+Android 8.0 (API 26) or later. Download `TB-Calendar-1.8.0.apk` below. Upgrading keeps your events, tasks, notes and settings; the new month module joins the end of your dashboard layout rather than rearranging it.
+
 ## 1.7.0 — 2026-09-08
 
 1.6.0 made the dashboard move. This one makes it **yours** — and adds the view it was missing.

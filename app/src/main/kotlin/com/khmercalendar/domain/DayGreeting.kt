@@ -15,6 +15,19 @@ import java.time.LocalTime
  */
 object DayGreeting {
 
+    /**
+     * The greeting, with the user's name if they gave one.
+     *
+     * Blank is the normal case and has to read as finished rather than as a missing value -
+     * so the name is appended to a complete sentence rather than filled into a slot in one.
+     * The name is trimmed at the settings screen, not here; a name that is only spaces would
+     * otherwise produce a trailing separator.
+     */
+    fun of(time: LocalTime, name: String = ""): String {
+        val greeting = of(time)
+        return if (name.isBlank()) greeting else "$greeting $name"
+    }
+
     fun of(time: LocalTime): String = when (time.hour) {
         in 0..4 -> "រាត្រីសួស្តី"
         in 5..11 -> "អរុណសួស្តី"

@@ -65,6 +65,8 @@ import com.khmercalendar.ui.settings.CategoriesViewModel
 import com.khmercalendar.ui.settings.DashboardEditorScreen
 import com.khmercalendar.ui.settings.NotificationSettingsScreen
 import com.khmercalendar.ui.settings.SettingsScreen
+import com.khmercalendar.ui.tasks.TaskListScreen
+import com.khmercalendar.ui.tasks.TaskListViewModel
 import java.time.LocalDate
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
@@ -85,7 +87,7 @@ private data class TopLevel(
 private val TOP_LEVEL = listOf(
     TopLevel(Routes.HOME, "ដើម", Icons.Outlined.Dashboard),
     TopLevel(Routes.MONTH, "ប្រតិទិន", Icons.Outlined.CalendarMonth),
-    TopLevel(Routes.AGENDA, "កិច្ចការ", Icons.Outlined.ChecklistRtl),
+    TopLevel(Routes.TASKS, "កិច្ចការ", Icons.Outlined.ChecklistRtl),
     TopLevel(Routes.ASSISTANT, "AI", Icons.Outlined.AutoAwesome),
     TopLevel(Routes.SETTINGS, "ផ្សេងៗ", Icons.Outlined.Tune),
 )
@@ -220,6 +222,20 @@ fun KhmerCalendarNavHost(
                 DayScreen(
                     viewModel = calendarViewModel,
                     onOpenEvent = { id, date -> navController.navigate(Routes.eventDetail(id, date.toString())) },
+                )
+            }
+
+            composable(Routes.TASKS) {
+                val vm: TaskListViewModel = viewModel(factory = factory)
+                TaskListScreen(
+                    viewModel = vm,
+                    onOpenTask = { id, date ->
+                        navController.navigate(Routes.eventDetail(id, date.toString()))
+                    },
+                    onOpenAgenda = { navController.navigate(Routes.AGENDA) },
+                    onFullEditor = { date ->
+                        navController.navigate(Routes.eventEdit(0L, date.toString()))
+                    },
                 )
             }
 

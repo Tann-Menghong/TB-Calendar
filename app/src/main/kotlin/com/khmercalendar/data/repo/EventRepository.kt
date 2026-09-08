@@ -126,6 +126,7 @@ class EventRepository(
                     isTask = event.isTask,
                     isCompleted = event.isCompleted,
                     isRecurring = rule != null,
+                    priority = event.priority,
                 )
                 out.getOrPut(date) { mutableListOf() } += occurrence
 
@@ -198,6 +199,7 @@ class EventRepository(
             colorArgb = draft.colorArgb,
             isTask = draft.isTask,
             isCompleted = draft.isCompleted,
+            priority = draft.priority.stored,
             completedAtMillis = if (draft.isCompleted) now else null,
             createdAtMillis = if (draft.id == 0L) now else (eventDao.byId(draft.id)?.createdAtMillis ?: now),
             updatedAtMillis = now,
@@ -237,6 +239,11 @@ class EventRepository(
 
     suspend fun setCompleted(eventId: Long, completed: Boolean) {
         eventDao.setCompleted(eventId, completed, System.currentTimeMillis())
+    }
+
+    /** Changes a task's urgency in place, without going through the full editor. */
+    suspend fun setPriority(eventId: Long, priority: com.khmercalendar.domain.TaskPriority) {
+        eventDao.setPriority(eventId, priority.stored, System.currentTimeMillis())
     }
 
     suspend fun allEvents(): List<EventEntity> = eventDao.allEvents()

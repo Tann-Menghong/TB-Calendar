@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,7 +18,7 @@ import kotlinx.coroutines.launch
         EventExceptionEntity::class,
         DayNoteEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class KhmerCalendarDatabase : RoomDatabase() {
@@ -31,6 +32,24 @@ abstract class KhmerCalendarDatabase : RoomDatabase() {
     companion object {
         private const val NAME = "khmer_calendar.db"
 
+        /**
+         * Adds the task priority column.
+         *
+         * One `ALTER TABLE ... ADD COLUMN` with a default, which is the only kind of schema
+         * change SQLite performs without rewriting the table - existing events keep every
+         * value they had and read back as [com.khmercalendar.domain.TaskPriority.NORMAL].
+         * Covered by a migration test rather than trusted: destructive fallback is never
+         * configured on this database, so a wrong migration would mean a crash on open
+         * rather than a silent wipe, and neither is acceptable for someone's calendar.
+         */
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE events ADD COLUMN priority INTEGER NOT NULL DEFAULT 0",
+                )
+            }
+        }
+
         @Volatile
         private var instance: KhmerCalendarDatabase? = null
 
@@ -41,6 +60,7 @@ abstract class KhmerCalendarDatabase : RoomDatabase() {
 
         private fun build(context: Context, scope: CoroutineScope): KhmerCalendarDatabase =
             Room.databaseBuilder(context, KhmerCalendarDatabase::class.java, NAME)
+                .addMigrations(MIGRATION_1_2)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         // Seeding runs off the creation callback so first launch is never

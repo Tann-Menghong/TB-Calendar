@@ -1,11 +1,11 @@
 {
-  "versionCode": 11,
-  "versionName": "1.7.0",
-  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v1.7.0/TB-Calendar-1.7.0.apk",
-  "apkSizeBytes": 60182940,
-  "apkSha256": "693f10bbd36e8b9a1859414942663295ec10e56d6ddbc2909376eb04c64165c6",
+  "versionCode": 12,
+  "versionName": "1.8.0",
+  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v1.8.0/TB-Calendar-1.8.0.apk",
+  "apkSizeBytes": 60215708,
+  "apkSha256": "14bd9e134a5b886fc5426027a074fb585eb8f029b902a88797fea52ef5ed4e71",
   "minSdk": 26,
-  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v1.7.0",
-  "releaseNotesKm": "ផ្ទាំងទិដ្ឋភាពសប្តាហ៍ថ្មី។ អេក្រង់រៀបចំផ្ទាំងដើមដោយឡែក មានគំរូ ការអូស និងព្រួញ។ ចុចឱ្យយូរលើផ្ទាំងណាមួយដើម្បីលាក់ ឬផ្លាស់ទី។",
-  "releaseNotesEn": "The week as seven bars, so you can see which day is going to be busy before you get there. A dashboard editor of its own with four presets, drag-to-reorder and the arrows kept beside it, and a long press on any module to hide or move it without leaving the screen. The header greets you and sheds two lines as you scroll."
+  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v1.8.0",
+  "releaseNotesKm": "បញ្ជីកិច្ចការថ្មី ភ្ជាប់ជាមួយប្រតិទិន៖ ហួសកំណត់ ថ្ងៃនេះ សប្តាហ៍នេះ និងកម្រិតសំខាន់។ ផ្ទាំងទិដ្ឋភាពខែថ្មី។ ជ្រើសរើសប៊ូតុងរហ័ស និងដាក់ឈ្មោះក្នុងការស្វាគមន៍។",
+  "releaseNotesEn": "A to-do list that lives inside the calendar - overdue, today, this week, with three levels of urgency - so a task you add is a day on your calendar, not a second list to keep in step. A month heatmap for the dashboard, a quick-action row you choose yourself, and an optional name in the greeting."
 }

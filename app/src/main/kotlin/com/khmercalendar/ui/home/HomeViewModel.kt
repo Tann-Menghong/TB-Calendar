@@ -11,6 +11,10 @@ import com.khmercalendar.data.prefs.AppSettings
 import com.khmercalendar.data.repo.EventRepository
 import com.khmercalendar.domain.DayLoad
 import com.khmercalendar.domain.EventOccurrence
+import com.khmercalendar.domain.MonthOverview
+import com.khmercalendar.domain.MonthWeek
+import com.khmercalendar.domain.TaskBoard
+import com.khmercalendar.domain.TaskItem
 import com.khmercalendar.domain.WeekOverview
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -25,8 +29,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.YearMonth
 import java.time.temporal.ChronoUnit
 
 /** An upcoming date the dashboard counts down to. */
@@ -57,6 +63,9 @@ data class HomeState(
     /** The seven days of the current week, including the ones already behind today. */
     val week: List<DayLoad> = emptyList(),
     val weekTotals: WeekOverview.Totals = WeekOverview.Totals(0, 0, 0, null),
+    /** The current month as rows of seven, for the heatmap. */
+    val month: List<MonthWeek> = emptyList(),
+    val monthTotals: MonthOverview.Totals = MonthOverview.Totals(0, 0, 0, null),
     val stats: HomeStats = HomeStats(),
     val note: String = "",
     val isLoading: Boolean = true,
@@ -67,15 +76,15 @@ data class HomeState(
      * All-day entries are excluded: "in 40 minutes" is meaningless for something that has no
      * clock time, and the dashboard would otherwise announce a birthday as though it were
      * about to start.
+     *
+     * [now] is passed in rather than read here. As a getter reading the clock it was computed
+     * once, during the composition that first drew the dashboard, and never again - so the
+     * "next" card kept pointing at a meeting that had already finished.
      */
-    val nextEventToday: EventOccurrence?
-        get() {
-            val now = java.time.LocalDateTime.now()
-            return todayEvents
-                .filterNot { it.allDay || it.isCompleted }
-                .filter { it.start.isAfter(now) }
-                .minByOrNull { it.start }
-        }
+    fun nextEventToday(now: LocalDateTime): EventOccurrence? = todayEvents
+        .filterNot { it.allDay || it.isCompleted }
+        .filter { it.start.isAfter(now) }
+        .minByOrNull { it.start }
 }
 
 /**
@@ -116,8 +125,8 @@ class HomeViewModel(
         .flatMapLatest { (day, weekStart) ->
             combine(
                 repository.observeOccurrences(
-                    CalendarWeek.startOfWeek(day, weekStart),
-                    day.plusDays(WINDOW_DAYS),
+                    windowStart(day, weekStart),
+                    maxOf(day.plusDays(WINDOW_DAYS), YearMonth.from(day).atEndOfMonth()),
                 ),
                 repository.observeNote(day),
                 settings,
@@ -126,6 +135,19 @@ class HomeViewModel(
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeState())
+
+    /**
+     * The first day the dashboard needs loaded.
+     *
+     * The week module needs the days already behind today; the month heatmap needs the whole
+     * month, which starts earlier still. Taking the earlier of the two means one query rather
+     * than two, and everything downstream that means "what is coming up" is clamped back to
+     * today regardless of how far back the window reaches.
+     */
+    private fun windowStart(day: LocalDate, weekStart: DayOfWeek): LocalDate = minOf(
+        CalendarWeek.startOfWeek(day, weekStart),
+        CalendarWeek.startOfWeek(day.withDayOfMonth(1), weekStart),
+    )
 
     private suspend fun build(
         day: LocalDate,
@@ -149,7 +171,15 @@ class HomeViewModel(
             .filter { !it.isTask && (it.allDay || it.end.isAfter(now)) }
             .take(UPCOMING_LIMIT)
 
-        val tasks = flat.filter { it.isTask && !it.isCompleted }.take(TASK_LIMIT)
+        // Ranked, not "the first six the query returned". A focus list that ignores which
+        // task is urgent is a list of tasks, which the to-do screen already is.
+        val tasks = TaskBoard
+            .focus(
+                tasks = flat.filter { it.isTask }.map { TaskItem(it, it.taskPriority) },
+                today = day,
+                limit = TASK_LIMIT,
+            )
+            .map { it.occurrence }
 
         val holidays = if (prefs.showHolidays) {
             KhmerHolidays.inRange(day, day.plusDays(WINDOW_DAYS))
@@ -189,6 +219,21 @@ class HomeViewModel(
             },
         )
 
+        val monthOf = YearMonth.from(day)
+        val month = MonthOverview.build(
+            month = monthOf,
+            today = day,
+            weekStart = prefs.weekStart,
+            byDate = byDate,
+            holidayDates = if (prefs.showHolidays) {
+                KhmerHolidays.inRange(monthOf.atDay(1), monthOf.atEndOfMonth())
+                    .map { it.date }
+                    .toSet()
+            } else {
+                emptySet()
+            },
+        )
+
         val monthEnd = day.withDayOfMonth(day.lengthOfMonth())
         HomeState(
             today = day,
@@ -200,6 +245,8 @@ class HomeViewModel(
             countdowns = countdowns,
             week = week,
             weekTotals = WeekOverview.totals(week),
+            month = month,
+            monthTotals = MonthOverview.totals(month),
             stats = HomeStats(
                 eventsThisMonth = byDate
                     .filterKeys { !it.isBefore(day) && !it.isAfter(monthEnd) }

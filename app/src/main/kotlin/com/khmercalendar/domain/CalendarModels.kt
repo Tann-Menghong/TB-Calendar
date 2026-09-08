@@ -30,7 +30,17 @@ data class EventOccurrence(
     val isTask: Boolean,
     val isCompleted: Boolean,
     val isRecurring: Boolean,
+    /**
+     * The task's urgency, as stored.
+     *
+     * Defaulted so that every existing construction of this class - the tests included -
+     * still compiles and reads back as [TaskPriority.NORMAL]. Ordinary events carry it and
+     * ignore it, the same way they carry [isCompleted].
+     */
+    val priority: Int = 0,
 ) {
+    val taskPriority: TaskPriority get() = TaskPriority.of(priority)
+
     val durationMinutes: Long
         get() = java.time.Duration.between(start, end).toMinutes()
 }
@@ -52,6 +62,7 @@ data class EventDraftModel(
     val reminderMinutes: List<Int> = listOf(30),
     val isTask: Boolean = false,
     val isCompleted: Boolean = false,
+    val priority: TaskPriority = TaskPriority.NORMAL,
 )
 
 /**
