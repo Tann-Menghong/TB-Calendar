@@ -28,6 +28,12 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.ui.graphics.Brush
+import com.khmercalendar.ui.theme.IconSize
+import com.khmercalendar.ui.theme.LocalAccentTrio
+import com.khmercalendar.ui.theme.Spacing
+import com.khmercalendar.ui.theme.TechShape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -171,43 +177,64 @@ private fun PrivacyBanner(
     onUnload: () -> Unit,
     onManage: () -> Unit,
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(
-            Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                Icons.Outlined.Lock,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.primary,
+    val trio = LocalAccentTrio.current
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .background(
+                Brush.horizontalGradient(
+                    listOf(
+                        trio.alt.copy(alpha = 0.18f),
+                        trio.far.copy(alpha = 0.10f),
+                        Color.Transparent,
+                    ),
+                ),
             )
-            Spacer(Modifier.width(8.dp))
+            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // The lock is the point of this strip, so it gets a tile rather than a 16dp
+            // glyph lost against the text. "It runs here, nothing is sent" is the single
+            // most reassuring thing this screen can say, and it was set in caption type.
+            Box(
+                Modifier
+                    .size(36.dp)
+                    .clip(TechShape)
+                    .background(trio.alt.copy(alpha = 0.20f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Outlined.Lock,
+                    contentDescription = null,
+                    modifier = Modifier.size(IconSize.small),
+                    tint = trio.alt,
+                )
+            }
+            Spacer(Modifier.width(Spacing.md))
             Column(Modifier.weight(1f)) {
                 Text(
-                    "ដំណើរការក្នុងឧបករណ៍ទាំងស្រុង",
+                    "\u178a\u17c6\u178e\u17be\u179a\u1780\u17b6\u179a\u1780\u17d2\u1793\u17bb\u1784\u17a7\u1794\u1780\u179a\u178e\u17cd\u1791\u17b6\u17c6\u1784\u179f\u17d2\u179a\u17bb\u1784",
                     style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
                     when {
-                        loading -> "កំពុងផ្ទុកម៉ូដែល..."
-                        modelReady -> "ម៉ូដែល៖ ${modelName ?: "មិនស្គាល់"} — កំពុងដំណើរការ"
-                        !enabled -> "AI បិទ — មុខងារគណនាទាំងអស់នៅតែដំណើរការ"
-                        installed -> "ម៉ូដែលរួចរាល់ ប៉ុន្តែមិនទាន់ផ្ទុក"
-                        else -> "គ្មានម៉ូដែល — មុខងារគណនានៅតែដំណើរការ"
+                        loading -> "\u1780\u17c6\u1796\u17bb\u1784\u1795\u17d2\u1791\u17bb\u1780\u1798\u17c9\u17bc\u178a\u17c2\u179b..."
+                        modelReady -> "\u1798\u17c9\u17bc\u178a\u17c2\u179b\u17d6 ${modelName ?: "\u1798\u17b7\u1793\u179f\u17d2\u1782\u17b6\u179b\u17cb"} \u2014 \u1780\u17c6\u1796\u17bb\u1784\u178a\u17c6\u178e\u17be\u179a\u1780\u17b6\u179a"
+                        !enabled -> "AI \u1794\u17b7\u1791 \u2014 \u1798\u17bb\u1781\u1784\u17b6\u179a\u1782\u178e\u1793\u17b6\u1791\u17b6\u17c6\u1784\u17a2\u179f\u17cb\u1793\u17c5\u178f\u17c2\u178a\u17c6\u178e\u17be\u179a\u1780\u17b6\u179a"
+                        installed -> "\u1798\u17c9\u17bc\u178a\u17c2\u179b\u179a\u17bd\u1785\u179a\u17b6\u179b\u17cb \u1794\u17c9\u17bb\u1793\u17d2\u178f\u17c2\u1798\u17b7\u1793\u1791\u17b6\u1793\u17cb\u1795\u17d2\u1791\u17bb\u1780"
+                        else -> "\u1782\u17d2\u1798\u17b6\u1793\u1798\u17c9\u17bc\u178a\u17c2\u179b \u2014 \u1798\u17bb\u1781\u1784\u17b6\u179a\u1782\u178e\u1793\u17b6\u1793\u17c5\u178f\u17c2\u178a\u17c6\u178e\u17be\u179a\u1780\u17b6\u179a"
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             when {
-                loading -> CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                modelReady -> TextButton(onClick = onUnload) { Text("បិទ") }
-                enabled && installed -> TextButton(onClick = onLoad) { Text("ផ្ទុក") }
-                else -> TextButton(onClick = onManage) { Text("ម៉ូដែល") }
+                loading -> CircularProgressIndicator(Modifier.size(IconSize.small), strokeWidth = 2.dp)
+                modelReady -> TextButton(onClick = onUnload) { Text("\u1794\u17b7\u1791") }
+                enabled && installed -> TextButton(onClick = onLoad) { Text("\u1795\u17d2\u1791\u17bb\u1780") }
+                else -> TextButton(onClick = onManage) { Text("\u1798\u17c9\u17bc\u178a\u17c2\u179b") }
             }
         }
     }

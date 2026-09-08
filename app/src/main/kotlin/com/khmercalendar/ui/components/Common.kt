@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -101,9 +102,47 @@ fun EmptyState(
     message: String,
     modifier: Modifier = Modifier,
     action: (@Composable () -> Unit)? = null,
+    compact: Boolean = false,
 ) {
+    if (compact) {
+        // For panels that are only a few rows tall. The full state needs about 150dp; the
+        // month screen's day panel has less than half that under a six-row grid, and the
+        // centred version put the icon on screen and both lines of explanation below the
+        // fold - a first launch showed one grey glyph and nothing else.
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(com.khmercalendar.ui.theme.IconSize.md),
+            )
+            Spacer(Modifier.width(Spacing.md))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            action?.invoke()
+        }
+        return
+    }
     Column(
-        modifier = modifier.fillMaxWidth().padding(Spacing.xxl),
+        // Was 32dp on all four sides, which pushed the title and message below the fold
+        // inside the month screen's day panel - the panel is short and the user saw an icon
+        // with no words at all.
+        modifier = modifier.fillMaxWidth().padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(

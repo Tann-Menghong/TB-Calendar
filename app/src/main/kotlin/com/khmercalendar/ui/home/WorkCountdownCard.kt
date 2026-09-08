@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -39,7 +40,9 @@ import com.khmercalendar.core.work.WorkSchedule
 import com.khmercalendar.core.work.WorkState
 import com.khmercalendar.core.work.WorkStatus
 import com.khmercalendar.ui.components.CalendarFormats
+import com.khmercalendar.ui.components.GradientCard
 import com.khmercalendar.ui.components.LocalUses24Hour
+import com.khmercalendar.ui.theme.AppType
 import com.khmercalendar.ui.theme.GradientTone
 import com.khmercalendar.ui.theme.Gradients
 import com.khmercalendar.ui.theme.LocalAppSettings
@@ -76,24 +79,25 @@ fun WorkCountdownCard(
     val uses24Hour = LocalUses24Hour.current
     val tone = toneFor(status.state)
 
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(Radius.lg))
-            .background(Brush.linearGradient(tone.colors)),
+    GradientCard(
+        tone = tone,
+        modifier = modifier,
+        shape = RoundedCornerShape(Radius.lg),
+        onClick = onOpenSettings,
     ) {
-        Row(
-            Modifier.padding(Spacing.lg).fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f)) {
+        Column(Modifier.fillMaxWidth()) {
+            // The state as a badge, and the clock beside it. The state used to be plain text
+            // the same size as the line under it, which meant the single most important word
+            // on the dashboard - whether you are working - had no more weight than the
+            // timestamp next to it.
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = status.state.labelKm,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                     color = tone.onTone,
+                    modifier = Modifier.weight(1f),
                 )
-                Spacer(Modifier.height(2.dp))
                 Text(
                     text = CalendarFormats.time(
                         status.now.toLocalTime(),
@@ -103,49 +107,113 @@ fun WorkCountdownCard(
                     style = MaterialTheme.typography.bodyMedium,
                     color = tone.onTone.copy(alpha = 0.85f),
                 )
+            }
 
-                Spacer(Modifier.height(10.dp))
-                status.remaining?.let { remaining ->
-                    Text(
-                        text = clock(remaining, settings.useKhmerNumerals),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = tone.onTone,
-                    )
-                    Text(
-                        text = subtitleFor(status, uses24Hour, settings.useKhmerNumerals),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = tone.onTone.copy(alpha = 0.85f),
-                    )
-                } ?: Text(
-                    text = closingLine(status),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = tone.onTone.copy(alpha = 0.9f),
-                )
+            Spacer(Modifier.height(Spacing.lg))
 
-                if (status.remainingToday > Duration.ZERO && status.state != WorkState.FINISHED) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = "ការងារនៅសល់ថ្ងៃនេះ៖ " +
-                            clock(status.remainingToday, settings.useKhmerNumerals),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = tone.onTone.copy(alpha = 0.8f),
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    status.remaining?.let { remaining ->
+                        Text(
+                            text = clock(remaining, settings.useKhmerNumerals),
+                            // Tabular figures: without them the string changes width as the
+                            // digits tick and the whole card jitters once a second.
+                            style = AppType.countdown(),
+                            color = tone.onTone,
+                            maxLines = 1,
+                        )
+                        Spacer(Modifier.height(Spacing.xs))
+                        Text(
+                            text = subtitleFor(status, uses24Hour, settings.useKhmerNumerals),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = tone.onTone.copy(alpha = 0.85f),
+                        )
+                    } ?: Text(
+                        text = closingLine(status),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = tone.onTone.copy(alpha = 0.95f),
+                    )
+                }
+
+                status.progress?.let { progress ->
+                    Spacer(Modifier.width(Spacing.lg))
+                    ProgressRing(
+                        progress = progress,
+                        track = tone.onTone.copy(alpha = 0.22f),
+                        indicator = tone.onTone,
+                        label = "${KhmerNumerals.toKhmer((progress * 100).toInt())}%",
+                        labelColor = tone.onTone,
+                        khmerNumerals = settings.useKhmerNumerals,
                     )
                 }
             }
 
-            status.progress?.let { progress ->
-                Spacer(Modifier.size(12.dp))
-                ProgressRing(
-                    progress = progress,
-                    track = tone.onTone.copy(alpha = 0.25f),
+            if (status.remainingToday > Duration.ZERO && status.state != WorkState.FINISHED) {
+                Spacer(Modifier.height(Spacing.lg))
+                // How much of the working day is left in total, which is a different question
+                // from how long until the next break and the one people actually ask at 3pm.
+                // Label and value stacked on the left, not spread to both edges. The
+                // dashboard's floating action button sits over the bottom-right corner of
+                // whichever card is there, and a number pushed to that corner disappears
+                // underneath it.
+                Text(
+                    text = "ការងារនៅសល់ថ្ងៃនេះ",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = tone.onTone.copy(alpha = 0.8f),
+                )
+                Text(
+                    text = clock(status.remainingToday, settings.useKhmerNumerals),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = tone.onTone,
+                )
+                Spacer(Modifier.height(Spacing.sm))
+                DayProgressBar(
+                    fraction = status.dayFraction(),
+                    track = tone.onTone.copy(alpha = 0.22f),
                     indicator = tone.onTone,
-                    label = "${KhmerNumerals.toKhmer((progress * 100).toInt())}%",
-                    labelColor = tone.onTone,
-                    khmerNumerals = settings.useKhmerNumerals,
                 )
             }
         }
+    }
+}
+
+/**
+ * How much of today's scheduled work is behind you.
+ *
+ * Separate from [WorkStatus.progress], which is progress through the *current block*. Both
+ * are useful and they are not the same number: at 1:35pm you are two minutes into the
+ * afternoon and most of the way through the day.
+ */
+private fun WorkStatus.dayFraction(): Float {
+    val total = totalToday.seconds
+    if (total <= 0L) return 0f
+    val worked = (total - remainingToday.seconds).coerceAtLeast(0L)
+    return (worked.toFloat() / total.toFloat()).coerceIn(0f, 1f)
+}
+
+/** A flat progress bar, drawn rather than themed so it can sit on a gradient. */
+@Composable
+private fun DayProgressBar(fraction: Float, track: Color, indicator: Color) {
+    val animated by animateFloatAsState(
+        targetValue = fraction.coerceIn(0f, 1f),
+        label = "dayProgress",
+    )
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(6.dp)
+            .clip(RoundedCornerShape(3.dp))
+            .background(track),
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth(animated)
+                .height(6.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(indicator),
+        )
     }
 }
 

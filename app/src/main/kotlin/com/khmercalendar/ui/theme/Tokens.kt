@@ -1,5 +1,6 @@
 package com.khmercalendar.ui.theme
 
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
 import androidx.compose.ui.graphics.Color
@@ -32,11 +33,22 @@ object Spacing {
     /** The default inset of a card, and the gap between cards. */
     val lg = 16.dp
 
+    /** Inside a hero card, which needs more room than a list row. */
+    val xl = 20.dp
+
     /** Around a section that should read as separate from what surrounds it. */
-    val xl = 24.dp
+    val xxl = 24.dp
 
     /** Around an empty state, which needs room to not look like a mistake. */
-    val xxl = 32.dp
+    val huge = 32.dp
+
+    /**
+     * Clearance under a scrolling screen that has a floating action button.
+     *
+     * Not a guess: the FAB is 56dp with 16dp of margin, and on the dashboard it was sitting
+     * squarely on top of the last card - the lunar date ran underneath it.
+     */
+    val fabClearance = 96.dp
 }
 
 /**
@@ -58,6 +70,15 @@ object Radius {
 
     /** Dialogs and bottom sheets. */
     val xl = 28.dp
+
+    /**
+     * The bite taken out of a technical surface.
+     *
+     * Used only by [TechShape]. A cut corner is a strong signal and it stops meaning anything
+     * if every card has one - the calendar itself stays rounded, and this marks the few
+     * surfaces that are reporting on a system rather than on the user's day.
+     */
+    val cut = 14.dp
 }
 
 /**
@@ -78,6 +99,50 @@ object Elevation {
     val floating = 6.dp
 }
 
+/** Line weights, so a hairline is the same hairline everywhere. */
+object Stroke {
+    /** The border on a card or a tech surface. */
+    val hairline = 1.dp
+
+    /** A progress ring or bar. */
+    val ring = 6.dp
+
+    /** The bar that carries an event's category colour. */
+    val accentBar = 4.dp
+}
+
+/** Icon sizes, from the smallest inline glyph to a primary action. */
+object IconSize {
+    /** Inline with body text. */
+    val inline = 16.dp
+
+    /** Inside a chip or a metadata row. */
+    val small = 20.dp
+
+    /** The default: navigation, app bar actions, list rows. */
+    val md = 24.dp
+
+    /** The tile in Quick Actions. */
+    val tile = 22.dp
+}
+
+/**
+ * How long things take.
+ *
+ * Short by design. Motion on a dashboard is feedback, not decoration: anything long enough to
+ * notice as an animation is long enough to be in the way of someone checking the time.
+ */
+object Motion {
+    /** A press, a checkbox, a selection. */
+    const val QUICK = 120
+
+    /** A card appearing, a section expanding. */
+    const val STANDARD = 220
+
+    /** A progress ring catching up to a new value. */
+    const val PROGRESS = 600
+}
+
 /** [Radius] as Material's shape scale, so every built-in component inherits it. */
 val AppShapes = Shapes(
     extraSmall = RoundedCornerShape(6.dp),
@@ -88,15 +153,33 @@ val AppShapes = Shapes(
 )
 
 /**
+ * The angular surface, for the few places that report on a system.
+ *
+ * Two corners cut, not four: a fully chamfered card reads as a warning sign, and diagonally
+ * opposite cuts give the shape a direction. Reserved for the AI card, the work countdown and
+ * status badges - the surfaces that are about the machine rather than about the month.
+ */
+val TechShape = CutCornerShape(
+    topStart = 0.dp,
+    topEnd = Radius.cut,
+    bottomEnd = 0.dp,
+    bottomStart = Radius.cut,
+)
+
+/**
  * A two-stop gradient and the colour that stays legible on it.
  *
  * Gradients are used for one job only: telling the user at a glance which of a handful of
- * states something is in - green is working, amber is a break, slate is done. Two stops in
- * one hue family, never a blend across the wheel, so a screen with two of them still reads
- * as one design rather than a paint chart.
+ * states something is in - green is working, amber is a break, slate is done. Two stops that
+ * stay inside one region of the wheel, never a blend across it, so a screen with two of them
+ * still reads as one design rather than a paint chart.
  */
 data class GradientTone(val from: Color, val to: Color, val onTone: Color = Color.White) {
     val colors: List<Color> get() = listOf(from, to)
+
+    /** The same tone at low alpha, for a wash behind content that has to stay readable. */
+    fun wash(alpha: Float): GradientTone =
+        copy(from = from.copy(alpha = alpha), to = to.copy(alpha = alpha * 0.4f))
 }
 
 /**
@@ -104,12 +187,15 @@ data class GradientTone(val from: Color, val to: Color, val onTone: Color = Colo
  *
  * Named for meaning rather than for colour, so a card asks for [working] and not for "green";
  * restyling a state is then one edit here instead of a search for a hex value.
+ *
+ * These are the fixed, state-carrying ones. The gradients that follow the user's accent are
+ * built at runtime from the colour scheme - see [com.khmercalendar.ui.theme.AccentGradients].
  */
 object Gradients {
-    val working = GradientTone(Color(0xFF1E9E6A), Color(0xFF12795A))
+    val working = GradientTone(Color(0xFF00C46A), Color(0xFF00907E))
     val resting = GradientTone(Color(0xFFE0902B), Color(0xFFC96F1E))
     val upcoming = GradientTone(Color(0xFF2F6FED), Color(0xFF2453B8))
-    val done = GradientTone(Color(0xFF4A5568), Color(0xFF2D3748))
+    val done = GradientTone(Color(0xFF3A4356), Color(0xFF262D3B))
     val away = GradientTone(Color(0xFF7A4FE0), Color(0xFF5A34B0))
     val muted = GradientTone(Color(0xFF9AA2B2), Color(0xFF7A8294))
 }

@@ -53,6 +53,7 @@ import com.khmercalendar.core.khmer.KhmerTerms
 import com.khmercalendar.ui.calendar.EventRow
 import com.khmercalendar.ui.components.ColorDot
 import com.khmercalendar.ui.components.EmptyState
+import com.khmercalendar.ui.components.PrimaryFab
 import com.khmercalendar.ui.components.CalendarFormats
 import com.khmercalendar.ui.components.localeNumber
 import com.khmercalendar.ui.theme.LocalAppSettings
@@ -99,9 +100,11 @@ fun AgendaScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAdd) {
-                Icon(Icons.Outlined.Add, contentDescription = "បន្ថែម")
-            }
+            PrimaryFab(
+                onClick = onAdd,
+                icon = Icons.Outlined.Add,
+                contentDescription = "បន្ថែម",
+            )
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {

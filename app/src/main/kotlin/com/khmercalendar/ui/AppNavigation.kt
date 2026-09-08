@@ -11,6 +11,7 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.ViewAgenda
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -142,14 +143,23 @@ fun KhmerCalendarNavHost(
                 enter = expandVertically(),
                 exit = shrinkVertically(),
             ) {
-                NavigationBar {
+                // The container is named rather than inherited: Material tints the bar with
+                // surfaceTint, which on a saturated accent gave the light theme a lavender
+                // bar under an otherwise white-and-green screen.
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                ) {
                     TOP_LEVEL.forEach { item ->
                         NavigationBarItem(
                             selected = currentRoute == item.route,
                             onClick = { navController.navigateTopLevel(item.route) },
                             icon = { Icon(item.icon, contentDescription = item.label) },
                             label = { Text(item.label) },
-                            alwaysShowLabel = false,
+                            // Every destination keeps its label. Five Khmer words fit
+                            // across the bar, and an icon-only tab asks the user to learn
+                            // what a sparkle means before they can find the assistant.
+                            alwaysShowLabel = true,
                         )
                     }
                 }

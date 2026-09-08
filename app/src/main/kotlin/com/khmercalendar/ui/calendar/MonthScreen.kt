@@ -22,9 +22,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.EventNote
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,6 +51,7 @@ import com.khmercalendar.ui.components.EmptyState
 import com.khmercalendar.ui.components.localeNumber
 import com.khmercalendar.ui.components.localeWrittenDate
 import com.khmercalendar.ui.theme.LocalAppSettings
+import com.khmercalendar.ui.theme.Spacing
 import com.khmercalendar.core.khmer.CalendarWeek
 import java.time.DayOfWeek
 import java.time.YearMonth
@@ -89,6 +95,13 @@ fun MonthScreen(
     }
 
     Column(modifier.fillMaxSize()) {
+        MonthHeader(
+            month = visibleMonth,
+            isCurrentMonth = visibleMonth == java.time.YearMonth.now(),
+            onPrevious = { viewModel.showMonth(visibleMonth.minusMonths(1)) },
+            onNext = { viewModel.showMonth(visibleMonth.plusMonths(1)) },
+            onToday = viewModel::goToToday,
+        )
         WeekdayHeader(settings.weekStart, settings.showWeekNumbers)
 
         HorizontalPager(
@@ -128,6 +141,70 @@ fun MonthScreen(
             onOpenEvent = onOpenEvent,
             onOpenDay = onOpenDay,
         )
+    }
+}
+
+/**
+ * Which month you are looking at.
+ *
+ * This did not exist. The screen opened straight into the weekday captions and the grid, so
+ * after two swipes there was nothing anywhere on it that said which month was on screen -
+ * the single most important label a month view has. The day numbers alone cannot tell you:
+ * every month has a 14th.
+ *
+ * The arrows are here as well as the swipe because a swipe is invisible, and "today" because
+ * getting back after browsing forward a year otherwise means swiping twelve times. It is
+ * disabled rather than hidden when you are already on this month, so the control does not
+ * move around under the thumb.
+ */
+@Composable
+private fun MonthHeader(
+    month: java.time.YearMonth,
+    isCurrentMonth: Boolean,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onToday: () -> Unit,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(start = Spacing.lg, end = Spacing.sm, top = Spacing.lg, bottom = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = KhmerTerms.solarMonth(month.monthValue),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+            )
+            // A hair of space between the two lines. Khmer stacks a subscript below the
+            // baseline, so two Texts set directly on top of each other collide even at a
+            // 1.55x line height.
+            Spacer(Modifier.height(Spacing.xs))
+            Text(
+                text = "\u1786\u17d2\u1793\u17b6\u17c6" + localeNumber(month.year),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
+        }
+        if (!isCurrentMonth) {
+            TextButton(onClick = onToday) { Text("\u1790\u17d2\u1784\u17c3\u1793\u17c1\u17c7") }
+        }
+        IconButton(onClick = onPrevious) {
+            Icon(
+                Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
+                contentDescription = "\u1781\u17c2\u1798\u17bb\u1793",
+            )
+        }
+        IconButton(onClick = onNext) {
+            Icon(
+                Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                contentDescription = "\u1781\u17c2\u1794\u1793\u17d2\u1791\u17b6\u1794\u17cb",
+            )
+        }
     }
 }
 
@@ -313,6 +390,7 @@ private fun SelectedDayPanel(
                 icon = Icons.AutoMirrored.Filled.EventNote,
                 title = "គ្មានព្រឹត្តិការណ៍",
                 message = "ចុចប៊ូតុង + ដើម្បីបន្ថែមព្រឹត្តិការណ៍ថ្មី",
+                compact = true,
             )
         } else {
             LazyColumn(

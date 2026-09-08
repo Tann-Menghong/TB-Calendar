@@ -51,10 +51,12 @@ import com.khmercalendar.ui.Routes
 import com.khmercalendar.ui.calendar.EventRow
 import com.khmercalendar.ui.components.DashboardSkeleton
 import com.khmercalendar.ui.components.EmptyState
+import com.khmercalendar.ui.components.PrimaryFab
 import com.khmercalendar.ui.components.SectionCard
 import com.khmercalendar.ui.components.SectionHeader
 import com.khmercalendar.ui.components.localeNumber
 import com.khmercalendar.ui.theme.LocalAppSettings
+import com.khmercalendar.ui.theme.Spacing
 import java.time.LocalDate
 
 /**
@@ -92,15 +94,20 @@ fun HomeScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { onAdd(state.today) }) {
-                Icon(Icons.Outlined.Add, contentDescription = "បន្ថែមព្រឹត្តិការណ៍")
-            }
+            PrimaryFab(
+                onClick = { onAdd(state.today) },
+                icon = Icons.Outlined.Add,
+                contentDescription = "បន្ថែមព្រឹត្តិការណ៍",
+            )
         },
     ) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(
+                horizontal = Spacing.md,
+                vertical = Spacing.md,
+            ),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             if (state.isLoading) {
                 // Not an empty state: until the query returns, "you have nothing on" is a
@@ -118,6 +125,17 @@ fun HomeScreen(
                                 nextEventAt = state.nextEventToday?.start?.toLocalTime(),
                                 nextEventTitle = state.nextEventToday?.title,
                                 onOpenDay = onOpenDay,
+                                // The lunar date and today's holiday belong on the card that
+                                // establishes what day it is, not three positions further
+                                // down the scroll. The separate lunar card stays available
+                                // for anyone who has it switched on, and simply repeats it.
+                                lunarText = state.lunar
+                                    ?.takeIf { settings.showKhmerLunarDates }
+                                    ?.format(),
+                                holidayName = state.holidays
+                                    .firstOrNull { it.date == state.today }
+                                    ?.nameKm
+                                    ?.takeIf { settings.showHolidays },
                             )
 
                         com.khmercalendar.data.prefs.DashboardCard.LUNAR ->
@@ -164,7 +182,9 @@ fun HomeScreen(
             }
 
             if (!state.isLoading) item { StatsRow(state) }
-            item { Spacer(Modifier.height(72.dp)) }
+            // Clearance for the floating action button, which was sitting on top of the last
+            // card - the lunar date ran underneath it on a device.
+            item { Spacer(Modifier.height(Spacing.fabClearance)) }
         }
     }
 }

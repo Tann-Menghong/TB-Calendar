@@ -72,7 +72,14 @@ enum class DashboardCard(val key: String, val labelKm: String) {
 data class AppSettings(
     // --- appearance ---
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val accentArgb: Int = 0xFF2F6FED.toInt(),
+    /**
+     * The app's own identity colour, and the first entry in [com.khmercalendar.ui.theme.AccentPalette].
+     *
+     * Every other accent still produces a complete, coherent scheme - the secondary and
+     * tertiary are derived from whatever is chosen - so this is a default rather than an
+     * assumption baked into the screens.
+     */
+    val accentArgb: Int = 0xFF00FF88.toInt(),
     val useDynamicColor: Boolean = false,
     val fontScale: Float = 1.0f,
     val density: CalendarDensity = CalendarDensity.COMFORTABLE,
