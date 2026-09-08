@@ -118,7 +118,7 @@ fun BackupScreen(
             busy = false
             snackbar.showSnackbar(
                 result.fold(
-                    onSuccess = { "នាំចូល ${localeNumberPlain(it)} ព្រឹត្តិការណ៍" },
+                    onSuccess = { icsImportMessage(it) },
                     onFailure = { "នាំចូលមិនបាន៖ ${it.message}" },
                 ),
             )
@@ -205,7 +205,7 @@ fun BackupScreen(
                             val isIcs = uri.toString().endsWith(".ics", ignoreCase = true)
                             val message = if (isIcs) {
                                 IcsFormat.import(context, database, uri).fold(
-                                    onSuccess = { "នាំចូល ${localeNumberPlain(it)} ព្រឹត្តិការណ៍" },
+                                    onSuccess = { icsImportMessage(it) },
                                     onFailure = { "នាំចូលមិនបាន៖ ${it.message}" },
                                 )
                             } else {
@@ -234,3 +234,18 @@ fun BackupScreen(
 /** Snackbar text is built outside composition, so the Khmer digits are converted directly. */
 private fun localeNumberPlain(value: Int): String =
     com.khmercalendar.core.khmer.KhmerNumerals.toKhmer(value)
+
+/**
+ * What to say after reading an .ics file.
+ *
+ * Names the skipped events rather than hiding them: a second import of the same file now adds
+ * nothing, and a user who expected it to add something needs to know why it did not.
+ */
+private fun icsImportMessage(result: IcsFormat.ImportResult): String = when {
+    result.imported == 0 && result.skipped > 0 ->
+        "មានរួចហើយ។ រំលង ${localeNumberPlain(result.skipped)} ព្រឹត្តិការណ៍ដែលស្ទួនគ្នា"
+    result.skipped > 0 ->
+        "នាំចូល ${localeNumberPlain(result.imported)} · " +
+            "រំលង ${localeNumberPlain(result.skipped)} ដែលស្ទួនគ្នា"
+    else -> "នាំចូល ${localeNumberPlain(result.imported)} ព្រឹត្តិការណ៍"
+}

@@ -39,12 +39,42 @@ class ReminderScheduler(
     private val settingsStore: SettingsStore,
 ) {
 
-    suspend fun rescheduleAll() {
+    /**
+     * Re-arms every reminder, and never throws.
+     *
+     * Thirteen places call this, and eleven of them called it as a *side effect* of something
+     * else the user asked for: saving an event, deleting one, restoring a backup, toggling a
+     * notification setting, finishing a boot. None of those passed a handler, so an exception
+     * here did not fail the rescheduling — it killed the process, and on `BOOT_COMPLETED` it
+     * killed it at boot. Losing a reminder is bad; losing the calendar because a reminder
+     * could not be armed is worse, and the user was doing something else entirely.
+     *
+     * The failure modes are known and all external: the exact-alarm permission can be revoked
+     * between the check and the call, Android caps how many alarms an app may hold, and
+     * DataStore and Room can both fail on I/O. So this is a boundary, not a blanket catch —
+     * the error is logged with the component and operation behind it (there is no crash
+     * reporter to send it to and there never will be), and the [Result] lets a caller that
+     * genuinely needs to know check. [kotlinx.coroutines.CancellationException] is rethrown,
+     * because a cancelled scope is not a failure and swallowing it would break the caller's
+     * structured concurrency.
+     *
+     * @return the number of alarms armed, or the failure that stopped it.
+     */
+    suspend fun rescheduleAll(): Result<Int> = try {
+        Result.success(armAll())
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Log.e(TAG, "ReminderScheduler.rescheduleAll failed; reminders may not fire", e)
+        Result.failure(e)
+    }
+
+    private suspend fun armAll(): Int {
         val settings = settingsStore.settings.first()
-        val alarmManager = context.getSystemService<AlarmManager>() ?: return
+        val alarmManager = context.getSystemService<AlarmManager>() ?: return 0
 
         cancelAll(alarmManager)
-        if (!settings.notificationsEnabled) return
+        if (!settings.notificationsEnabled) return 0
 
         NotificationChannels.ensure(context, settings.notificationSoundUri, settings.notificationVibrate)
 
@@ -57,7 +87,7 @@ class ReminderScheduler(
             if (occurrence.isCompleted) continue
             val minutes = repository.reminders(occurrence.eventId)
             for (minutesBefore in minutes) {
-                if (armed >= MAX_ALARMS) return
+                if (armed >= MAX_ALARMS) return armed
                 val fireAt = occurrence.start.minusMinutes(minutesBefore.toLong())
                 if (fireAt.isBefore(now)) continue
 
@@ -95,6 +125,7 @@ class ReminderScheduler(
             armed += armHolidayReminders(alarmManager, now, zone, armed)
         }
         Log.i(TAG, "Armed $armed reminders over the next $WINDOW_DAYS days")
+        return armed
     }
 
     /**

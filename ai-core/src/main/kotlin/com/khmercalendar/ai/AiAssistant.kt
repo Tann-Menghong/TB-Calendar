@@ -4,6 +4,7 @@ import com.khmercalendar.ai.tools.AiEventView
 import com.khmercalendar.ai.tools.CalendarQuery
 import com.khmercalendar.ai.tools.CalendarTools
 import com.khmercalendar.core.khmer.KhmerNumerals
+import com.khmercalendar.core.khmer.KhmerTerms
 import com.khmercalendar.core.nlu.EventProposal
 import com.khmercalendar.core.nlu.ExtractedFact
 import com.khmercalendar.core.nlu.FactSource
@@ -65,6 +66,14 @@ class AiAssistant(
     private val calendar: CalendarQuery,
     private val parser: NaturalLanguageEventParser = NaturalLanguageEventParser(),
     private val extractor: LongTextEventExtractor = LongTextEventExtractor(parser),
+    /**
+     * The hours the user says they are available, read fresh on every call.
+     *
+     * A supplier rather than a value because the setting changes while the app is running and
+     * a captured copy would answer with the old one. This module cannot see DataStore; the
+     * app module passes a lambda that can.
+     */
+    private val availability: () -> ClosedRange<LocalTime> = { DEFAULT_AVAILABILITY },
 ) {
 
     val modelReady: Boolean get() = engine.isReady
@@ -178,24 +187,46 @@ class AiAssistant(
             append("រកឃើញការជាន់គ្នា ${KhmerNumerals.toKhmer(conflicts.size)}៖\n\n")
             conflicts.forEach { c ->
                 append("• ${c.a.title} ⟷ ${c.b.title}\n")
-                append("  ${c.a.start.toLocalDate()} — ជាន់គ្នា ${KhmerNumerals.toKhmer(c.overlapMinutes.toInt())} នាទី\n")
+                append("  ${khmerDate(c.a.start.toLocalDate())} — ជាន់គ្នា ${KhmerNumerals.toKhmer(c.overlapMinutes.toInt())} នាទី\n")
             }
         }.trim()
         return AssistantReply.Text(text, AnswerSource.RULES)
     }
 
     /** Free time on a day, computed from the event table. */
-    suspend fun suggestFreeSlots(date: LocalDate, minimumMinutes: Long = 60): AssistantReply {
+    suspend fun suggestFreeSlots(
+        date: LocalDate,
+        minimumMinutes: Long = 60,
+        now: LocalDateTime = LocalDateTime.now(),
+    ): AssistantReply {
         val events = calendar.eventsBetween(
             LocalDateTime.of(date, LocalTime.MIN),
             LocalDateTime.of(date, LocalTime.MAX),
         )
-        val slots = CalendarTools.freeSlots(events, date, minimumMinutes)
+        val window = availability()
+        val slots = CalendarTools.freeSlots(
+            events = events,
+            date = date,
+            minimumMinutes = minimumMinutes,
+            dayStart = window.start,
+            dayEnd = window.endInclusive,
+            // Asked about today, the answer must not open with hours already gone.
+            notBefore = now,
+        )
         if (slots.isEmpty()) {
-            return AssistantReply.Text("ថ្ងៃនេះគ្មានពេលទំនេរគ្រប់គ្រាន់ទេ។", AnswerSource.RULES)
+            val exhausted = date == now.toLocalDate() &&
+                !now.toLocalTime().isBefore(window.endInclusive)
+            return AssistantReply.Text(
+                if (exhausted) {
+                    "ម៉ោងទំនេររបស់ថ្ងៃនេះបានកន្លងផុតហើយ។"
+                } else {
+                    "គ្មានពេលទំនេរគ្រប់គ្រាន់ទេ។"
+                },
+                AnswerSource.RULES,
+            )
         }
         val text = buildString {
-            append("ពេលទំនេរនៅថ្ងៃ $date៖\n")
+            append("ពេលទំនេរនៅ${khmerDate(date)}៖\n")
             slots.forEach { s ->
                 append("• ").append(KhmerNumerals.toKhmer("%02d:%02d".format(s.start.hour, s.start.minute)))
                 append(" – ").append(KhmerNumerals.toKhmer("%02d:%02d".format(s.end.hour, s.end.minute)))
@@ -381,6 +412,20 @@ class AiAssistant(
     private fun parseTimeOfDay(value: String): LocalTime? =
         runCatching { LocalTime.parse(value.trim().take(5)) }.getOrNull()
 
+    /**
+     * A date inside a Khmer sentence.
+     *
+     * The clash and free-time replies used to interpolate a [LocalDate] directly, which
+     * renders as "2026-09-08" - an ISO date dropped into the middle of a line that is
+     * otherwise entirely Khmer, with Latin digits even for a user who has asked for Khmer
+     * numerals everywhere else.
+     */
+    private fun khmerDate(date: LocalDate): String = buildString {
+        append("ថ្ងៃ").append(KhmerTerms.dayOfWeek(date.dayOfWeek))
+        append(" ទី").append(KhmerNumerals.toKhmer(date.dayOfMonth))
+        append(" ខែ").append(KhmerTerms.solarMonth(date.monthValue))
+    }
+
     companion object {
         /** Below this the model is asked, if one is loaded. */
         const val MIN_RULE_CONFIDENCE = 0.55f
@@ -389,5 +434,8 @@ class AiAssistant(
         const val MODEL_INPUT_BUDGET = 1_200
 
         private const val MODEL_TITLE_MAX_WORDS = 8
+
+        /** Matches [com.khmercalendar.data.prefs.AppSettings] so a test sees the real default. */
+        val DEFAULT_AVAILABILITY: ClosedRange<LocalTime> = LocalTime.of(8, 0)..LocalTime.of(18, 0)
     }
 }

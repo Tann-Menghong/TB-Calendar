@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -113,9 +114,13 @@ fun WeekScreen(
 /**
  * A single day laid out against an hour ruler.
  *
- * The ruler covers 06:00 to 22:00 rather than a full 24 hours: showing the small hours means
- * two thirds of the screen is always empty, and the events that do fall there are still
- * listed above the ruler.
+ * The ruler covers the user's own waking hours from settings rather than a full 24, because
+ * showing the small hours means two thirds of the screen is always empty. It is then
+ * *stretched to cover every event on the day*, which is what keeps the compromise honest: a
+ * fixed 06:00-22:00 window used to hide a timed event outside it completely - the event was
+ * in the month grid, the agenda, the dashboard, search and the widgets, and simply absent
+ * here. That became easy to hit once a new event added late in the evening correctly starts
+ * at midnight.
  */
 @Composable
 fun DayScreen(
@@ -129,6 +134,15 @@ fun DayScreen(
 
     val allDay = events.filter { it.allDay }
     val timed = events.filterNot { it.allDay }
+    val settings = LocalAppSettings.current
+
+    // The preferred window, widened to whatever the day actually holds.
+    val hours = remember(timed, settings.dayStartHour, settings.dayEndHour) {
+        val starts = timed.map { it.start.hour }
+        val first = (starts + settings.dayStartHour).min().coerceIn(0, 23)
+        val last = (starts + settings.dayEndHour).max().coerceIn(first, 23)
+        (first..last).toList()
+    }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -169,7 +183,7 @@ fun DayScreen(
             }
         }
 
-        items((FIRST_HOUR..LAST_HOUR).toList()) { hour ->
+        items(hours) { hour ->
             val inHour = timed.filter { it.start.hour == hour }
             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                 Text(
@@ -223,5 +237,3 @@ fun DayScreen(
     }
 }
 
-private const val FIRST_HOUR = 6
-private const val LAST_HOUR = 22

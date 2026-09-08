@@ -78,7 +78,18 @@ class AppContainer(
     val aiEngine: AiEngine by lazy { AiEngineFactory.create(context) }
 
     val aiAssistant: AiAssistant by lazy {
-        AiAssistant(engine = aiEngine, calendar = repositoryAsCalendarQuery())
+        AiAssistant(
+            engine = aiEngine,
+            calendar = repositoryAsCalendarQuery(),
+            // Read at call time, not captured: the availability sliders in Appearance said
+            // they drove free-time suggestions and drove nothing at all, because nothing
+            // outside that screen ever read them.
+            availability = {
+                val current = cachedSettings
+                java.time.LocalTime.of(current.dayStartHour, 0)..
+                    java.time.LocalTime.of(current.dayEndHour, 0)
+            },
+        )
     }
 
     /**
@@ -98,6 +109,10 @@ class AppContainer(
             val days = java.time.Duration.between(from, to).toDays().toInt().coerceIn(1, 400)
             return eventRepository.upcoming(from, days)
                 .filter { !it.start.isAfter(to) }
+                // One entry per real occurrence. An event that runs past midnight is listed
+                // on both days it covers so it appears in both grids, and those two rows
+                // carry the same start - a flat list must not hold it twice.
+                .distinctBy { it.eventId to it.start }
                 .map {
                     AiEventView(
                         id = it.eventId,

@@ -41,7 +41,15 @@ data class FreeSlot(val start: LocalDateTime, val end: LocalDateTime) {
  */
 object CalendarTools {
 
-    /** Every pair of overlapping timed events in the list. */
+    /**
+     * Every pair of overlapping timed events in the list.
+     *
+     * An event never clashes with itself. That is not a hypothetical: an event running past
+     * midnight is carried onto the second day so it shows in both grids, and the assistant's
+     * flat list then held the same event twice. On a device it read "Late 11pm ⟷ Late 11pm —
+     * ជាន់គ្នា ៦០ នាទី", which is nonsense the moment you read it. Callers de-duplicate too,
+     * but the invariant belongs here, where the claim is made.
+     */
     fun conflicts(events: List<AiEventView>): List<Conflict> {
         val timed = events.filterNot { it.allDay }.sortedBy { it.start }
         val out = mutableListOf<Conflict>()
@@ -51,6 +59,7 @@ object CalendarTools {
                 val b = timed[j]
                 // Sorted by start, so once b begins after a ends nothing later can overlap a.
                 if (!b.start.isBefore(a.end)) break
+                if (a.id == b.id) continue
                 val overlapEnd = minOf(a.end, b.end)
                 val minutes = Duration.between(b.start, overlapEnd).toMinutes()
                 if (minutes > 0) out += Conflict(a, b, minutes)
@@ -67,7 +76,12 @@ object CalendarTools {
      * Gaps of at least [minimumMinutes] on [date] inside working hours.
      *
      * Bounded to a waking window on purpose: technically 02:00 is free, but proposing it is
-     * not an answer anyone wanted.
+     * not an answer anyone wanted. [dayStart] and [dayEnd] are the user's own availability
+     * from settings - the caller passes them, because this module has no access to
+     * preferences and should not acquire one.
+     *
+     * [notBefore] trims the window at a moment that has already passed. Asked "when am I free
+     * today" at three in the afternoon, the honest answer cannot begin with this morning.
      */
     fun freeSlots(
         events: List<AiEventView>,
@@ -75,9 +89,14 @@ object CalendarTools {
         minimumMinutes: Long = 30,
         dayStart: LocalTime = LocalTime.of(8, 0),
         dayEnd: LocalTime = LocalTime.of(18, 0),
+        notBefore: LocalDateTime? = null,
     ): List<FreeSlot> {
-        val windowStart = LocalDateTime.of(date, dayStart)
+        val windowStart = maxOf(
+            LocalDateTime.of(date, dayStart),
+            notBefore?.takeIf { it.toLocalDate() == date } ?: LocalDateTime.MIN,
+        )
         val windowEnd = LocalDateTime.of(date, dayEnd)
+        if (!windowStart.isBefore(windowEnd)) return emptyList()
         val busy = events
             .filterNot { it.allDay }
             .filter { it.start < windowEnd && windowStart < it.end }

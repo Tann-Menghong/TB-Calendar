@@ -288,7 +288,9 @@ fun AppearanceScreen(
 
             SettingsGroup("ម៉ោងធ្វើការ") {
                 Text(
-                    "ប្រើសម្រាប់ការស្នើពេលទំនេរ និងការបង្ហាញប្រតិទិនសប្តាហ៍។",
+                    "កំណត់ម៉ោងដែលអ្នកទំនេរ។ " +
+                        "ប្រើក្នុងការស្នើពេលទំនេរ " +
+                        "និងបង្ហាញទិដ្ឋភាពថ្ងៃ។",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
