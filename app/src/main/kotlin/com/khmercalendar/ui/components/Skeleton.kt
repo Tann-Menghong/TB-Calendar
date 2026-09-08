@@ -1,6 +1,5 @@
 package com.khmercalendar.ui.components
 
-import android.provider.Settings
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -18,7 +17,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
@@ -104,17 +102,9 @@ fun DashboardSkeleton(modifier: Modifier = Modifier) {
  */
 @Composable
 private fun skeletonAlpha(): Float {
-    val context = LocalContext.current
-    val animationsOff = remember(context) {
-        runCatching {
-            Settings.Global.getFloat(
-                context.contentResolver,
-                Settings.Global.ANIMATOR_DURATION_SCALE,
-                1f,
-            )
-        }.getOrDefault(1f) == 0f
-    }
-    if (animationsOff) return 0.09f
+    // One gate for the whole app now: the system switch and the in-app animation level both
+    // land in AppMotion, so the shimmer cannot outlive either.
+    if (AppMotion.scale() == 0f) return 0.09f
 
     val transition = rememberInfiniteTransition(label = "skeleton")
     val alpha by transition.animateFloat(

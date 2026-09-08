@@ -133,14 +133,30 @@ object IconSize {
  * notice as an animation is long enough to be in the way of someone checking the time.
  */
 object Motion {
-    /** A press, a checkbox, a selection. */
-    const val QUICK = 120
+    /** A press, an icon, a checkbox. Feedback, not transition. */
+    const val MICRO = 120
 
-    /** A card appearing, a section expanding. */
-    const val STANDARD = 220
+    /** A card appearing, a status colour changing. */
+    const val SMALL = 180
 
-    /** A progress ring catching up to a new value. */
+    /** A section expanding, a sheet arriving. */
+    const val MEDIUM = 260
+
+    /** The dashboard rearranging, a hero collapsing. */
+    const val LARGE = 380
+
+    /** A progress ring or bar catching up to a new value. */
     const val PROGRESS = 600
+
+    /** Kept for callers written before the scale had four steps. */
+    const val QUICK = MICRO
+    const val STANDARD = SMALL
+
+    /** How far apart timeline rows enter, so the list arrives as a sequence. */
+    const val STAGGER = 40
+
+    /** The longest a stagger is allowed to run before every remaining row arrives at once. */
+    const val STAGGER_CAP = 320
 }
 
 /** [Radius] as Material's shape scale, so every built-in component inherits it. */

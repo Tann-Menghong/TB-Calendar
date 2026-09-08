@@ -53,6 +53,20 @@ enum class DashboardDensity(val cardPaddingDp: Int, val gapDp: Int, val labelKm:
     SPACIOUS(20, 16, "ធំ"),
 }
 
+/**
+ * How much the interface is allowed to move.
+ *
+ * [MINIMAL] is not "off with the decoration on" - it collapses every duration to zero, so
+ * state changes still happen and simply arrive rather than travel. That is the same behaviour
+ * the system's own reduced-motion switch produces, which is deliberate: this setting exists
+ * for people who want less movement without turning it off system-wide.
+ */
+enum class AnimationLevel(val scale: Float, val labelKm: String) {
+    MINIMAL(0f, "តិចបំផុត"),
+    STANDARD(1f, "ធម្មតា"),
+    ENHANCED(1.3f, "ច្រើន"),
+}
+
 /** Which screen the app opens on. */
 enum class StartScreen(val route: String, val labelKm: String) {
     HOME("home", "ផ្ទាំងដើម"),
@@ -149,6 +163,7 @@ data class AppSettings(
     val dashboardCards: List<DashboardCard> = DashboardCard.entries.toList(),
     val hiddenDashboardCards: Set<String> = emptySet(),
     val dashboardDensity: DashboardDensity = DashboardDensity.COMFORTABLE,
+    val animationLevel: AnimationLevel = AnimationLevel.STANDARD,
 
     // --- work schedule ---
     /**

@@ -70,12 +70,28 @@ fun SurfaceCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val shape = RoundedCornerShape(Radius.md)
+    // A tappable card dips three per cent under the finger. The purpose is to confirm the
+    // touch landed on *this* card rather than the one beside it; ten per cent would read as
+    // a toy, and the scale is skipped entirely when motion is reduced, where the ripple is
+    // already doing the job.
+    val press = rememberPressSource()
     Column(
         modifier
             .fillMaxWidth()
+            .then(if (onClick != null) Modifier.pressScale(press) else Modifier)
             .clip(shape)
             .background(MaterialTheme.colorScheme.surface)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable(
+                        interactionSource = press,
+                        indication = androidx.compose.material3.ripple(),
+                        onClick = onClick,
+                    )
+                } else {
+                    Modifier
+                },
+            )
             .padding(padding),
         content = content,
     )
@@ -315,28 +331,6 @@ fun PrimaryFab(
 }
 
 /**
- * Whether the user has asked the system for less movement.
- *
- * Compose has no reduced-motion flag of its own, so this reads the animator duration scale -
- * which is what both "Remove animations" in accessibility settings and the developer-options
- * animation scales write to. Every animation in the app that is decoration rather than
- * feedback checks this, so a single system switch turns them all off.
- */
-@Composable
-fun rememberReducedMotion(): Boolean {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    return androidx.compose.runtime.remember(context) {
-        runCatching {
-            android.provider.Settings.Global.getFloat(
-                context.contentResolver,
-                android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,
-                1f,
-            )
-        }.getOrDefault(1f) == 0f
-    }
-}
-
-/**
  * A flat progress bar.
  *
  * Drawn rather than themed so it can sit on a gradient card as readily as on a plain one, and
@@ -352,12 +346,9 @@ fun ProgressBar(
     height: androidx.compose.ui.unit.Dp = 6.dp,
 ) {
     val target = fraction.coerceIn(0f, 1f)
-    val reduced = rememberReducedMotion()
     val animated by androidx.compose.animation.core.animateFloatAsState(
         targetValue = target,
-        animationSpec = androidx.compose.animation.core.tween(
-            durationMillis = if (reduced) 0 else com.khmercalendar.ui.theme.Motion.PROGRESS,
-        ),
+        animationSpec = AppMotion.tweenOf(com.khmercalendar.ui.theme.Motion.PROGRESS),
         label = "progress",
     )
     Box(

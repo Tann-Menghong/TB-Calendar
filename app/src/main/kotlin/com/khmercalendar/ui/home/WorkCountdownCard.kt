@@ -47,7 +47,8 @@ import com.khmercalendar.ui.theme.GradientTone
 import com.khmercalendar.ui.theme.Gradients
 import com.khmercalendar.ui.theme.LocalAppSettings
 import com.khmercalendar.ui.components.ProgressBar
-import com.khmercalendar.ui.components.rememberReducedMotion
+import com.khmercalendar.ui.components.AppMotion
+import com.khmercalendar.ui.components.animatedAccent
 import com.khmercalendar.ui.theme.Motion
 import com.khmercalendar.ui.theme.Radius
 import com.khmercalendar.ui.theme.Spacing
@@ -80,7 +81,13 @@ fun WorkCountdownCard(
 
     val settings = LocalAppSettings.current
     val uses24Hour = LocalUses24Hour.current
-    val tone = toneFor(status.state)
+    // The gradient crossfades between states rather than cutting. Morning work becoming lunch
+    // is a transition the user should see happen, not a card that was suddenly a different
+    // colour the next time they looked at it.
+    val target = toneFor(status.state)
+    val from by animatedAccent(target.from, Motion.LARGE)
+    val to by animatedAccent(target.to, Motion.LARGE)
+    val tone = target.copy(from = from, to = to)
 
     GradientCard(
         tone = tone,
@@ -235,12 +242,9 @@ private fun ProgressRing(
     // Animated so a resumed screen sweeps to its value instead of snapping.
     // Sweeps to its value on resume rather than snapping - unless the user has asked the
     // system for less movement, in which case it simply arrives.
-    val reduced = rememberReducedMotion()
     val animated by animateFloatAsState(
         targetValue = progress.coerceIn(0f, 1f),
-        animationSpec = androidx.compose.animation.core.tween(
-            durationMillis = if (reduced) 0 else Motion.PROGRESS,
-        ),
+        animationSpec = AppMotion.tweenOf(Motion.PROGRESS),
         label = "workProgress",
     )
     Box(Modifier.size(84.dp), contentAlignment = Alignment.Center) {

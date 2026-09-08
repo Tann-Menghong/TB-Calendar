@@ -29,6 +29,17 @@ import androidx.compose.material.icons.outlined.HourglassEmpty
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.graphicsLayer
+import com.khmercalendar.ui.components.AnimatedNumberText
+import com.khmercalendar.ui.components.AppMotion
+import com.khmercalendar.ui.components.StatusBadge
+import com.khmercalendar.ui.theme.Motion
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -179,8 +190,19 @@ private fun NextEventModule(
                 color = accent,
             )
             val minutes = Duration.between(now, next.start.toLocalTime()).toMinutes()
-            if (minutes > 0) {
-                Text(
+            when {
+                // Inside a quarter of an hour the countdown stops being information and
+                // starts being a prompt, so it says so in words rather than by turning a
+                // colour - which would tell a colour-blind user nothing at all.
+                minutes in 0..15 -> {
+                    Spacer(Modifier.height(Spacing.xs))
+                    StatusBadge(
+                        text = "\u1785\u17b6\u1794\u17cb\u1795\u17d2\u178f\u17be\u1798\u1786\u17b6\u1794\u17cb\u17d7",
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+
+                minutes > 15 -> Text(
                     relativeMinutes(minutes, settings.useKhmerNumerals),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -217,10 +239,12 @@ private fun ProgressModule(
         ModuleLabel("TODAY", color = accent)
         Spacer(Modifier.height(Spacing.sm))
         if (tasksTotal > 0) {
-            Text(
-                "${localeNumber(percent)}%",
+            // Counts to its new value when a task is ticked, rather than jumping.
+            AnimatedNumberText(
+                value = percent,
                 style = AppType.metric(),
                 color = MaterialTheme.colorScheme.onSurface,
+                suffix = "%",
             )
             Spacer(Modifier.height(Spacing.xs))
             // The figure and the bar say the same thing twice on purpose, and the words say
@@ -236,8 +260,8 @@ private fun ProgressModule(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            Text(
-                localeNumber(eventsToday),
+            AnimatedNumberText(
+                value = eventsToday,
                 style = AppType.metric(),
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -297,6 +321,7 @@ fun TimelineModule(
 
         entries.forEachIndexed { index, entry ->
             val passed = isToday && entry.at <= now
+            TimelineEnter(index = index) {
             TimelineRow(
                 entry = entry,
                 passed = passed,
@@ -312,7 +337,41 @@ fun TimelineModule(
                     entry.date?.let { d -> { onOpenEvent(id, d) } }
                 },
             )
+            }
         }
+    }
+}
+
+/**
+ * A timeline row arriving.
+ *
+ * Fades and lifts a few pixels, staggered by position so the day assembles downwards rather
+ * than appearing all at once. The stagger is capped - a long day would otherwise take a
+ * second and a half to finish arriving, which is an animation the user is waiting on rather
+ * than one they enjoy.
+ *
+ * Runs once. Recomposing a row - because a minute passed, or a task was ticked - must not
+ * replay it.
+ */
+@Composable
+private fun TimelineEnter(index: Int, content: @Composable () -> Unit) {
+    val delay = (index * Motion.STAGGER).coerceAtMost(Motion.STAGGER_CAP)
+    var shown by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { shown = true }
+
+    val progress by animateFloatAsState(
+        targetValue = if (shown) 1f else 0f,
+        animationSpec = AppMotion.enterOf(Motion.MEDIUM, delayMillis = delay),
+        label = "timelineEnter",
+    )
+    Box(
+        Modifier
+            .graphicsLayer {
+                alpha = progress
+                translationY = (1f - progress) * 12.dp.toPx()
+            },
+    ) {
+        content()
     }
 }
 
@@ -393,7 +452,10 @@ private fun TimelineRow(
                         null
                     },
                 )
-                entry.subtitle?.let {
+                val subtitle = entry.subtitle ?: entry.subtitleAt?.let { at ->
+                    "រហូតដល់ " + CalendarFormats.time(at, uses24Hour, khmerNumerals)
+                }
+                subtitle?.let {
                     Text(
                         text = it,
                         style = MaterialTheme.typography.bodySmall,

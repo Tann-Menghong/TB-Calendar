@@ -383,11 +383,16 @@ fun KhmerCalendarTheme(
         CalendarFormats.uses24Hour(context, settings.timeFormat)
     }
 
+    // Read once at the root. Every animated component reads the composition local rather
+    // than doing its own Settings.Global lookup, so a component cannot forget to check.
+    val reducedMotion = com.khmercalendar.ui.components.rememberReducedMotion()
+
     CompositionLocalProvider(
         LocalAppSettings provides settings,
         LocalUses24Hour provides uses24Hour,
         LocalIsDarkTheme provides dark,
         LocalAccentTrio provides trio,
+        com.khmercalendar.ui.components.LocalReducedMotion provides reducedMotion,
     ) {
         MaterialTheme(
             colorScheme = scheme,

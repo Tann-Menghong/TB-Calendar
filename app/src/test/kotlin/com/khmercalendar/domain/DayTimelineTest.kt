@@ -2,6 +2,7 @@ package com.khmercalendar.domain
 
 import com.khmercalendar.core.work.WorkSchedule
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
@@ -78,7 +79,11 @@ class DayTimelineTest {
         val midday = entries.single { it.at == LocalTime.of(11, 30) }
 
         assertEquals(TimelineEntry.Kind.BREAK, midday.kind)
-        assertTrue(midday.subtitle!!.contains("13:30"))
+        // The time is carried, not rendered: the builder has no access to the user's 12/24
+        // hour preference or their numerals, and a hard-coded "13:30" sat inside a timeline
+        // where every other time read "១:៣០ រសៀល".
+        assertEquals(LocalTime.of(13, 30), midday.subtitleAt)
+        assertNull(midday.subtitle)
     }
 
     @Test

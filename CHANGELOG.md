@@ -1,5 +1,49 @@
 # Changelog
 
+## 1.6.0 — 2026-09-08
+
+1.5.0 built the dashboard's structure. This one makes it move — and puts every animation in the app behind one switch you control.
+
+### ចលនា · You decide how much the interface moves
+
+**ការកំណត់ → រូបរាង → ចលនា** — **តិចបំផុត**, **ធម្មតា** or **ច្រើន**.
+
+**តិចបំផុត** does not mean "the same animations, faster". It collapses every duration to zero, so a state still changes — it simply arrives instead of travelling. That is what reduced motion should do: it is about movement, never about hiding information.
+
+Your phone's own accessibility setting still wins over this one, and the app says so under the control.
+
+#### Why this is one switch and not a convention
+
+Two things can ask for less movement: Android's accessibility switch and the setting above. A convention that each animation "should check" would be honoured wherever somebody remembered and quietly broken everywhere else — and that failure is invisible in review, because the animation just runs for a user who asked it not to.
+
+So durations now come from one place or they do not exist. Every animation in the app is gated by it, including the loading shimmer, the progress ring, the progress bars, the timeline and press feedback.
+
+### What moves now
+
+**The work card crossfades between states.** Morning work becoming lunch is a transition you see happen, rather than a card that was a different colour the next time you looked.
+
+**The timeline arrives as a sequence** — each row fading and lifting a few pixels, staggered downward so the day assembles rather than appearing. The stagger is capped: a long day would otherwise take a second and a half to finish, which is an animation you wait on rather than enjoy. It runs once, and a minute passing does not replay it.
+
+**Figures count to their new value.** Tick a task and the percentage counts up rather than jumping. Only on a real change — a number that animates every time it is recomposed is noise.
+
+**Cards dip under the finger.** Three per cent, not ten: the point is confirming the touch landed on *this* card, and anything more reads as a toy.
+
+### ចាប់ផ្តើមឆាប់ៗ · The next event tells you when it is close
+
+Inside a quarter of an hour, the countdown stops being information and becomes a prompt, so **NEXT** says so — in words. Not by turning a colour, which would tell a colour-blind user nothing at all.
+
+### A time inside the timeline read the wrong way
+
+The break row said **រហូតដល់ 13:30** — Latin digits, 24-hour — inside a timeline where every other time read ១:៣០ រសៀល. The cause is worth naming: the timeline builder is pure and has no access to your 12/24-hour preference or your choice of numerals, and it was formatting a clock time anyway. It now carries the time and lets the screen render it. Covered by a test.
+
+### Tested
+
+181 unit tests pass and lint is clean. Checked on an **Android 8.0 (API 26)** emulator with a seeded working day: the "starting soon" badge at fourteen minutes out, the corrected break subtitle, and — the check that matters most — the whole dashboard at **តិចបំផុត**, where every row of the timeline is present and complete. Reduced motion must never hide information.
+
+### Privacy
+
+Unchanged: no account, no analytics, no tracking, no ads. Your calendar never leaves the device. The AI is optional, off by default, and runs entirely on-device.
+
 ## 1.5.0 — 2026-09-08
 
 The Home tab is a different screen. Not a restyle of the old one — a different composition, a different reading order, and a piece of information it never showed before.

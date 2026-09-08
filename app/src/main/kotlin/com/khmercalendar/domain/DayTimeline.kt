@@ -17,6 +17,14 @@ data class TimelineEntry(
     val title: String,
     val kind: Kind,
     val subtitle: String? = null,
+    /**
+     * A time the subtitle needs to mention, left unformatted.
+     *
+     * The builder must not render a clock time itself: it has no access to the user's 12/24
+     * hour preference or their choice of numerals, and a hard-coded "13:30" sat inside a
+     * timeline where every other time read "១:៣០ រសៀល". Formatting belongs to the composable.
+     */
+    val subtitleAt: LocalTime? = null,
     /** Present only for calendar entries, so a tap can open the event. */
     val eventId: Long? = null,
     val date: LocalDate? = null,
@@ -63,7 +71,7 @@ object DayTimeline {
                     entries += TimelineEntry(
                         at = block.end,
                         title = "ពេលសម្រាក",
-                        subtitle = "រហូតដល់ " + next.start.toDisplay(),
+                        subtitleAt = next.start,
                         kind = TimelineEntry.Kind.BREAK,
                     )
                 } else {
@@ -106,6 +114,4 @@ object DayTimeline {
      */
     fun nowIndex(entries: List<TimelineEntry>, now: LocalTime): Int =
         entries.count { it.at <= now }
-
-    private fun LocalTime.toDisplay(): String = "%02d:%02d".format(hour, minute)
 }

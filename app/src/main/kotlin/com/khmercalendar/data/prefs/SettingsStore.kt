@@ -76,6 +76,7 @@ class SettingsStore(context: Context) {
             ?: DashboardCard.entries.toList(),
         hiddenDashboardCards = this[Keys.DASHBOARD_HIDDEN] ?: emptySet(),
         dashboardDensity = enumOf(this[Keys.DASHBOARD_DENSITY], DashboardDensity.COMFORTABLE),
+        animationLevel = enumOf(this[Keys.ANIMATION_LEVEL], AnimationLevel.STANDARD),
 
         workSchedule = WorkScheduleCodec
             .decode(this[Keys.WORK_SCHEDULE])
@@ -148,6 +149,9 @@ class SettingsStore(context: Context) {
 
     suspend fun setDashboardDensity(density: DashboardDensity) =
         put(Keys.DASHBOARD_DENSITY, density.name)
+
+    suspend fun setAnimationLevel(level: AnimationLevel) =
+        put(Keys.ANIMATION_LEVEL, level.name)
 
     suspend fun setWorkSchedule(schedule: WorkSchedule) {
         // The blocks and the on/off switch are separate keys but one user action, so they are
@@ -261,6 +265,7 @@ class SettingsStore(context: Context) {
         val DASHBOARD_ORDER = stringPreferencesKey("dashboard_order")
         val DASHBOARD_HIDDEN = stringSetPreferencesKey("dashboard_hidden")
         val DASHBOARD_DENSITY = stringPreferencesKey("dashboard_density")
+        val ANIMATION_LEVEL = stringPreferencesKey("animation_level")
 
         val WORK_SCHEDULE = stringPreferencesKey("work_schedule")
         val WORK_ENABLED = booleanPreferencesKey("work_enabled")

@@ -1,11 +1,11 @@
 {
-  "versionCode": 9,
-  "versionName": "1.5.0",
-  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v1.5.0/TB-Calendar-1.5.0.apk",
+  "versionCode": 10,
+  "versionName": "1.6.0",
+  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v1.6.0/TB-Calendar-1.6.0.apk",
   "apkSizeBytes": 60094776,
-  "apkSha256": "cf4868b8d8b362c3583997243458d02f5ac851fc2d8b4af8bd337cc01d23cafb",
+  "apkSha256": "1881d668812feaf3ed6aff0903eb80b134984b91117779c545b1bbdc95b0fe62",
   "minSdk": 26,
-  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v1.5.0",
-  "releaseNotesKm": "ផ្ទាំងដើមថ្មីទាំងស្រុង។ កាលវិភាគថ្ងៃនេះជាខ្សែពេលវេលា មានចំណុចម៉ោងបច្ចុប្បន្ន។ មានម៉ោងរស់នៅ ស្ថានភាពការងារ និងកិច្ចការសំខាន់។",
-  "releaseNotesEn": "The Home tab is rebuilt as a command centre. The toolbar is replaced by a live status strip, today is set as a headline, and today's events are drawn as a timeline with your working day on the same line and a marker at the current minute. Adds a next/progress pair, a numbered focus list, an up-next strip and a quick-action dock in place of the floating button."
+  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v1.6.0",
+  "releaseNotesKm": "ការកំណត់ចលនាថ្មី។ តិចបំផុត ធម្មតា ឬ ច្រើន។ កាតស្ថានភាពការងារប្តូរពណ៌យឺតៗ និងកាលវិភាគចូលមកជាលំដាប់។",
+  "releaseNotesEn": "An animation setting you control, and one gate every animation in the app goes through - including your phone's own reduced-motion switch, which still wins. The work card crossfades between states, the timeline arrives as a sequence, figures count to their new value, and the next event says when it is starting soon."
 }

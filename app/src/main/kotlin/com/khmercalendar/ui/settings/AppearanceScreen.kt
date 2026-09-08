@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import com.khmercalendar.data.prefs.AppSettings
 import com.khmercalendar.data.prefs.CalendarDensity
 import com.khmercalendar.data.prefs.DashboardCard
+import com.khmercalendar.data.prefs.AnimationLevel
 import com.khmercalendar.data.prefs.DashboardDensity
 import com.khmercalendar.data.prefs.SettingsStore
 import com.khmercalendar.data.prefs.ThemeMode
@@ -386,6 +387,26 @@ fun AppearanceScreen(
                         onClick = { scope.launch { settingsStore.setDashboardDensity(density) } },
                     )
                 }
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "ចលនា",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+                AnimationLevel.entries.forEach { level ->
+                    ChoiceRow(
+                        title = level.labelKm,
+                        selected = settings.animationLevel == level,
+                        onClick = { scope.launch { settingsStore.setAnimationLevel(level) } },
+                    )
+                }
+                Text(
+                    "ការកំណត់ចលនារបស់ប្រព័ន្ធមានអាទិភាពជាងការកំណត់នេះ។",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
                 Spacer(Modifier.height(6.dp))
                 // The saved order, then anything a newer version added. Reordering writes the
                 // whole list, so a card can never end up in the order twice or not at all.
