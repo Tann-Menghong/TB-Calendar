@@ -40,6 +40,19 @@ enum class CalendarDensity(val cellHeightDp: Int, val labelKm: String) {
     SPACIOUS(72, "ធំ"),
 }
 
+/**
+ * How much room the dashboard cards take.
+ *
+ * Separate from [CalendarDensity], which sizes the month grid's cells. This one changes the
+ * padding inside a dashboard card and the gap between cards, so someone who wants to see five
+ * cards without scrolling can, and someone who finds that cramped is not forced into it.
+ */
+enum class DashboardDensity(val cardPaddingDp: Int, val gapDp: Int, val labelKm: String) {
+    COMPACT(12, 8, "តូច"),
+    COMFORTABLE(16, 12, "មធ្យម"),
+    SPACIOUS(20, 16, "ធំ"),
+}
+
 /** Which screen the app opens on. */
 enum class StartScreen(val route: String, val labelKm: String) {
     HOME("home", "ផ្ទាំងដើម"),
@@ -119,6 +132,7 @@ data class AppSettings(
     val defaultEventDurationMinutes: Int = 60,
     val dashboardCards: List<DashboardCard> = DashboardCard.entries.toList(),
     val hiddenDashboardCards: Set<String> = emptySet(),
+    val dashboardDensity: DashboardDensity = DashboardDensity.COMFORTABLE,
 
     // --- work schedule ---
     /**

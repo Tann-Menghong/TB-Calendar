@@ -46,6 +46,9 @@ import com.khmercalendar.ui.theme.AppType
 import com.khmercalendar.ui.theme.GradientTone
 import com.khmercalendar.ui.theme.Gradients
 import com.khmercalendar.ui.theme.LocalAppSettings
+import com.khmercalendar.ui.components.ProgressBar
+import com.khmercalendar.ui.components.rememberReducedMotion
+import com.khmercalendar.ui.theme.Motion
 import com.khmercalendar.ui.theme.Radius
 import com.khmercalendar.ui.theme.Spacing
 import kotlinx.coroutines.delay
@@ -169,7 +172,7 @@ fun WorkCountdownCard(
                     color = tone.onTone,
                 )
                 Spacer(Modifier.height(Spacing.sm))
-                DayProgressBar(
+                ProgressBar(
                     fraction = status.dayFraction(),
                     track = tone.onTone.copy(alpha = 0.22f),
                     indicator = tone.onTone,
@@ -191,30 +194,6 @@ private fun WorkStatus.dayFraction(): Float {
     if (total <= 0L) return 0f
     val worked = (total - remainingToday.seconds).coerceAtLeast(0L)
     return (worked.toFloat() / total.toFloat()).coerceIn(0f, 1f)
-}
-
-/** A flat progress bar, drawn rather than themed so it can sit on a gradient. */
-@Composable
-private fun DayProgressBar(fraction: Float, track: Color, indicator: Color) {
-    val animated by animateFloatAsState(
-        targetValue = fraction.coerceIn(0f, 1f),
-        label = "dayProgress",
-    )
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .height(6.dp)
-            .clip(RoundedCornerShape(3.dp))
-            .background(track),
-    ) {
-        Box(
-            Modifier
-                .fillMaxWidth(animated)
-                .height(6.dp)
-                .clip(RoundedCornerShape(3.dp))
-                .background(indicator),
-        )
-    }
 }
 
 /**
@@ -254,8 +233,14 @@ private fun ProgressRing(
     khmerNumerals: Boolean,
 ) {
     // Animated so a resumed screen sweeps to its value instead of snapping.
+    // Sweeps to its value on resume rather than snapping - unless the user has asked the
+    // system for less movement, in which case it simply arrives.
+    val reduced = rememberReducedMotion()
     val animated by animateFloatAsState(
         targetValue = progress.coerceIn(0f, 1f),
+        animationSpec = androidx.compose.animation.core.tween(
+            durationMillis = if (reduced) 0 else Motion.PROGRESS,
+        ),
         label = "workProgress",
     )
     Box(Modifier.size(84.dp), contentAlignment = Alignment.Center) {

@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import com.khmercalendar.data.prefs.AppSettings
 import com.khmercalendar.data.prefs.CalendarDensity
 import com.khmercalendar.data.prefs.DashboardCard
+import com.khmercalendar.data.prefs.DashboardDensity
 import com.khmercalendar.data.prefs.SettingsStore
 import com.khmercalendar.data.prefs.ThemeMode
 import com.khmercalendar.ui.components.CalendarFormats
@@ -371,6 +372,21 @@ fun AppearanceScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "ទំហំកាត",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+                DashboardDensity.entries.forEach { density ->
+                    ChoiceRow(
+                        title = density.labelKm,
+                        selected = settings.dashboardDensity == density,
+                        onClick = { scope.launch { settingsStore.setDashboardDensity(density) } },
+                    )
+                }
+                Spacer(Modifier.height(6.dp))
                 // The saved order, then anything a newer version added. Reordering writes the
                 // whole list, so a card can never end up in the order twice or not at all.
                 val ordered = settings.dashboardCards

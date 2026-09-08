@@ -30,7 +30,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.khmercalendar.ui.components.SectionCard
+import com.khmercalendar.ui.components.IconTile
+import com.khmercalendar.ui.components.SectionTitle
+import com.khmercalendar.ui.components.SurfaceCard
+import com.khmercalendar.ui.theme.CardAccent
+import com.khmercalendar.ui.theme.LocalAppSettings
+import com.khmercalendar.ui.theme.color
 import com.khmercalendar.ui.theme.Radius
 import com.khmercalendar.ui.theme.Spacing
 
@@ -50,22 +55,21 @@ fun QuickActionsCard(
     onSearch: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    SectionCard(modifier) {
-        Text(
-            "សកម្មភាពរហ័ស",
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+    val density = LocalAppSettings.current.dashboardDensity
+    SurfaceCard(modifier, padding = density.cardPaddingDp.dp) {
+        SectionTitle("សកម្មភាពរហ័ស", accent = CardAccent.NEUTRAL.color())
         Spacer(Modifier.height(Spacing.md))
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            QuickAction(Icons.Outlined.Event, "ព្រឹត្តិការណ៍", MaterialTheme.colorScheme.primary, onAddEvent)
-            QuickAction(Icons.Outlined.CheckCircle, "កិច្ចការ", MaterialTheme.colorScheme.tertiary, onAddTask)
-            QuickAction(Icons.Outlined.EditNote, "កំណត់ចំណាំ", MaterialTheme.colorScheme.secondary, onAddNote)
-            QuickAction(Icons.Outlined.AutoAwesome, "ជំនួយការ", MaterialTheme.colorScheme.primary, onAssistant)
-            QuickAction(Icons.Outlined.Search, "ស្វែងរក", MaterialTheme.colorScheme.secondary, onSearch)
+            // Each action takes the colour of the thing it makes, so the row reads as a key
+            // to the cards below it rather than as five arbitrary tints.
+            QuickAction(Icons.Outlined.Event, "ព្រឹត្តិការណ៍", CardAccent.CALENDAR.color(), onAddEvent)
+            QuickAction(Icons.Outlined.CheckCircle, "កិច្ចការ", CardAccent.TASKS.color(), onAddTask)
+            QuickAction(Icons.Outlined.EditNote, "កំណត់ចំណាំ", CardAccent.NEUTRAL.color(), onAddNote)
+            QuickAction(Icons.Outlined.AutoAwesome, "ជំនួយការ", CardAccent.AI.color(), onAssistant)
+            QuickAction(Icons.Outlined.Search, "ស្វែងរក", CardAccent.CALENDAR.color(), onSearch)
         }
     }
 }
@@ -84,15 +88,7 @@ private fun QuickAction(
             .clickable(onClick = onClick)
             .padding(horizontal = Spacing.xs, vertical = Spacing.xs),
     ) {
-        Box(
-            Modifier
-                .size(44.dp)
-                .clip(RoundedCornerShape(Radius.md))
-                .background(tint.copy(alpha = 0.12f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(22.dp))
-        }
+        IconTile(icon = icon, contentDescription = label, tint = tint)
         Spacer(Modifier.height(Spacing.xs))
         Text(
             label,

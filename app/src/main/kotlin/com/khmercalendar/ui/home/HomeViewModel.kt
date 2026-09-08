@@ -36,6 +36,9 @@ data class HomeStats(
     val eventsThisMonth: Int = 0,
     val openTasks: Int = 0,
     val doneTasks: Int = 0,
+    /** Today alone, for the dashboard's progress bar. The others span the whole window. */
+    val todayTasksDone: Int = 0,
+    val todayTasksTotal: Int = 0,
 )
 
 data class HomeState(
@@ -154,6 +157,8 @@ class HomeViewModel(
                 eventsThisMonth = byDate.filterKeys { !it.isAfter(monthEnd) }.values.sumOf { it.size },
                 openTasks = flat.count { it.isTask && !it.isCompleted },
                 doneTasks = flat.count { it.isTask && it.isCompleted },
+                todayTasksDone = todayEvents.count { it.isTask && it.isCompleted },
+                todayTasksTotal = todayEvents.count { it.isTask },
             ),
             note = note,
             isLoading = false,

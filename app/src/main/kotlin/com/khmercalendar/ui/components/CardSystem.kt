@@ -20,6 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -225,6 +226,7 @@ fun MetricTile(
 fun SectionTitle(
     title: String,
     modifier: Modifier = Modifier,
+    accent: Color = MaterialTheme.colorScheme.primary,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     Row(
@@ -237,7 +239,7 @@ fun SectionTitle(
                 Modifier
                     .size(width = 3.dp, height = 14.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(MaterialTheme.colorScheme.primary),
+                    .background(accent),
             )
             Spacer(Modifier.width(Spacing.sm))
             Text(
@@ -309,5 +311,68 @@ fun PrimaryFab(
         contentColor = MaterialTheme.colorScheme.onPrimary,
     ) {
         Icon(icon, contentDescription = contentDescription)
+    }
+}
+
+/**
+ * Whether the user has asked the system for less movement.
+ *
+ * Compose has no reduced-motion flag of its own, so this reads the animator duration scale -
+ * which is what both "Remove animations" in accessibility settings and the developer-options
+ * animation scales write to. Every animation in the app that is decoration rather than
+ * feedback checks this, so a single system switch turns them all off.
+ */
+@Composable
+fun rememberReducedMotion(): Boolean {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    return androidx.compose.runtime.remember(context) {
+        runCatching {
+            android.provider.Settings.Global.getFloat(
+                context.contentResolver,
+                android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,
+                1f,
+            )
+        }.getOrDefault(1f) == 0f
+    }
+}
+
+/**
+ * A flat progress bar.
+ *
+ * Drawn rather than themed so it can sit on a gradient card as readily as on a plain one, and
+ * so the track and indicator are the caller's choice. Animates to its value unless the user
+ * has asked for less motion, in which case it simply arrives there.
+ */
+@Composable
+fun ProgressBar(
+    fraction: Float,
+    modifier: Modifier = Modifier,
+    track: Color = MaterialTheme.colorScheme.surfaceVariant,
+    indicator: Color = MaterialTheme.colorScheme.primary,
+    height: androidx.compose.ui.unit.Dp = 6.dp,
+) {
+    val target = fraction.coerceIn(0f, 1f)
+    val reduced = rememberReducedMotion()
+    val animated by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = target,
+        animationSpec = androidx.compose.animation.core.tween(
+            durationMillis = if (reduced) 0 else com.khmercalendar.ui.theme.Motion.PROGRESS,
+        ),
+        label = "progress",
+    )
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(height)
+            .clip(RoundedCornerShape(height / 2))
+            .background(track),
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth(animated)
+                .height(height)
+                .clip(RoundedCornerShape(height / 2))
+                .background(indicator),
+        )
     }
 }

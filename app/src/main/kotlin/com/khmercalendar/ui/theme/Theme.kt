@@ -417,3 +417,48 @@ val AccentPalette: List<Pair<String, Int>> = listOf(
     "ត្នោត" to 0xFF8A6236.toInt(),
     "ប្រផេះ" to 0xFF546070.toInt(),
 )
+
+/**
+ * What kind of thing a card is about, as a colour.
+ *
+ * Cards on a dashboard all have the same shape and weight, so the eye needs another way to
+ * tell a work card from a holiday card while scanning. Category colour does that - but it is
+ * never the *only* signal: every card also carries a heading in words, because colour alone
+ * fails for a good share of users and fails completely for a screen reader.
+ *
+ * Most of these follow the user's accent through the derived trio, so the palette stays
+ * coherent whichever accent is chosen. [HOLIDAY] is the exception and is deliberately fixed:
+ * a Cambodian public holiday is a cultural thing rather than a system state, and gold is what
+ * it is regardless of the app's accent. Making it neon-whatever would be the moment the
+ * futuristic styling started overwriting the culture it is meant to serve.
+ */
+enum class CardAccent { CALENDAR, WORK, TASKS, AI, HOLIDAY, WARNING, NEUTRAL }
+
+/** Resolves a [CardAccent] against the live scheme. */
+@Composable
+@ReadOnlyComposable
+fun CardAccent.color(): Color {
+    val scheme = MaterialTheme.colorScheme
+    val trio = LocalAccentTrio.current
+    val dark = LocalIsDarkTheme.current
+    return when (this) {
+        CardAccent.CALENDAR -> trio.alt
+        CardAccent.WORK -> scheme.primary
+        CardAccent.TASKS -> scheme.primary
+        CardAccent.AI -> trio.far
+        CardAccent.HOLIDAY -> if (dark) Gold.bright else Gold.deep
+        CardAccent.WARNING -> if (dark) Amber.bright else Amber.deep
+        CardAccent.NEUTRAL -> scheme.onSurfaceVariant
+    }
+}
+
+/** The one colour in the app that does not follow the accent. */
+private object Gold {
+    val bright = Color(0xFFF0C24B)
+    val deep = Color(0xFF8A6414)
+}
+
+private object Amber {
+    val bright = Color(0xFFFFCC33)
+    val deep = Color(0xFF8A5A00)
+}

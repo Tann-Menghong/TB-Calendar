@@ -51,9 +51,16 @@ class IcsFormatTest {
     private suspend fun read(text: String) =
         IcsFormat.parseInto(db, IcsFormat.unfold(text), phnomPenh, now)
 
-    private fun localStartOf(id: Long = 1): LocalDateTime {
-        val row = kotlinx.coroutines.runBlocking { db.eventDao().allEvents() }
-            .first { it.id == id }
+    /**
+     * Suspend rather than blocking.
+     *
+     * This was a `runBlocking` inside a `runTest` scope, which parks the test dispatcher and
+     * leaks whatever it throws into the *next* test in the class - the failure surfaces as
+     * "uncaught exceptions before the test started" on a test that has nothing to do with it.
+     * Intermittent, and worse than no test while it lasted.
+     */
+    private suspend fun localStartOf(id: Long = 1): LocalDateTime {
+        val row = db.eventDao().allEvents().first { it.id == id }
         return Instant.ofEpochMilli(row.startUtcMillis).atZone(phnomPenh).toLocalDateTime()
     }
 

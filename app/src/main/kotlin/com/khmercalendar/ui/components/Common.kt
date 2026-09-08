@@ -59,36 +59,6 @@ fun localeNumber(value: Any, khmerNumerals: Boolean): String {
     return if (khmerNumerals) KhmerNumerals.toKhmer(text) else text
 }
 
-@Composable
-fun SectionCard(
-    modifier: Modifier = Modifier,
-    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
-) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = Elevation.flat),
-    ) {
-        Column(Modifier.padding(Spacing.lg), content = content)
-    }
-}
-
-@Composable
-fun SectionHeader(title: String, modifier: Modifier = Modifier, trailing: (@Composable () -> Unit)? = null) {
-    Row(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        trailing?.invoke()
-    }
-}
-
 /**
  * The state every list needs when it has nothing to show.
  *

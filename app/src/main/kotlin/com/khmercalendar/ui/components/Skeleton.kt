@@ -67,7 +67,7 @@ fun SkeletonCard(
     modifier: Modifier = Modifier,
     lines: Int = 2,
 ) {
-    SectionCard(
+    SurfaceCard(
         modifier.semantics { contentDescription = "កំពុងផ្ទុក" },
     ) {
         SkeletonBlock(height = 14.dp, widthFraction = 0.38f)

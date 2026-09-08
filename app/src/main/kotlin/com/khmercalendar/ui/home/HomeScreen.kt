@@ -52,9 +52,13 @@ import com.khmercalendar.ui.calendar.EventRow
 import com.khmercalendar.ui.components.DashboardSkeleton
 import com.khmercalendar.ui.components.EmptyState
 import com.khmercalendar.ui.components.PrimaryFab
-import com.khmercalendar.ui.components.SectionCard
-import com.khmercalendar.ui.components.SectionHeader
 import com.khmercalendar.ui.components.localeNumber
+import com.khmercalendar.ui.components.ProgressBar
+import com.khmercalendar.ui.components.SectionTitle
+import com.khmercalendar.ui.components.StatusBadge
+import com.khmercalendar.ui.components.SurfaceCard
+import com.khmercalendar.ui.theme.CardAccent
+import com.khmercalendar.ui.theme.color
 import com.khmercalendar.ui.theme.LocalAppSettings
 import com.khmercalendar.ui.theme.Spacing
 import java.time.LocalDate
@@ -107,7 +111,7 @@ fun HomeScreen(
                 horizontal = Spacing.md,
                 vertical = Spacing.md,
             ),
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(settings.dashboardDensity.gapDp.dp),
         ) {
             if (state.isLoading) {
                 // Not an empty state: until the query returns, "you have nothing on" is a
@@ -192,14 +196,39 @@ fun HomeScreen(
 @Composable
 private fun LunarCard(state: HomeState) {
     val lunar = state.lunar ?: return
-    SectionCard {
-        SectionHeader("ចន្ទគតិខ្មែរ")
+    DashboardCard(accent = CardAccent.CALENDAR, title = "ចន្ទគតិខ្មែរ") {
         Text(lunar.format(), style = MaterialTheme.typography.bodyLarge)
+        Spacer(Modifier.height(Spacing.xs))
         Text(
             "ច.ស. ${localeNumber(lunar.jolakSakarajYear)}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+/**
+ * The wrapper every dashboard card goes through.
+ *
+ * One place decides a card's padding, its heading and the colour of the rule beside it, so the
+ * nine cards on this screen cannot drift apart the way they had - a Card here, a clipped Box
+ * there, headings at three different weights. Density comes from the user's setting rather
+ * than a constant, which is the whole reason the padding is not simply written into
+ * [SurfaceCard].
+ */
+@Composable
+private fun DashboardCard(
+    accent: CardAccent,
+    title: String,
+    modifier: Modifier = Modifier,
+    trailing: (@Composable () -> Unit)? = null,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
+) {
+    val density = LocalAppSettings.current.dashboardDensity
+    SurfaceCard(modifier = modifier, padding = density.cardPaddingDp.dp) {
+        SectionTitle(title = title, accent = accent.color(), trailing = trailing)
+        Spacer(Modifier.height(Spacing.md))
+        content()
     }
 }
 
@@ -209,18 +238,19 @@ private fun UpcomingCard(
     onOpenEvent: (Long, LocalDate) -> Unit,
     onNavigate: (String) -> Unit,
 ) {
-    SectionCard {
-        SectionHeader(
-            title = "ព្រឹត្តិការណ៍ខាងមុខ",
-            trailing = {
-                TextButton(onClick = { onNavigate(Routes.AGENDA) }) { Text("ទាំងអស់") }
-            },
-        )
+    DashboardCard(
+        accent = CardAccent.CALENDAR,
+        title = "ព្រឹត្តិការណ៍ខាងមុខ",
+        trailing = {
+            TextButton(onClick = { onNavigate(Routes.AGENDA) }) { Text("ទាំងអស់") }
+        },
+    ) {
         if (state.upcoming.isEmpty()) {
             EmptyState(
                 icon = Icons.Outlined.EventAvailable,
                 title = "ទំនេរ",
                 message = "គ្មានព្រឹត្តិការណ៍ក្នុងរយៈពេលខាងមុខ",
+                compact = true,
             )
         } else {
             state.upcoming.forEach { event ->
@@ -253,13 +283,13 @@ private fun UpcomingRow(event: EventOccurrence, onClick: () -> Unit) {
 
 @Composable
 private fun HolidayCard(holidays: List<Holiday>, onNavigate: (String) -> Unit) {
-    SectionCard {
-        SectionHeader(
-            title = "បុណ្យជាតិខាងមុខ",
-            trailing = {
-                TextButton(onClick = { onNavigate(Routes.HOLIDAYS) }) { Text("ទាំងអស់") }
-            },
-        )
+    DashboardCard(
+        accent = CardAccent.HOLIDAY,
+        title = "បុណ្យជាតិខាងមុខ",
+        trailing = {
+            TextButton(onClick = { onNavigate(Routes.HOLIDAYS) }) { Text("ទាំងអស់") }
+        },
+    ) {
         if (holidays.isEmpty()) {
             Text(
                 "គ្មានបុណ្យក្នុងរយៈពេលខាងមុខ",
@@ -272,30 +302,45 @@ private fun HolidayCard(holidays: List<Holiday>, onNavigate: (String) -> Unit) {
                     Modifier.fillMaxWidth().padding(vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    // Gold for a public holiday, the muted tone for an observance - and the
+                    // word "public" is not carried by the dot alone: a public holiday also
+                    // gets the day count, which is the thing you actually want from this row.
+                    val gold = CardAccent.HOLIDAY.color()
                     Box(
                         Modifier
                             .size(8.dp)
                             .clip(RoundedCornerShape(4.dp))
                             .background(
                                 if (holiday.kind == HolidayKind.PUBLIC) {
-                                    MaterialTheme.colorScheme.error
+                                    gold
                                 } else {
-                                    MaterialTheme.colorScheme.tertiary
+                                    MaterialTheme.colorScheme.onSurfaceVariant
                                 },
                             ),
                     )
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        holiday.nameKm,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.weight(1f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        "${localeNumber(holiday.date.dayOfMonth)} ${KhmerTerms.solarMonth(holiday.date.monthValue)}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    Spacer(Modifier.width(Spacing.md))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            holiday.nameKm,
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            "${localeNumber(holiday.date.dayOfMonth)} ${KhmerTerms.solarMonth(holiday.date.monthValue)}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Spacer(Modifier.width(Spacing.sm))
+                    val away = java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), holiday.date)
+                    StatusBadge(
+                        text = when {
+                            away <= 0L -> "ថ្ងៃនេះ"
+                            away == 1L -> "ស្អែក"
+                            else -> "នៅ ${localeNumber(away)} ថ្ងៃ"
+                        },
+                        color = gold,
                     )
                 }
             }
@@ -306,8 +351,7 @@ private fun HolidayCard(holidays: List<Holiday>, onNavigate: (String) -> Unit) {
 @Composable
 private fun CountdownCard(countdowns: List<Countdown>) {
     if (countdowns.isEmpty()) return
-    SectionCard {
-        SectionHeader("រាប់ថយក្រោយ")
+    DashboardCard(accent = CardAccent.NEUTRAL, title = "រាប់ថយក្រោយ") {
         countdowns.forEach { item ->
             Row(
                 Modifier.fillMaxWidth().padding(vertical = 5.dp),
@@ -323,8 +367,11 @@ private fun CountdownCard(countdowns: List<Countdown>) {
                 Text(
                     if (item.daysAway == 0L) "ថ្ងៃនេះ" else "នៅ ${localeNumber(item.daysAway)} ថ្ងៃ",
                     style = MaterialTheme.typography.labelLarge,
+                    // The same gold the holiday card uses. It was the error colour, which
+                    // meant the two cards described the same Pchum Ben in red on one and
+                    // gold on the other - and red on a holiday reads as a warning.
                     color = if (item.isHoliday) {
-                        MaterialTheme.colorScheme.error
+                        CardAccent.HOLIDAY.color()
                     } else {
                         MaterialTheme.colorScheme.primary
                     },
@@ -340,11 +387,33 @@ private fun TaskCard(
     onToggle: (Long, Boolean) -> Unit,
     onOpenEvent: (Long, LocalDate) -> Unit,
 ) {
-    SectionCard {
-        SectionHeader("កិច្ចការ")
+    val done = state.stats.todayTasksDone
+    val total = state.stats.todayTasksTotal
+    DashboardCard(
+        accent = CardAccent.TASKS,
+        title = "កិច្ចការ",
+        trailing = {
+            if (total > 0) {
+                Text(
+                    "${localeNumber(done)}/${localeNumber(total)}",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+    ) {
+        // The count and the bar say the same thing two ways, on purpose: a bar alone is a
+        // shape you have to estimate, and a fraction alone is a number you have to picture.
+        if (total > 0) {
+            ProgressBar(
+                fraction = done.toFloat() / total.toFloat(),
+                indicator = CardAccent.TASKS.color(),
+            )
+            Spacer(Modifier.height(Spacing.md))
+        }
         if (state.tasks.isEmpty()) {
             Text(
-                "គ្មានកិច្ចការដែលនៅសល់",
+                if (total > 0) "រួចរាល់ទាំងអស់ហើយ" else "គ្មានកិច្ចការដែលនៅសល់",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -380,13 +449,13 @@ private fun NoteCard(
     onSave: () -> Unit,
     dirty: Boolean,
 ) {
-    SectionCard {
-        SectionHeader(
-            title = "កំណត់ចំណាំថ្ងៃនេះ",
-            trailing = {
-                if (dirty) TextButton(onClick = onSave) { Text("រក្សាទុក") }
-            },
-        )
+    DashboardCard(
+        accent = CardAccent.NEUTRAL,
+        title = "កំណត់ចំណាំថ្ងៃនេះ",
+        trailing = {
+            if (dirty) TextButton(onClick = onSave) { Text("រក្សាទុក") }
+        },
+    ) {
         OutlinedTextField(
             value = text,
             onValueChange = onChange,
@@ -400,7 +469,7 @@ private fun NoteCard(
 
 @Composable
 private fun StatsRow(state: HomeState) {
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
         StatBox("ព្រឹត្តិការណ៍ខែនេះ", state.stats.eventsThisMonth, Modifier.weight(1f))
         StatBox("កិច្ចការនៅសល់", state.stats.openTasks, Modifier.weight(1f))
         StatBox("កិច្ចការរួចរាល់", state.stats.doneTasks, Modifier.weight(1f))
