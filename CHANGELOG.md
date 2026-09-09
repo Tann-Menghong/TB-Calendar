@@ -1,5 +1,55 @@
 # Changelog
 
+## 2.2.0 — 2026-09-09
+
+A focus timer that cannot lose your session, and does not sit in the background burning battery.
+
+### ផ្តោតអារម្មណ៍ · The focus timer
+
+Work in sessions with breaks between them — the pomodoro method, with the lengths as settings rather than dogma. 25/5/15 after four is the default; a translator working in 90-minute blocks and a student revising in 20 both change it.
+
+Start a session and the ring counts down. Finish it and it goes into today's total. After a focus session the app offers a break; after four, a longer one; after a break, focus again.
+
+**ថ្ងៃនេះ · សប្តាហ៍នេះ · វគ្គថ្ងៃនេះ** underneath, all computed on the device from your own sessions. Nothing about how you spend your time is sent anywhere, because there is nowhere for it to go.
+
+### Nothing ticks in the background
+
+This is the part worth explaining, because it is the difference between a timer app you keep and one you uninstall in a week.
+
+The obvious way to build a countdown is a foreground service ticking once a second. That is also how timer apps drain batteries and get killed by aggressive power management — which on the phones this app is built for is the normal case, not the exception.
+
+So a running session is **two numbers in the database**: when it started, and how long it was meant to last. Everything on screen is worked out from those and the clock, the moment you look. The screen's ticker runs only while the screen is actually visible. Exactly one alarm is set, for the end.
+
+The consequence is the good kind: **force-stop the app mid-session and nothing happens to it.** Reopen and the timer is exactly where it should be, because there was never a countdown in memory to lose. That was tested by doing it.
+
+### It is honest about what you actually did
+
+**A session stopped early records the time it really ran**, not the time you planned. Twelve minutes is twelve minutes.
+
+**A session you forgot to stop is capped at what you planned.** Leave a 25-minute timer running overnight and it records 25, not nine hours. The number would otherwise be false, and it would poison every total it was added to. Under-reporting a forgotten timer is the safe direction to be wrong in.
+
+**Breaks do not count as focus time.** Resting is part of the method, not part of the work.
+
+**A session that crosses midnight belongs to the evening it started in**, which is how the person who did it would describe it.
+
+There is a "finish" and a "discard", and no "pause" — a paused focus session is a session you did not have, and pretending otherwise would put invented minutes into your totals.
+
+The end-of-session notification does not start the next timer for you. An app that silently begins your break while you are still typing has made the break a fiction.
+
+### Tested
+
+**414 unit tests** pass and lint is clean, including 19 new ones. Because a session is a start time and a length rather than a live countdown, all of it is testable without waiting for real seconds: a session left running overnight, one stopped early, one crossing midnight, a clock that jumped backwards, a cycle length of zero not dividing by zero, and the very first focus of the day not being mistaken for a multiple of four.
+
+Checked on an **Android 8.0 (API 26)** emulator: the upgrade over a real version-5 database with all twelve events, the checklists from 2.1.0 and the habits from 2.0.0 intact; starting a session and watching the ring move; **force-stopping the app mid-session and reopening to find the timer still correct**; finishing it and seeing one minute recorded rather than the twenty-five planned; the cycle advancing to a short break; and the alarm being cancelled on finish.
+
+### Privacy
+
+Unchanged: no account, no analytics, no tracking, no ads. Your sessions are as local as your calendar. The AI is optional, off by default, and runs entirely on-device.
+
+### Install
+
+Android 8.0 (API 26) or later. Download `TB-Calendar-2.2.0.apk` below. Upgrading keeps your events, tasks, notes, countdowns, habits, checklists and settings.
+
 ## 2.1.0 — 2026-09-09
 
 Tasks can have steps.

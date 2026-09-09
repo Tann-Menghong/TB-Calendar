@@ -15,6 +15,7 @@ import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Celebration
 import androidx.compose.material.icons.outlined.HourglassEmpty
 import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.WorkOutline
 import androidx.compose.material.icons.outlined.SystemUpdateAlt
@@ -88,6 +89,12 @@ fun SettingsScreen(
                     subtitle = "មើលបញ្ជីបុណ្យតាមឆ្នាំ",
                     icon = Icons.Outlined.Celebration,
                     onClick = { onNavigate(Routes.HOLIDAYS) },
+                )
+                SettingsRow(
+                    title = "ផ្តោតអារម្មណ៍",
+                    subtitle = "កំណត់ម៉ោងធ្វើការជាវគ្គ និងសម្រាក",
+                    icon = Icons.Outlined.Timer,
+                    onClick = { onNavigate(Routes.FOCUS) },
                 )
                 SettingsRow(
                     title = "ទម្លាប់",

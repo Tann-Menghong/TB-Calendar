@@ -15,6 +15,7 @@ import com.khmercalendar.core.khmer.CalendarWeek
 import com.khmercalendar.core.work.WorkSchedule
 import com.khmercalendar.core.work.WorkScheduleCodec
 import com.khmercalendar.domain.CountdownStyle
+import com.khmercalendar.domain.FocusSettings
 import com.khmercalendar.domain.DockLayout
 import com.khmercalendar.domain.DockSlot
 import kotlinx.coroutines.flow.Flow
@@ -83,6 +84,12 @@ class SettingsStore(context: Context) {
         dockSlots = DockLayout.decode(this[Keys.DOCK_SLOTS]?.split(",").orEmpty()),
         displayName = this[Keys.DISPLAY_NAME].orEmpty(),
         countdownStyle = CountdownStyle.of(this[Keys.COUNTDOWN_STYLE]),
+        focusSettings = FocusSettings(
+            focusMinutes = this[Keys.FOCUS_MINUTES] ?: 25,
+            shortBreakMinutes = this[Keys.FOCUS_SHORT_BREAK] ?: 5,
+            longBreakMinutes = this[Keys.FOCUS_LONG_BREAK] ?: 15,
+            sessionsBeforeLongBreak = this[Keys.FOCUS_CYCLE] ?: 4,
+        ),
 
         workSchedule = WorkScheduleCodec
             .decode(this[Keys.WORK_SCHEDULE])
@@ -181,6 +188,16 @@ class SettingsStore(context: Context) {
         put(Keys.DISPLAY_NAME, name.trim().take(24))
 
     suspend fun setCountdownStyle(style: CountdownStyle) = put(Keys.COUNTDOWN_STYLE, style.key)
+
+    /** Written in one edit: four keys, one user action, and no half-applied cycle. */
+    suspend fun setFocusSettings(value: FocusSettings) {
+        store.edit { prefs ->
+            prefs[Keys.FOCUS_MINUTES] = value.focusMinutes
+            prefs[Keys.FOCUS_SHORT_BREAK] = value.shortBreakMinutes
+            prefs[Keys.FOCUS_LONG_BREAK] = value.longBreakMinutes
+            prefs[Keys.FOCUS_CYCLE] = value.sessionsBeforeLongBreak
+        }
+    }
 
     suspend fun setWorkSchedule(schedule: WorkSchedule) {
         // The blocks and the on/off switch are separate keys but one user action, so they are
@@ -298,6 +315,10 @@ class SettingsStore(context: Context) {
         val DOCK_SLOTS = stringPreferencesKey("dock_slots")
         val DISPLAY_NAME = stringPreferencesKey("display_name")
         val COUNTDOWN_STYLE = stringPreferencesKey("countdown_style")
+        val FOCUS_MINUTES = intPreferencesKey("focus_minutes")
+        val FOCUS_SHORT_BREAK = intPreferencesKey("focus_short_break")
+        val FOCUS_LONG_BREAK = intPreferencesKey("focus_long_break")
+        val FOCUS_CYCLE = intPreferencesKey("focus_cycle")
 
         val WORK_SCHEDULE = stringPreferencesKey("work_schedule")
         val WORK_ENABLED = booleanPreferencesKey("work_enabled")

@@ -288,3 +288,35 @@ interface ChecklistDao {
     @Query("SELECT COUNT(*) FROM checklist_items WHERE eventId = :eventId")
     suspend fun countForEvent(eventId: Long): Int
 }
+
+@Dao
+interface FocusDao {
+
+    /** The running session, if any. There is at most one; see [FocusRepository.start]. */
+    @Query("SELECT * FROM focus_sessions WHERE endedAtMillis IS NULL ORDER BY startedAtMillis DESC LIMIT 1")
+    fun observeRunning(): Flow<FocusSessionEntity?>
+
+    @Query("SELECT * FROM focus_sessions WHERE endedAtMillis IS NULL ORDER BY startedAtMillis DESC LIMIT 1")
+    suspend fun running(): FocusSessionEntity?
+
+    /**
+     * Sessions from [fromMillis] onwards.
+     *
+     * Bounded: the screen shows today and this week, so reading a year of sessions to draw
+     * two figures would be paid for on every redraw.
+     */
+    @Query("SELECT * FROM focus_sessions WHERE startedAtMillis >= :fromMillis ORDER BY startedAtMillis DESC")
+    fun observeSince(fromMillis: Long): Flow<List<FocusSessionEntity>>
+
+    @Insert
+    suspend fun insert(session: FocusSessionEntity): Long
+
+    @Query("UPDATE focus_sessions SET endedAtMillis = :endedAtMillis WHERE id = :id")
+    suspend fun finish(id: Long, endedAtMillis: Long)
+
+    @Query("DELETE FROM focus_sessions WHERE id = :id")
+    suspend fun deleteById(id: Long)
+
+    @Query("SELECT COUNT(*) FROM focus_sessions")
+    suspend fun count(): Int
+}

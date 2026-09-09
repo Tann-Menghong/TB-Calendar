@@ -12,6 +12,7 @@ import com.khmercalendar.data.db.KhmerCalendarDatabase
 import com.khmercalendar.data.prefs.AppSettings
 import com.khmercalendar.data.prefs.SettingsStore
 import com.khmercalendar.data.repo.EventRepository
+import com.khmercalendar.data.repo.FocusRepository
 import com.khmercalendar.data.repo.HabitRepository
 import com.khmercalendar.notify.ReminderScheduler
 import com.khmercalendar.update.UpdateRepository
@@ -47,6 +48,8 @@ class AppContainer(
     val settingsStore: SettingsStore by lazy { SettingsStore(context) }
 
     val habitRepository: HabitRepository by lazy { HabitRepository(database.habitDao()) }
+
+    val focusRepository: FocusRepository by lazy { FocusRepository(context, database.focusDao()) }
 
     val eventRepository: EventRepository by lazy {
         EventRepository(

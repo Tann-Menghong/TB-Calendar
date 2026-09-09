@@ -10,6 +10,7 @@ import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -98,6 +99,7 @@ class MigrationTest {
                 KhmerCalendarDatabase.MIGRATION_2_3,
                 KhmerCalendarDatabase.MIGRATION_3_4,
                 KhmerCalendarDatabase.MIGRATION_4_5,
+                KhmerCalendarDatabase.MIGRATION_5_6,
             )
             .allowMainThreadQueries()
             .build()
@@ -363,12 +365,59 @@ class MigrationTest {
     }
 
     @Test
+    fun `a version 5 calendar gains focus sessions with everything else intact`() = runBlocking {
+        createVersion(5)
+        SQLiteDatabase.openOrCreateDatabase(dbFile, null).use { raw ->
+            raw.execSQL(
+                "INSERT INTO events (id, title, description, location, startUtcMillis, " +
+                    "endUtcMillis, allDay, zoneId, rrule, categoryId, colorArgb, isTask, " +
+                    "isCompleted, priority, isPinned, completedAtMillis, createdAtMillis, " +
+                    "updatedAtMillis) VALUES " +
+                    "(41, 'សរសេររបាយការណ៍', NULL, NULL, 1000, 2000, 1, '$ZONE', NULL, " +
+                    "NULL, NULL, 1, 0, 0, 0, NULL, 500, 600)",
+            )
+            raw.execSQL(
+                "INSERT INTO checklist_items (eventId, text, isDone, sortOrder, createdAtMillis) " +
+                    "VALUES (41, 'ប្រមូលទិន្នន័យ', 0, 0, 1)",
+            )
+        }
+
+        val migrated = openMigrated()
+
+        assertNotNull("the task was lost by the 5 to 6 migration", migrated.eventDao().byId(41))
+        // Everything version 5 added survived too.
+        assertEquals(1, migrated.checklistDao().countForEvent(41))
+        assertEquals(0, migrated.focusDao().count())
+    }
+
+    @Test
+    fun `a focus session survives being written and finished`() = runBlocking {
+        createVersion(5)
+        val migrated = openMigrated()
+
+        val id = migrated.focusDao().insert(
+            FocusSessionEntity(
+                kind = "focus",
+                startedAtMillis = 1_000_000L,
+                plannedMinutes = 25,
+            ),
+        )
+        // A running session is the one with no end; that is the whole "is a timer running?"
+        // query, and it must survive a process restart because nothing is held in memory.
+        assertNotNull(migrated.focusDao().running())
+
+        migrated.focusDao().finish(id, endedAtMillis = 1_000_000L + 12 * 60_000L)
+        assertNull("a finished session must stop counting as running", migrated.focusDao().running())
+        assertEquals(1, migrated.focusDao().count())
+    }
+
+    @Test
     fun `a fresh install opens at the current version without a migration`() = runBlocking {
         // The migration path and the create-from-scratch path produce different code in Room,
         // and only one of them is exercised by the tests above.
         val fresh = openMigrated()
 
         assertEquals(0, fresh.eventDao().count())
-        assertEquals(5, fresh.openHelper.writableDatabase.version)
+        assertEquals(6, fresh.openHelper.writableDatabase.version)
     }
 }

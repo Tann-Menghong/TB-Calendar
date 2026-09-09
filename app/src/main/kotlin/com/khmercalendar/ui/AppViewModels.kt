@@ -13,6 +13,7 @@ import com.khmercalendar.ui.settings.AiModelViewModel
 import com.khmercalendar.ui.settings.CategoriesViewModel
 import com.khmercalendar.ui.settings.UpdateViewModel
 import com.khmercalendar.ui.countdown.CountdownViewModel
+import com.khmercalendar.ui.focus.FocusViewModel
 import com.khmercalendar.ui.habit.HabitViewModel
 import com.khmercalendar.ui.tasks.TaskListViewModel
 
@@ -33,6 +34,7 @@ fun appViewModelFactory(container: AppContainer): ViewModelProvider.Factory = vi
     initializer { TaskListViewModel(container.eventRepository, container.settings) }
     initializer { CountdownViewModel(container.eventRepository) }
     initializer { HabitViewModel(container.habitRepository, container.settings) }
+    initializer { FocusViewModel(container.focusRepository, container.settings) }
     initializer {
         AssistantViewModel(
             assistant = container.aiAssistant,

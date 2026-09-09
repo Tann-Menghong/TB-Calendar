@@ -5,6 +5,7 @@ import com.khmercalendar.core.search.DateQuery
 import com.khmercalendar.core.work.WorkSchedule
 import com.khmercalendar.domain.CalendarViewMode
 import com.khmercalendar.domain.CountdownStyle
+import com.khmercalendar.domain.FocusSettings
 import com.khmercalendar.domain.DockLayout
 import com.khmercalendar.domain.DockSlot
 import java.time.DayOfWeek
@@ -216,6 +217,13 @@ data class AppSettings(
      * format; [com.khmercalendar.domain.CountdownStyle] is the only place that does.
      */
     val countdownStyle: CountdownStyle = CountdownStyle.DAYS,
+    /**
+     * How long each part of the focus cycle runs.
+     *
+     * Held as the object rather than four loose ints so nothing has to re-apply the sane
+     * bounds; [com.khmercalendar.domain.FocusSettings] is the only place that does.
+     */
+    val focusSettings: FocusSettings = FocusSettings(),
 
     // --- work schedule ---
     /**

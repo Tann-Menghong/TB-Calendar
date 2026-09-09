@@ -41,6 +41,8 @@ import com.khmercalendar.ui.assistant.AssistantScreen
 import com.khmercalendar.ui.assistant.AssistantViewModel
 import com.khmercalendar.domain.CalendarViewMode
 import com.khmercalendar.ui.countdown.CountdownScreen
+import com.khmercalendar.ui.focus.FocusScreen
+import com.khmercalendar.ui.focus.FocusViewModel
 import com.khmercalendar.ui.habit.HabitScreen
 import com.khmercalendar.ui.habit.HabitViewModel
 import com.khmercalendar.ui.countdown.CountdownViewModel
@@ -283,6 +285,11 @@ fun KhmerCalendarNavHost(
 
             composable(Routes.HOLIDAYS) {
                 HolidayScreen(onBack = navController::popBackStack)
+            }
+
+            composable(Routes.FOCUS) {
+                val vm: FocusViewModel = viewModel(factory = factory)
+                FocusScreen(viewModel = vm, onBack = navController::popBackStack)
             }
 
             composable(Routes.HABITS) {

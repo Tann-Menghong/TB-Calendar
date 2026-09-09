@@ -32,6 +32,9 @@ object Routes {
     /** The habits you are keeping. */
     const val HABITS = "habits"
 
+    /** The focus timer. */
+    const val FOCUS = "focus"
+
     const val SETTINGS = "settings"
     const val SETTINGS_APPEARANCE = "settings/appearance"
     const val SETTINGS_DASHBOARD = "settings/dashboard"

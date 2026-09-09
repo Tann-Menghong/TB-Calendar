@@ -237,3 +237,29 @@ data class ChecklistItemEntity(
     val sortOrder: Int = 0,
     val createdAtMillis: Long,
 )
+
+/**
+ * One focus or break session.
+ *
+ * ## Why a running session is a row rather than state in memory
+ *
+ * A timer held in a service or a view model dies with the process, and on the phones this app
+ * targets the process is killed routinely. Two numbers in a table - when it started and how
+ * long it was meant to last - survive that exactly, and everything the screen shows is
+ * derived from them and the clock. Nothing ticks in the background; one alarm is set for the
+ * end. See [com.khmercalendar.domain.FocusTimer].
+ *
+ * @property endedAtMillis null while running. A session stopped early keeps the time it
+ *   really ran, so the statistics are honest.
+ * @property eventId the task this was for, or null. Deliberately not a foreign key: deleting
+ *   a task should not delete the record that you spent an hour on it.
+ */
+@Entity(tableName = "focus_sessions", indices = [Index("startedAtMillis")])
+data class FocusSessionEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val kind: String,
+    val startedAtMillis: Long,
+    val plannedMinutes: Int,
+    val endedAtMillis: Long? = null,
+    val eventId: Long? = null,
+)

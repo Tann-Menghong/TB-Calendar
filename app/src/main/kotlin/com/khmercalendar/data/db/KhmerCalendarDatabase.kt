@@ -20,8 +20,9 @@ import kotlinx.coroutines.launch
         HabitEntity::class,
         HabitEntryEntity::class,
         ChecklistItemEntity::class,
+        FocusSessionEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 abstract class KhmerCalendarDatabase : RoomDatabase() {
@@ -33,6 +34,7 @@ abstract class KhmerCalendarDatabase : RoomDatabase() {
     abstract fun dayNoteDao(): DayNoteDao
     abstract fun habitDao(): HabitDao
     abstract fun checklistDao(): ChecklistDao
+    abstract fun focusDao(): FocusDao
 
     companion object {
         private const val NAME = "khmer_calendar.db"
@@ -134,6 +136,28 @@ abstract class KhmerCalendarDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Adds the focus-session table.
+         *
+         * Additive, SQL copied from Room's exported version-6 schema. Same discipline as
+         * [MIGRATION_3_4] and [MIGRATION_4_5].
+         */
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `focus_sessions` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`kind` TEXT NOT NULL, `startedAtMillis` INTEGER NOT NULL, " +
+                        "`plannedMinutes` INTEGER NOT NULL, `endedAtMillis` INTEGER, " +
+                        "`eventId` INTEGER)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_focus_sessions_startedAtMillis` " +
+                        "ON `focus_sessions` (`startedAtMillis`)",
+                )
+            }
+        }
+
         @Volatile
         private var instance: KhmerCalendarDatabase? = null
 
@@ -144,7 +168,13 @@ abstract class KhmerCalendarDatabase : RoomDatabase() {
 
         private fun build(context: Context, scope: CoroutineScope): KhmerCalendarDatabase =
             Room.databaseBuilder(context, KhmerCalendarDatabase::class.java, NAME)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(
+                    MIGRATION_1_2,
+                    MIGRATION_2_3,
+                    MIGRATION_3_4,
+                    MIGRATION_4_5,
+                    MIGRATION_5_6,
+                )
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         // Seeding runs off the creation callback so first launch is never
