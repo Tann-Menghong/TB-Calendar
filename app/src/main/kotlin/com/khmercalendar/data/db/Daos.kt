@@ -206,3 +206,51 @@ interface DayNoteDao {
     @Query("DELETE FROM day_notes WHERE epochDay = :epochDay")
     suspend fun deleteForDay(epochDay: Long)
 }
+
+@Dao
+interface HabitDao {
+
+    @Query("SELECT * FROM habits ORDER BY sortOrder, name")
+    fun observeAll(): Flow<List<HabitEntity>>
+
+    @Query("SELECT * FROM habits ORDER BY sortOrder, name")
+    suspend fun all(): List<HabitEntity>
+
+    @Query("SELECT * FROM habits WHERE id = :id")
+    suspend fun byId(id: Long): HabitEntity?
+
+    @Upsert
+    suspend fun upsert(habit: HabitEntity): Long
+
+    @Query("DELETE FROM habits WHERE id = :id")
+    suspend fun deleteById(id: Long)
+
+    @Query("UPDATE habits SET archivedAtMillis = :atMillis WHERE id = :id")
+    suspend fun setArchived(id: Long, atMillis: Long?)
+
+    /**
+     * Every tick from [fromEpochDay] onwards.
+     *
+     * Bounded rather than the whole table: streaks and the thirty-day rate never look back
+     * further than a year, and a habit kept for a decade is otherwise 3,650 rows read to
+     * draw one screen.
+     */
+    @Query("SELECT * FROM habit_entries WHERE epochDay >= :fromEpochDay")
+    fun observeEntriesSince(fromEpochDay: Long): Flow<List<HabitEntryEntity>>
+
+    /**
+     * Ticks a habit for a day.
+     *
+     * IGNORE rather than REPLACE: the unique index already makes a second tick meaningless,
+     * and REPLACE would delete and reinsert the row, moving `completedAtMillis` for no reason
+     * every time a list redraws and somebody double-taps.
+     */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertEntry(entry: HabitEntryEntity)
+
+    @Query("DELETE FROM habit_entries WHERE habitId = :habitId AND epochDay = :epochDay")
+    suspend fun deleteEntry(habitId: Long, epochDay: Long)
+
+    @Query("SELECT COUNT(*) FROM habits WHERE archivedAtMillis IS NULL")
+    suspend fun activeCount(): Int
+}

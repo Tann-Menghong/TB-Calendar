@@ -1,11 +1,11 @@
 {
-  "versionCode": 16,
-  "versionName": "1.12.0",
-  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v1.12.0/TB-Calendar-1.12.0.apk",
-  "apkSizeBytes": 60264860,
-  "apkSha256": "16deca9a21705b3951e45074d6163fe9b842c5e5d3f1020a4030e4486046c555",
+  "versionCode": 17,
+  "versionName": "2.0.0",
+  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v2.0.0/TB-Calendar-2.0.0.apk",
+  "apkSizeBytes": 60297628,
+  "apkSha256": "2131c819947ba0679d77cdf4817aaa71fb271c9dae9657539df6f551bf425a1c",
   "minSdk": 26,
-  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v1.12.0",
-  "releaseNotesKm": "ទិដ្ឋភាពឆ្នាំថ្មី៖ ១២ ខែក្នុងអេក្រង់តែមួយ ជាមួយថ្ងៃពិត បុណ្យជាតិ និងចំណុចបង្ហាញថ្ងៃមមាញឹក។ ចុចខែដើម្បីបើកខែ ចុចថ្ងៃដើម្បីបើកថ្ងៃ។ ចុចឱ្យយូរលើថ្ងៃណាមួយ ដើម្បីបន្ថែមព្រឹត្តិការណ៍ ឬកិច្ចការ។ ជួសជុល៖ ការចុចពីរដងលើថ្ងៃមិនដំណើរការ។",
-  "releaseNotesEn": "A year view - twelve real month grids on one screen, with holidays, today's disc and a dot on every day that has something on it, so you can see the shape of the year and still tap a date in it. Tap a month to open it, a day to open that day. Long-press any date for its actions: add an event, add a task, open the day. Fixed: double-tapping a date in the month grid did nothing at all - the handler was passed in and never wired up."
+  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v2.0.0",
+  "releaseNotesKm": "ទម្លាប់ថ្មី៖ តាមដានអ្វីដែលអ្នកចង់ធ្វើឱ្យបានទៀងទាត់ រៀងរាល់ថ្ងៃ ថ្ងៃជាក់លាក់ ឬប៉ុន្មានដងក្នុងសប្តាហ៍។ ស្ទ្រីកមិនដាច់ពេលចុងសប្តាហ៍ដែលអ្នកមិនបានសន្យា ហើយថ្ងៃនេះដែលមិនទាន់ធីកមិនធ្វើឱ្យដាច់ទេ។ ទិន្នន័យទាំងអស់នៅក្នុងឧបករណ៍។",
+  "releaseNotesEn": "Habits - the first thing in TB-Calendar that is not a date. Track something daily, on particular weekdays, or a number of times a week, and the arithmetic respects which you chose: a Mon/Wed/Fri streak survives the weekend, a weekly target cannot be failed on a Tuesday, and an unticked today never breaks anything because the day is not over. No points, no badges, no nagging. Everything stays on the device."
 }

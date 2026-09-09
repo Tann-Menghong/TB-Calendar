@@ -17,8 +17,10 @@ import kotlinx.coroutines.launch
         ReminderEntity::class,
         EventExceptionEntity::class,
         DayNoteEntity::class,
+        HabitEntity::class,
+        HabitEntryEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class KhmerCalendarDatabase : RoomDatabase() {
@@ -28,6 +30,7 @@ abstract class KhmerCalendarDatabase : RoomDatabase() {
     abstract fun reminderDao(): ReminderDao
     abstract fun eventExceptionDao(): EventExceptionDao
     abstract fun dayNoteDao(): DayNoteDao
+    abstract fun habitDao(): HabitDao
 
     companion object {
         private const val NAME = "khmer_calendar.db"
@@ -65,6 +68,45 @@ abstract class KhmerCalendarDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Adds the habit tables.
+         *
+         * Two `CREATE TABLE`s and their indices - purely additive, so nothing existing is
+         * read, rewritten or at risk. The SQL is copied from the schema Room exported for
+         * version 4 rather than written by hand, which is the only way to be sure the
+         * migrated database and a fresh install end up identical; the migration test opens
+         * the result and lets Room compare them.
+         */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `habits` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`name` TEXT NOT NULL, `colorArgb` INTEGER NOT NULL, " +
+                        "`scheduleKind` TEXT NOT NULL, `scheduleDays` TEXT NOT NULL, " +
+                        "`weeklyTarget` INTEGER NOT NULL, `sortOrder` INTEGER NOT NULL, " +
+                        "`archivedAtMillis` INTEGER, `createdAtMillis` INTEGER NOT NULL)",
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `habit_entries` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`habitId` INTEGER NOT NULL, `epochDay` INTEGER NOT NULL, " +
+                        "`completedAtMillis` INTEGER NOT NULL, " +
+                        "FOREIGN KEY(`habitId`) REFERENCES `habits`(`id`) " +
+                        "ON UPDATE NO ACTION ON DELETE CASCADE )",
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS " +
+                        "`index_habit_entries_habitId_epochDay` " +
+                        "ON `habit_entries` (`habitId`, `epochDay`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_habit_entries_epochDay` " +
+                        "ON `habit_entries` (`epochDay`)",
+                )
+            }
+        }
+
         @Volatile
         private var instance: KhmerCalendarDatabase? = null
 
@@ -75,7 +117,7 @@ abstract class KhmerCalendarDatabase : RoomDatabase() {
 
         private fun build(context: Context, scope: CoroutineScope): KhmerCalendarDatabase =
             Room.databaseBuilder(context, KhmerCalendarDatabase::class.java, NAME)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         // Seeding runs off the creation callback so first launch is never

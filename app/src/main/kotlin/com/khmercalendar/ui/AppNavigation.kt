@@ -41,6 +41,8 @@ import com.khmercalendar.ui.assistant.AssistantScreen
 import com.khmercalendar.ui.assistant.AssistantViewModel
 import com.khmercalendar.domain.CalendarViewMode
 import com.khmercalendar.ui.countdown.CountdownScreen
+import com.khmercalendar.ui.habit.HabitScreen
+import com.khmercalendar.ui.habit.HabitViewModel
 import com.khmercalendar.ui.countdown.CountdownViewModel
 import com.khmercalendar.ui.calendar.CalendarScreen
 import com.khmercalendar.ui.calendar.CalendarViewModel
@@ -281,6 +283,14 @@ fun KhmerCalendarNavHost(
 
             composable(Routes.HOLIDAYS) {
                 HolidayScreen(onBack = navController::popBackStack)
+            }
+
+            composable(Routes.HABITS) {
+                val vm: HabitViewModel = viewModel(factory = factory)
+                // Re-read on entry: a habit screen left open overnight would otherwise tick
+                // yesterday, which is the one mistake a habit tracker must never make.
+                LaunchedEffect(Unit) { vm.refreshToday() }
+                HabitScreen(viewModel = vm, onBack = navController::popBackStack)
             }
 
             composable(Routes.COUNTDOWNS) {

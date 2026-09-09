@@ -13,6 +13,8 @@ import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Celebration
+import androidx.compose.material.icons.outlined.HourglassEmpty
+import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.WorkOutline
 import androidx.compose.material.icons.outlined.SystemUpdateAlt
@@ -86,6 +88,18 @@ fun SettingsScreen(
                     subtitle = "មើលបញ្ជីបុណ្យតាមឆ្នាំ",
                     icon = Icons.Outlined.Celebration,
                     onClick = { onNavigate(Routes.HOLIDAYS) },
+                )
+                SettingsRow(
+                    title = "ទម្លាប់",
+                    subtitle = "តាមដានអ្វីដែលអ្នកធ្វើឱ្យបានទៀងទាត់",
+                    icon = Icons.Outlined.Bolt,
+                    onClick = { onNavigate(Routes.HABITS) },
+                )
+                SettingsRow(
+                    title = "រាប់ថយក្រោយ",
+                    subtitle = "ថ្ងៃដែលអ្នករាប់ថយក្រោយទៅរក",
+                    icon = Icons.Outlined.HourglassEmpty,
+                    onClick = { onNavigate(Routes.COUNTDOWNS) },
                 )
             }
 

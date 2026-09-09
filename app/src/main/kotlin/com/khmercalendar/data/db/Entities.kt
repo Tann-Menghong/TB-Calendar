@@ -149,3 +149,59 @@ data class DayNoteEntity(
     val text: String,
     val updatedAtMillis: Long,
 )
+
+/**
+ * A habit: something the user intends to do repeatedly.
+ *
+ * ## Why this is a table and tasks are not
+ *
+ * Tasks and countdowns are rows in `events`, deliberately, because each of them *is* a dated
+ * thing and sharing the table is what stops the calendar disagreeing with itself. A habit is
+ * not a dated thing - it is a rule about days, plus a tick per day it was kept. Forcing that
+ * into `events` would mean writing a row per day per habit forever, and a schedule change
+ * would have to rewrite history. Two small tables are the honest shape.
+ *
+ * @property scheduleKind [com.khmercalendar.domain.HabitSchedule.Kind.stored].
+ * @property scheduleDays weekdays as "1,3,5", Monday = 1. Empty unless the kind is DAYS.
+ * @property archivedAtMillis set instead of deleting, so the entries stay and a habit can
+ *   come back without losing its history.
+ */
+@Entity(tableName = "habits")
+data class HabitEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val colorArgb: Int,
+    val scheduleKind: String,
+    val scheduleDays: String = "",
+    val weeklyTarget: Int = 1,
+    val sortOrder: Int = 0,
+    val archivedAtMillis: Long? = null,
+    val createdAtMillis: Long,
+)
+
+/**
+ * One day a habit was kept.
+ *
+ * Presence is the fact; there is no "not done" row, because a day nobody ticked and a day
+ * somebody explicitly failed are the same thing and storing both invites them to disagree.
+ * The unique index on (habitId, epochDay) is what makes ticking twice a no-op rather than a
+ * duplicate - a real hazard when a tap is registered twice.
+ */
+@Entity(
+    tableName = "habit_entries",
+    foreignKeys = [
+        ForeignKey(
+            entity = HabitEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["habitId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index(value = ["habitId", "epochDay"], unique = true), Index("epochDay")],
+)
+data class HabitEntryEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val habitId: Long,
+    val epochDay: Long,
+    val completedAtMillis: Long,
+)

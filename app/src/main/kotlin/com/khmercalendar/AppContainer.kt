@@ -12,6 +12,7 @@ import com.khmercalendar.data.db.KhmerCalendarDatabase
 import com.khmercalendar.data.prefs.AppSettings
 import com.khmercalendar.data.prefs.SettingsStore
 import com.khmercalendar.data.repo.EventRepository
+import com.khmercalendar.data.repo.HabitRepository
 import com.khmercalendar.notify.ReminderScheduler
 import com.khmercalendar.update.UpdateRepository
 import kotlinx.coroutines.CoroutineScope
@@ -44,6 +45,8 @@ class AppContainer(
     val database: KhmerCalendarDatabase by lazy { KhmerCalendarDatabase.get(context, scope) }
 
     val settingsStore: SettingsStore by lazy { SettingsStore(context) }
+
+    val habitRepository: HabitRepository by lazy { HabitRepository(database.habitDao()) }
 
     val eventRepository: EventRepository by lazy {
         EventRepository(

@@ -29,6 +29,9 @@ object Routes {
     /** Every pinned countdown, and the ones that have already arrived. */
     const val COUNTDOWNS = "countdowns"
 
+    /** The habits you are keeping. */
+    const val HABITS = "habits"
+
     const val SETTINGS = "settings"
     const val SETTINGS_APPEARANCE = "settings/appearance"
     const val SETTINGS_DASHBOARD = "settings/dashboard"

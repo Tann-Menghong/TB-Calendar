@@ -1,5 +1,57 @@
 # Changelog
 
+## 2.0.0 — 2026-09-09
+
+A new pillar: habits. And the database that will carry the ones after it.
+
+### ទម្លាប់ · Habit tracking
+
+TB-Calendar has been a calendar with productivity attached. This is the first thing in it that is not a date at all — a rule about days, and a tick for each one you kept.
+
+**Three kinds of promise, because there are three.** *Read for ten minutes* is daily. *Go to the gym* is three particular weekdays. *Call home* is twice a week on no fixed day. Collapsing those into "every day" makes two of the three lie — and telling somebody they failed on a Sunday, for something they never agreed to do on Sundays, is the fastest way to make a tracker worth deleting.
+
+**The numbers are measured against what you actually promised.** A habit due on Monday, Wednesday and Friday reads 100% when you keep it, not 43%. Its streak survives the weekend. A twice-a-week habit cannot be failed on a Tuesday, because you cannot fail a weekly target on a particular day.
+
+**An unticked today never breaks anything.** The day is not over. A streak that resets at midnight and shows zero until you tick it is punishing people for the hour they happened to open the app.
+
+**It does not shout.** No points, no badges, no notification telling you that you have let a streak down. It shows a streak because a streak is genuinely the best one-number answer to "am I actually doing this", and then it stops. A habit tracker that nags is one people delete in a fortnight.
+
+Each row carries the last seven days as dots, the current streak, the longest one, and a thirty-day rate. Adding one takes a name and how often — nothing else. Asking for a colour, an icon and a reminder before the first habit can exist is how a tracker gets abandoned at its own setup screen.
+
+Removing a habit **archives** it. Three months of keeping something is a record of three months, and the app does not destroy that because you stopped.
+
+Find it in **ផ្សេងៗ → ទម្លាប់**. The countdown screen is now listed there too, which it should have been in 1.10.0.
+
+### The database changed, and it was tested before it shipped
+
+Two new tables, so the schema moved to version 4.
+
+This is the first time a feature here has earned its own tables. Tasks and countdowns are rows in the events table, deliberately — each of them *is* a dated thing, and sharing the table is what stops the calendar disagreeing with itself. A habit is not a dated thing. Forcing it into events would mean writing a row per habit per day forever, and a schedule change would have to rewrite history.
+
+The migration is two `CREATE TABLE`s: purely additive, so nothing existing is read, rewritten or at risk. The SQL is copied from the schema Room exported rather than typed by hand, which is the only way to be sure a migrated database and a fresh install end up identical — and the migration test opens the result and lets Room compare them itself.
+
+It now covers each step separately: 1→4 for anyone still on an early version, and 3→4 on its own, because a long chain can hide a broken last link. Then it was run the way you will run it, over a real version-3 database on an Android 8.0 device: all twelve events intact, both tables present.
+
+Ticking the same day twice is a no-op rather than a duplicate — a real hazard when a tap registers twice, and enforced by a unique index rather than by hoping.
+
+### Tested
+
+**373 unit tests** pass and lint is clean, including 27 new ones. The streak arithmetic carries most of them, because every interesting case is a boundary that cannot be seen by looking at a list of ticks: a weekday habit crossing a weekend, a habit done today but not yesterday, the longest run that is not the current one, and a completion rate that must not divide by zero for a habit with no due days in the window.
+
+Checked on an **Android 8.0 (API 26)** emulator: the upgrade over a real version-3 database, creating a weekday habit and a daily one, the day picker, the due-today count knowing that Wednesday is a Mon/Wed/Fri day, ticking one and watching the streak and the seven-day trail appear, and a deliberate double tap producing exactly one entry.
+
+### Known rough edge
+
+Ticking a habit moves it to the bottom of the list, so a second tap in the same place lands on a different row. That is conventional for a checklist and it keeps the remaining work at the top, but the list is not safe to tap through blindly.
+
+### Privacy
+
+Unchanged: no account, no analytics, no tracking, no ads. Habits are as local as everything else — there is no sync, and nothing about what you do or do not keep leaves the device. The AI is optional, off by default, and runs entirely on-device.
+
+### Install
+
+Android 8.0 (API 26) or later. Download `TB-Calendar-2.0.0.apk` below. Upgrading keeps your events, tasks, notes, countdowns and settings.
+
 ## 1.12.0 — 2026-09-09
 
 The year, at a glance — and a gesture that had never worked.
