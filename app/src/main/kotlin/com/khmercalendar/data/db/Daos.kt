@@ -103,6 +103,20 @@ interface EventDao {
     @Query("UPDATE events SET priority = :priority, updatedAtMillis = :atMillis WHERE id = :id")
     suspend fun setPriority(id: Long, priority: Int, atMillis: Long)
 
+    @Query("UPDATE events SET isPinned = :pinned, updatedAtMillis = :atMillis WHERE id = :id")
+    suspend fun setPinned(id: Long, pinned: Boolean, atMillis: Long)
+
+    /**
+     * Every pinned row, whatever its date.
+     *
+     * Unfiltered by time on purpose: a pinned birthday is a yearly series whose stored start
+     * is years in the past, and a countdown to it is its *next* occurrence. Deciding that
+     * needs the recurrence rule, which SQLite cannot evaluate - so the filtering happens
+     * after expansion, in the repository. There are only ever a handful of pinned rows.
+     */
+    @Query("SELECT * FROM events WHERE isPinned = 1 ORDER BY startUtcMillis")
+    fun observePinned(): Flow<List<EventEntity>>
+
     @Query("SELECT COUNT(*) FROM events")
     suspend fun count(): Int
 

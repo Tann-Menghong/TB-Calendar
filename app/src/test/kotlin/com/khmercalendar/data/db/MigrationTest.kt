@@ -55,9 +55,9 @@ class MigrationTest {
         dbFile.delete()
     }
 
-    /** Builds the database exactly as version 1 left it, from the exported schema. */
-    private fun createVersion1() {
-        val schema = JSONObject(schemaJson(1)).getJSONObject("database")
+    /** Builds the database exactly as [version] left it, from the exported schema. */
+    private fun createVersion(version: Int) {
+        val schema = JSONObject(schemaJson(version)).getJSONObject("database")
         val raw = SQLiteDatabase.openOrCreateDatabase(dbFile, null)
         try {
             val entities = schema.getJSONArray("entities")
@@ -77,7 +77,7 @@ class MigrationTest {
             // one it did not create and refuses to migrate.
             val setup = schema.getJSONArray("setupQueries")
             for (i in 0 until setup.length()) raw.execSQL(setup.getString(i))
-            raw.version = 1
+            raw.version = version
         } finally {
             raw.close()
         }
@@ -92,7 +92,10 @@ class MigrationTest {
 
     private fun openMigrated(): KhmerCalendarDatabase =
         Room.databaseBuilder(context, KhmerCalendarDatabase::class.java, NAME)
-            .addMigrations(KhmerCalendarDatabase.MIGRATION_1_2)
+            .addMigrations(
+                KhmerCalendarDatabase.MIGRATION_1_2,
+                KhmerCalendarDatabase.MIGRATION_2_3,
+            )
             .allowMainThreadQueries()
             .build()
             .also {
@@ -104,7 +107,9 @@ class MigrationTest {
 
     @Test
     fun `an existing calendar survives the upgrade intact`() = runBlocking {
-        createVersion1()
+        // From version 1, so this covers the whole chain rather than only the last step -
+        // which is the upgrade anyone still on an early version will actually run.
+        createVersion(1)
         SQLiteDatabase.openOrCreateDatabase(dbFile, null).use { raw ->
             raw.execSQL(
                 "INSERT INTO categories (id, name, colorArgb, isVisible, sortOrder, isBuiltIn) " +
@@ -141,8 +146,9 @@ class MigrationTest {
         assertTrue(event.isTask)
         assertEquals(500L, event.createdAtMillis)
 
-        // The new column reads as NORMAL for everything that predates it.
+        // The new columns read as their defaults for everything that predates them.
         assertEquals(0, event.priority)
+        assertEquals(false, event.isPinned)
 
         // Nothing else was dropped on the way through.
         assertEquals(1, migrated.categoryDao().count())
@@ -155,7 +161,7 @@ class MigrationTest {
 
     @Test
     fun `priority is writable once the migration has run`() = runBlocking {
-        createVersion1()
+        createVersion(1)
         val migrated = openMigrated()
 
         val id = migrated.eventDao().insert(
@@ -179,12 +185,63 @@ class MigrationTest {
     }
 
     @Test
+    fun `a version 2 calendar keeps its priorities and gains the pin`() = runBlocking {
+        // The step most people will actually take, exercised on its own: 1 to 3 passes
+        // through 1-2 and could hide a broken 2-3 behind it.
+        createVersion(2)
+        SQLiteDatabase.openOrCreateDatabase(dbFile, null).use { raw ->
+            raw.execSQL(
+                "INSERT INTO events (id, title, description, location, startUtcMillis, " +
+                    "endUtcMillis, allDay, zoneId, rrule, categoryId, colorArgb, isTask, " +
+                    "isCompleted, priority, completedAtMillis, createdAtMillis, " +
+                    "updatedAtMillis) VALUES " +
+                    "(11, 'ប្រឡង', NULL, NULL, 1000, 2000, 1, '$ZONE', 'FREQ=YEARLY', " +
+                    "NULL, NULL, 1, 0, 1, NULL, 500, 600)",
+            )
+        }
+
+        val migrated = openMigrated()
+        val event = migrated.eventDao().byId(11)
+
+        assertNotNull("the event was lost by the 2 to 3 migration", event)
+        requireNotNull(event)
+        assertEquals("ប្រឡង", event.title)
+        // The urgency set under version 2 is still there.
+        assertEquals(1, event.priority)
+        assertEquals("FREQ=YEARLY", event.rrule)
+        assertEquals(false, event.isPinned)
+    }
+
+    @Test
+    fun `the pin is writable once the migration has run`() = runBlocking {
+        createVersion(2)
+        val migrated = openMigrated()
+
+        val id = migrated.eventDao().insert(
+            EventEntity(
+                title = "ថ្ងៃកំណើត",
+                startUtcMillis = 10,
+                endUtcMillis = 20,
+                zoneId = ZONE,
+                allDay = true,
+                createdAtMillis = 1,
+                updatedAtMillis = 1,
+            ),
+        )
+        assertEquals(false, migrated.eventDao().byId(id)?.isPinned)
+
+        migrated.eventDao().setPinned(id, pinned = true, atMillis = 99)
+        assertEquals(true, migrated.eventDao().byId(id)?.isPinned)
+        assertEquals(99L, migrated.eventDao().byId(id)?.updatedAtMillis)
+    }
+
+    @Test
     fun `a fresh install opens at the current version without a migration`() = runBlocking {
         // The migration path and the create-from-scratch path produce different code in Room,
         // and only one of them is exercised by the tests above.
         val fresh = openMigrated()
 
         assertEquals(0, fresh.eventDao().count())
-        assertEquals(2, fresh.openHelper.writableDatabase.version)
+        assertEquals(3, fresh.openHelper.writableDatabase.version)
     }
 }

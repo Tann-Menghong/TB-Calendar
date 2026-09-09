@@ -4,6 +4,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextOverflow
+import com.khmercalendar.core.khmer.KhmerTerms
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
@@ -40,6 +47,9 @@ import com.khmercalendar.data.prefs.SettingsStore
 import com.khmercalendar.domain.DashboardArrangement
 import com.khmercalendar.domain.DayTimeline
 import com.khmercalendar.domain.CalendarViewMode
+import com.khmercalendar.domain.CountdownItem
+import com.khmercalendar.domain.CountdownStyle
+import com.khmercalendar.domain.Countdowns
 import com.khmercalendar.domain.DockSlot
 import com.khmercalendar.ui.Routes
 import com.khmercalendar.ui.components.DashboardSkeleton
@@ -48,6 +58,7 @@ import com.khmercalendar.ui.components.SurfaceCard
 import com.khmercalendar.ui.components.localeNumber
 import com.khmercalendar.ui.theme.CardAccent
 import com.khmercalendar.ui.theme.LocalAppSettings
+import com.khmercalendar.ui.theme.Radius
 import com.khmercalendar.ui.theme.Spacing
 import com.khmercalendar.ui.theme.color
 import kotlinx.coroutines.launch
@@ -189,7 +200,7 @@ fun HomeScreen(
                         when (slot) {
                             DockSlot.ADD_EVENT, DockSlot.ADD_TASK -> onAdd(state.today)
                             DockSlot.NOTE -> onOpenDay(state.today)
-                            DockSlot.COUNTDOWN -> onNavigate(Routes.HOLIDAYS)
+                            DockSlot.COUNTDOWN -> onNavigate(Routes.COUNTDOWNS)
                             DockSlot.TASKS -> onNavigate(Routes.TASKS)
                             DockSlot.CALENDAR -> onOpenCalendar(CalendarViewMode.MONTH)
                             DockSlot.SEARCH -> onNavigate(Routes.SEARCH)
@@ -347,7 +358,12 @@ private fun DashboardModule(
             onSummarise = { onNavigate(Routes.ASSISTANT) },
         )
 
-        DashboardCard.COUNTDOWN -> CountdownModule(state)
+        DashboardCard.COUNTDOWN -> CountdownModule(
+            items = state.countdowns,
+            now = now,
+            onOpen = { id, date -> onOpenEvent(id, date) },
+            onOpenAll = { onNavigate(Routes.COUNTDOWNS) },
+        )
 
         DashboardCard.NOTE -> NoteModule(
             text = noteDraft ?: state.note,
@@ -410,40 +426,102 @@ private fun HolidayModule(state: HomeState, onNavigate: (String) -> Unit) {
     }
 }
 
+/**
+ * The countdown card.
+ *
+ * Says where each row came from, because the card shows pinned dates when there are any and
+ * the next public holidays when there are not - and a card that silently swaps its source
+ * is a card you cannot trust. The empty state says how to pin, since the pin lives on the
+ * event's own screen and nothing else in the app points at it.
+ */
 @Composable
-private fun CountdownModule(state: HomeState) {
-    if (state.countdowns.isEmpty()) {
-        SurfaceCard(padding = LocalAppSettings.current.dashboardDensity.cardPaddingDp.dp) {
-            ModuleEmpty("រាប់ថយក្រោយ", "គ្មានអ្វីត្រូវរាប់ថយក្រោយ")
+private fun CountdownModule(
+    items: List<CountdownItem>,
+    now: LocalDateTime,
+    onOpen: (Long, LocalDate) -> Unit,
+    onOpenAll: () -> Unit,
+) {
+    val settings = LocalAppSettings.current
+    val padding = settings.dashboardDensity.cardPaddingDp.dp
+
+    if (items.isEmpty()) {
+        SurfaceCard(padding = padding) {
+            ModuleEmpty("រាប់ថយក្រោយ", "បើកព្រឹត្តិការណ៍មួយ ហើយចុចរូបខ្ទាស់ ដើម្បីរាប់ថយក្រោយ")
         }
         return
     }
-    SurfaceCard(padding = LocalAppSettings.current.dashboardDensity.cardPaddingDp.dp) {
-        ModuleLabel("រាប់ថយក្រោយ")
-        Spacer(Modifier.height(Spacing.md))
-        state.countdowns.forEach { item ->
-            androidx.compose.foundation.layout.Row(
-                Modifier.fillMaxWidth().padding(vertical = Spacing.xs),
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-            ) {
-                Text(
-                    item.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f),
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                )
-                Text(
-                    if (item.daysAway == 0L) "ថ្ងៃនេះ" else "នៅ ${localeNumber(item.daysAway)} ថ្ងៃ",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = if (item.isHoliday) {
-                        CardAccent.HOLIDAY.color()
-                    } else {
-                        MaterialTheme.colorScheme.primary
-                    },
-                )
-            }
+
+    SurfaceCard(padding = padding) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            ModuleLabel("រាប់ថយក្រោយ", Modifier.weight(1f))
+            TextButton(onClick = onOpenAll) { Text("ទាំងអស់") }
         }
+        Spacer(Modifier.height(Spacing.sm))
+        items.forEach { item ->
+            CountdownRow(
+                item = item,
+                now = now,
+                style = settings.countdownStyle,
+                khmerNumerals = settings.useKhmerNumerals,
+                onClick = { onOpen(item.eventId, item.date) }.takeIf { item.eventId > 0L },
+            )
+        }
+    }
+}
+
+/**
+ * One countdown.
+ *
+ * The remaining time is the loud half and the date the quiet one: a countdown answers "how
+ * long", and the date is what you check afterwards. A holiday row is labelled as such rather
+ * than only tinted - the accent alone would be the app choosing a colour to mean "this one is
+ * not yours", which is exactly the kind of colour-only meaning that fails for anybody who
+ * cannot separate the two.
+ */
+@Composable
+private fun CountdownRow(
+    item: CountdownItem,
+    now: LocalDateTime,
+    style: CountdownStyle,
+    khmerNumerals: Boolean,
+    onClick: (() -> Unit)?,
+) {
+    val row = Modifier
+        .fillMaxWidth()
+        .clip(RoundedCornerShape(Radius.sm))
+        .let { if (onClick != null) it.clickable(onClick = onClick) else it }
+        .padding(vertical = Spacing.sm, horizontal = Spacing.xs)
+
+    Row(row, verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = item.title,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = buildString {
+                    append(localeNumber(item.date.dayOfMonth, khmerNumerals))
+                    append(" ")
+                    append(KhmerTerms.solarMonth(item.date.monthValue))
+                    if (item.isHoliday) append(" · បុណ្យជាតិ")
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Text(
+            text = Countdowns.remaining(item, now, style, khmerNumerals),
+            style = MaterialTheme.typography.labelLarge,
+            color = if (item.isHoliday) {
+                CardAccent.HOLIDAY.color()
+            } else {
+                MaterialTheme.colorScheme.primary
+            },
+        )
     }
 }
 

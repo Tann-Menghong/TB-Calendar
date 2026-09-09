@@ -9,6 +9,7 @@ import com.khmercalendar.data.prefs.AppSettings
 import com.khmercalendar.data.repo.EventRepository
 import com.khmercalendar.domain.EventDraftDefaults
 import com.khmercalendar.domain.EventDraftModel
+import com.khmercalendar.domain.TaskPriority
 import com.khmercalendar.domain.EventTimes
 import com.khmercalendar.notify.ReminderScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +28,13 @@ data class EventEditState(
     val isSaving: Boolean = false,
     val saved: Boolean = false,
     val error: String? = null,
+    /**
+     * Whether this date is pinned as a countdown.
+     *
+     * Kept beside the draft rather than on it: the editor has no pin control, and a value on
+     * the draft would be saved back by the editor and could unpin what you were editing.
+     */
+    val isPinned: Boolean = false,
 )
 
 /** Backs the add and edit form, and the delete paths on the detail screen. */
@@ -94,9 +102,11 @@ class EventEditViewModel(
                     reminderMinutes = repository.reminders(entity.id),
                     isTask = entity.isTask,
                     isCompleted = entity.isCompleted,
+                    priority = TaskPriority.of(entity.priority),
                 ),
                 categories = categories,
                 isNew = false,
+                isPinned = entity.isPinned,
             )
         }
     }
@@ -174,5 +184,18 @@ class EventEditViewModel(
 
     fun setCompleted(eventId: Long, completed: Boolean) {
         viewModelScope.launch { repository.setCompleted(eventId, completed) }
+    }
+
+    /**
+     * Pins or unpins this date as a countdown.
+     *
+     * Optimistic: the flag is a single column and the write cannot fail in a way the user
+     * could act on, and a pin that takes a database round trip to appear reads as a button
+     * that did not work.
+     */
+    fun setPinned(eventId: Long, pinned: Boolean) {
+        if (eventId <= 0L) return
+        _state.value = _state.value.copy(isPinned = pinned)
+        viewModelScope.launch { repository.setPinned(eventId, pinned) }
     }
 }

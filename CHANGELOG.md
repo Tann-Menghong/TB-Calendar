@@ -1,5 +1,61 @@
 # Changelog
 
+## 1.10.0 — 2026-09-09
+
+Countdowns you choose yourself, free time where you need it, and a task urgency that stopped disappearing.
+
+### រាប់ថយក្រោយ · Count down to what matters to you
+
+The countdown card used to pick for you: the next public holiday, and the next event in your calendar. That is a reasonable default and not a countdown feature — the whole point is that *you* decide what is worth counting, and there was no way to say so.
+
+**Open any event and tap the pin.** That date is now a countdown. Exams, deadlines, birthdays, a trip, a project — anything already in your calendar, which is where those dates live anyway.
+
+**A pinned countdown is an event, not a second kind of thing.** It inherits everything an event already has. That is not tidiness for its own sake — it is what makes a birthday countdown work at all: pin a yearly repeat and the countdown reads its *next* occurrence, not the date years ago when you first entered it. A birthday pinned from June 2024 counts to June 2027 once this June has gone, without anyone maintaining it. Search, categories, colours, reminders, backup and ICS export come along for free too.
+
+**Three ways of writing the remaining time**, chosen on the countdown screen itself where you can see them change: **ថ្ងៃ** (នៅ ៥១ ថ្ងៃ), **ថ្ងៃ និងម៉ោង** (នៅ ៥០ ថ្ងៃ ២១ ម៉ោង), **សប្តាហ៍** (នៅ ៧ សប្តាហ៍ ២ ថ្ងៃ). Three, because they answer three different questions and everything past that is decoration. An all-day entry is never given an hours figure — claiming "៣ ថ្ងៃ ៧ ម៉ោង" until a birthday is a precision the date does not have.
+
+Today and tomorrow are always named rather than counted. A countdown reading "នៅ ១ ថ្ងៃ" makes you do the arithmetic it was supposed to do for you.
+
+**A countdown that has arrived is kept, not deleted.** It moves to បានកន្លងផុត with its pin still on. The exam you sat is your data; the app does not tidy it away on your behalf.
+
+The **រាប់ថយក្រោយ** button in the dashboard's quick row now opens this screen. It used to open the holiday list, which is not what the button said.
+
+### ទំនេរ · When you are free, on the day itself
+
+The day view now shows your free stretches above the timetable — the first two, and a count of the rest. On today it will not offer you a morning that has already gone: at 9:38 the answer starts at 9:38.
+
+The assistant could already work this out when asked. That was the wrong place for it in two ways: you had to think to ask, and the assistant is optional and off by default, so for most people the answer did not exist. The arithmetic has moved down into the calendar engine beside the lunar and recurrence code, where it belongs — it is interval subtraction, nothing to do with a model — and the assistant now calls the same function.
+
+Moving it earned twelve new tests for cases the assistant's own tests never reached: an unsorted list of meetings, a short meeting nested inside a long one (which under the obvious implementation invents a free gap that is already booked), and something that started before your day did.
+
+### The task urgency that quietly reset
+
+Setting a task to **សំខាន់**, then opening it in the full editor and saving, put it back to **ធម្មតា**.
+
+The editor loaded every field of the event except its urgency, so the draft it held always said "ធម្មតា" — and saving wrote that draft back over the real value. Nothing failed; the setting simply went, and only if you happened to look afterwards would you know.
+
+This is the fourth time this codebase has produced the same bug: a value written to the database that some path forgets to read. It is invisible to the compiler, to lint, and to every test that does not do the round trip.
+
+### The database changed, and that was tested before it shipped
+
+The pin needed a column, so the schema moved to version 3. Same treatment as last time: no destructive fallback is configured, so a bad migration makes the app fail to open rather than quietly deleting your calendar — which is the safer failure and still one nobody should ship.
+
+The migration test now covers **both** paths: version 1 straight through to 3, which is the upgrade anybody still on an early version will actually run, and version 2 to 3 on its own — because a 1→3 test passes through 1→2 first and could hide a broken 2→3 behind it. It was then run the way you will run it, installing over a real version-2 database on an Android 8.0 device: all twelve events survived and the new column read back as unpinned.
+
+### Tested
+
+**302 unit tests** pass and lint is clean, including 32 new ones covering countdown selection and phrasing in all three styles, free-time subtraction, and the schema migration.
+
+Checked on an **Android 8.0 (API 26)** emulator: the upgrade over a real version-2 database, pinning and unpinning from both the event and the countdown screen, a yearly birthday resolving forward to its next occurrence, all three styles, the free-time row trimming the morning that had gone, and both the urgency and the pin surviving a save from the full editor.
+
+### Privacy
+
+Unchanged: no account, no analytics, no tracking, no ads. Your calendar never leaves the device. The AI is optional, off by default, and runs entirely on-device.
+
+### Install
+
+Android 8.0 (API 26) or later. Download `TB-Calendar-1.10.0.apk` below. Upgrading keeps your events, tasks, notes and settings.
+
 ## 1.9.0 — 2026-09-08
 
 The calendar had four views. Three of them were nearly impossible to find.

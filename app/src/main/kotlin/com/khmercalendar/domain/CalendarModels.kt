@@ -38,6 +38,13 @@ data class EventOccurrence(
      * ignore it, the same way they carry [isCompleted].
      */
     val priority: Int = 0,
+    /**
+     * Whether this date is pinned as a countdown.
+     *
+     * Defaulted for the same reason as [priority]: every existing construction of this class,
+     * the tests included, still compiles and reads back as unpinned.
+     */
+    val isPinned: Boolean = false,
 ) {
     val taskPriority: TaskPriority get() = TaskPriority.of(priority)
 

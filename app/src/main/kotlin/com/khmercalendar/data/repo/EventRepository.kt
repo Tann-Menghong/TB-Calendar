@@ -11,6 +11,7 @@ import com.khmercalendar.data.db.EventEntity
 import com.khmercalendar.data.db.EventExceptionDao
 import com.khmercalendar.data.db.EventExceptionEntity
 import com.khmercalendar.data.db.ReminderDao
+import com.khmercalendar.domain.CountdownItem
 import com.khmercalendar.domain.EventDraftModel
 import com.khmercalendar.domain.EventOccurrence
 import com.khmercalendar.domain.EventTimes
@@ -127,6 +128,7 @@ class EventRepository(
                     isCompleted = event.isCompleted,
                     isRecurring = rule != null,
                     priority = event.priority,
+                    isPinned = event.isPinned,
                 )
                 out.getOrPut(date) { mutableListOf() } += occurrence
 
@@ -200,6 +202,10 @@ class EventRepository(
             isTask = draft.isTask,
             isCompleted = draft.isCompleted,
             priority = draft.priority.stored,
+            // Preserved across an edit rather than carried on the draft: pinning is done
+            // from the detail screen with one tap, and the editor has no pin control, so
+            // taking it from a draft would silently unpin anything you edited.
+            isPinned = if (draft.id == 0L) false else (eventDao.byId(draft.id)?.isPinned ?: false),
             completedAtMillis = if (draft.isCompleted) now else null,
             createdAtMillis = if (draft.id == 0L) now else (eventDao.byId(draft.id)?.createdAtMillis ?: now),
             updatedAtMillis = now,
@@ -246,6 +252,86 @@ class EventRepository(
         eventDao.setPriority(eventId, priority.stored, System.currentTimeMillis())
     }
 
+    /** Pins or unpins a date as a countdown. */
+    suspend fun setPinned(eventId: Long, pinned: Boolean) {
+        eventDao.setPinned(eventId, pinned, System.currentTimeMillis())
+    }
+
+    /**
+     * Pinned dates as countdowns, each resolved to its next occurrence from [today].
+     *
+     * The expansion is the point. A pinned birthday is a yearly series whose stored start is
+     * years in the past, so the row's own date is never the answer; the countdown is to the
+     * next occurrence, which only the recurrence rule can say. A one-off resolves to itself,
+     * and one that has already gone resolves to nothing and drops out - the countdown screen
+     * reports those separately from the row rather than showing a negative number.
+     */
+    fun observeCountdowns(today: LocalDate): Flow<List<CountdownItem>> {
+        val zone = zoneProvider()
+        return eventDao.observePinned().map { events ->
+            events.mapNotNull { event -> nextOccurrence(event, today, zone) }
+                .sortedWith(compareBy({ it.date }, { it.at }, { it.title }))
+        }
+    }
+
+    /**
+     * Pinned dates that have already gone.
+     *
+     * Only a one-off can be here: a repeating series always has a next occurrence, so
+     * [observeCountdowns] resolves it forward and it never reaches this list. That is the
+     * behaviour both want - a birthday counts to the next one, an exam you sat stays sat.
+     */
+    fun observePinnedPast(today: LocalDate): Flow<List<CountdownItem>> {
+        val zone = zoneProvider()
+        return eventDao.observePinned().map { events ->
+            events
+                .filter { nextOccurrence(it, today, zone) == null }
+                .map { event ->
+                    val start = EventTimes.fromUtcMillis(event.startUtcMillis, zone, event.allDay)
+                    CountdownItem(
+                        eventId = event.id,
+                        title = event.title,
+                        date = start.toLocalDate(),
+                        at = start,
+                        allDay = event.allDay,
+                        isHoliday = false,
+                        isPinned = true,
+                    )
+                }
+                .sortedByDescending { it.date }
+        }
+    }
+
+    /**
+     * The first occurrence of [event] on or after [today], as a countdown.
+     *
+     * The window is a little over a year so that a yearly series always lands inside it
+     * whichever side of its anniversary today falls, and a one-off further out than that is
+     * still found by starting the window at the event's own date when it is in the future.
+     */
+    private fun nextOccurrence(event: EventEntity, today: LocalDate, zone: ZoneId): CountdownItem? {
+        val start = EventTimes.fromUtcMillis(event.startUtcMillis, zone, event.allDay)
+        val rule = RecurrenceRule.parse(event.rrule)
+        val windowStart = if (rule == null) start.toLocalDate() else today
+        val date = RecurrenceExpander.occurrences(
+            start = start.toLocalDate(),
+            rule = rule,
+            windowStart = windowStart,
+            windowEnd = maxOf(windowStart, today.plusDays(COUNTDOWN_WINDOW_DAYS)),
+            exceptions = emptySet(),
+        ).firstOrNull { !it.isBefore(today) } ?: return null
+
+        return CountdownItem(
+            eventId = event.id,
+            title = event.title,
+            date = date,
+            at = LocalDateTime.of(date, start.toLocalTime()),
+            allDay = event.allDay,
+            isHoliday = false,
+            isPinned = true,
+        )
+    }
+
     suspend fun allEvents(): List<EventEntity> = eventDao.allEvents()
 
     suspend fun eventCount(): Int = eventDao.count()
@@ -286,6 +372,14 @@ class EventRepository(
 
     private companion object {
         const val DEFAULT_COLOR = 0xFF2F6FED.toInt()
+
+        /**
+         * How far ahead a pinned date is looked for.
+         *
+         * A little over a year, so a yearly series lands inside the window whichever side of
+         * its anniversary today falls on.
+         */
+        const val COUNTDOWN_WINDOW_DAYS = 400L
     }
 }
 

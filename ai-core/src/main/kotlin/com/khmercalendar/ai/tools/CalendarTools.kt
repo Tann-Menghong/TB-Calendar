@@ -3,6 +3,8 @@ package com.khmercalendar.ai.tools
 import com.khmercalendar.core.khmer.Chhankitek
 import com.khmercalendar.core.khmer.KhmerNumerals
 import com.khmercalendar.core.khmer.KhmerTerms
+import com.khmercalendar.core.schedule.FreeTime
+import com.khmercalendar.core.schedule.TimeSpan
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -73,15 +75,11 @@ object CalendarTools {
         existing.filterNot { it.allDay }.filter { it.start < end && start < it.end }
 
     /**
-     * Gaps of at least [minimumMinutes] on [date] inside working hours.
+     * Gaps of at least [minimumMinutes] on [date] inside the user's own day.
      *
-     * Bounded to a waking window on purpose: technically 02:00 is free, but proposing it is
-     * not an answer anyone wanted. [dayStart] and [dayEnd] are the user's own availability
-     * from settings - the caller passes them, because this module has no access to
-     * preferences and should not acquire one.
-     *
-     * [notBefore] trims the window at a moment that has already passed. Asked "when am I free
-     * today" at three in the afternoon, the honest answer cannot begin with this morning.
+     * The arithmetic is [FreeTime] in `:calendar-core`; this is the assistant's view of it.
+     * It lives down there because the day view needs the same answer and must not have to go
+     * through the AI module - which is optional and off by default - to get a subtraction.
      */
     fun freeSlots(
         events: List<AiEventView>,
@@ -90,35 +88,14 @@ object CalendarTools {
         dayStart: LocalTime = LocalTime.of(8, 0),
         dayEnd: LocalTime = LocalTime.of(18, 0),
         notBefore: LocalDateTime? = null,
-    ): List<FreeSlot> {
-        val windowStart = maxOf(
-            LocalDateTime.of(date, dayStart),
-            notBefore?.takeIf { it.toLocalDate() == date } ?: LocalDateTime.MIN,
-        )
-        val windowEnd = LocalDateTime.of(date, dayEnd)
-        if (!windowStart.isBefore(windowEnd)) return emptyList()
-        val busy = events
-            .filterNot { it.allDay }
-            .filter { it.start < windowEnd && windowStart < it.end }
-            .sortedBy { it.start }
-
-        val out = mutableListOf<FreeSlot>()
-        var cursor = windowStart
-        for (e in busy) {
-            if (e.start.isAfter(cursor)) {
-                val slotEnd = minOf(e.start, windowEnd)
-                if (Duration.between(cursor, slotEnd).toMinutes() >= minimumMinutes) {
-                    out += FreeSlot(cursor, slotEnd)
-                }
-            }
-            if (e.end.isAfter(cursor)) cursor = e.end
-            if (!cursor.isBefore(windowEnd)) break
-        }
-        if (cursor.isBefore(windowEnd) && Duration.between(cursor, windowEnd).toMinutes() >= minimumMinutes) {
-            out += FreeSlot(cursor, windowEnd)
-        }
-        return out
-    }
+    ): List<FreeSlot> = FreeTime.onDay(
+        busy = events.filterNot { it.allDay }.map { TimeSpan(it.start, it.end) },
+        date = date,
+        dayStart = dayStart,
+        dayEnd = dayEnd,
+        minimumMinutes = minimumMinutes,
+        notBefore = notBefore,
+    ).map { FreeSlot(it.start, it.end) }
 
     /** A Khmer one-line summary of a day, used in the assistant and in the widget. */
     fun describeDay(date: LocalDate, events: List<AiEventView>): String {

@@ -26,6 +26,9 @@ object Routes {
     const val ASSISTANT = "assistant"
     const val HOLIDAYS = "holidays"
 
+    /** Every pinned countdown, and the ones that have already arrived. */
+    const val COUNTDOWNS = "countdowns"
+
     const val SETTINGS = "settings"
     const val SETTINGS_APPEARANCE = "settings/appearance"
     const val SETTINGS_DASHBOARD = "settings/dashboard"

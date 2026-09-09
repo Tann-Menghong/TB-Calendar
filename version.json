@@ -1,11 +1,11 @@
 {
-  "versionCode": 13,
-  "versionName": "1.9.0",
-  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v1.9.0/TB-Calendar-1.9.0.apk",
+  "versionCode": 14,
+  "versionName": "1.10.0",
+  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v1.10.0/TB-Calendar-1.10.0.apk",
   "apkSizeBytes": 60232092,
-  "apkSha256": "5b231ab4736255edd4a192d084fd19f7e4a1282cbcc4d06988be0d0fc5fba5bc",
+  "apkSha256": "7188e9831aa47664b3c693941dd2443795b53737c63e600dd4ae9ede57775516",
   "minSdk": 26,
-  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v1.9.0",
-  "releaseNotesKm": "ប្រតិទិនមួយ មើលបានបួនបែប៖ ខែ សប្តាហ៍ ថ្ងៃ និងបញ្ជី ដោយប្តូរនៅលើអេក្រង់តែម្តង។ លោតទៅកាលបរិច្ឆេទណាមួយ។ ព្រឹត្តិការណ៍ត្រួតគ្នាបង្ហាញនៅថ្ងៃដែលវាកើតឡើង។ ជួសជុល៖ អេក្រង់ចាប់ផ្តើមដែលមិនដំណើរការ។",
-  "releaseNotesEn": "One calendar you can read four ways - month, week, day and list - with a switcher on the screen itself. Three of those views had existed since early versions and were all but unreachable. Jump to any date from the header, see a double-booking marked on the day it happens, and get the start screen you actually chose when the app opens cold."
+  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v1.10.0",
+  "releaseNotesKm": "រាប់ថយក្រោយតាមចិត្តអ្នក៖ បើកព្រឹត្តិការណ៍ណាមួយ រួចចុចរូបខ្ទាស់។ ថ្ងៃកំណើតប្រចាំឆ្នាំរាប់ទៅវេនបន្ទាប់ដោយស្វ័យប្រវត្តិ។ បីរបៀបសរសេរ៖ ថ្ងៃ, ថ្ងៃនិងម៉ោង, សប្តាហ៍។ ពេលទំនេរបង្ហាញក្នុងទិដ្ឋភាពថ្ងៃ។ ជួសជុល៖ កម្រិតសំខាន់របស់កិច្ចការបាត់ពេលរក្សាទុក។",
+  "releaseNotesEn": "Countdowns you choose: open any event and tap the pin. A pinned yearly birthday counts to its next occurrence by itself, because a countdown is an event rather than a second kind of thing. Three ways to write the remaining time. Your free stretches now show on the day itself, trimmed at the current minute. Fixed: setting a task to important and then saving it from the full editor silently reset it."
 }

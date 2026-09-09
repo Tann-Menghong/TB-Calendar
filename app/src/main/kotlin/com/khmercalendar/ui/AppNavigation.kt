@@ -40,6 +40,8 @@ import com.khmercalendar.ui.agenda.SearchScreen
 import com.khmercalendar.ui.assistant.AssistantScreen
 import com.khmercalendar.ui.assistant.AssistantViewModel
 import com.khmercalendar.domain.CalendarViewMode
+import com.khmercalendar.ui.countdown.CountdownScreen
+import com.khmercalendar.ui.countdown.CountdownViewModel
 import com.khmercalendar.ui.calendar.CalendarScreen
 import com.khmercalendar.ui.calendar.CalendarViewModel
 import com.khmercalendar.ui.event.EventDetailScreen
@@ -268,6 +270,21 @@ fun KhmerCalendarNavHost(
 
             composable(Routes.HOLIDAYS) {
                 HolidayScreen(onBack = navController::popBackStack)
+            }
+
+            composable(Routes.COUNTDOWNS) {
+                val vm: CountdownViewModel = viewModel(factory = factory)
+                // Re-read on every entry: a countdown screen left open overnight would
+                // otherwise still be counting from yesterday.
+                LaunchedEffect(Unit) { vm.refreshToday() }
+                CountdownScreen(
+                    viewModel = vm,
+                    settingsStore = container.settingsStore,
+                    onOpenEvent = { id, date ->
+                        navController.navigate(Routes.eventDetail(id, date.toString()))
+                    },
+                    onBack = navController::popBackStack,
+                )
             }
 
             composable(Routes.SETTINGS) {

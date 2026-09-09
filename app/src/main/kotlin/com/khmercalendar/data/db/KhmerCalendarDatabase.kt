@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
         EventExceptionEntity::class,
         DayNoteEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class KhmerCalendarDatabase : RoomDatabase() {
@@ -50,6 +50,21 @@ abstract class KhmerCalendarDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Adds the countdown pin.
+         *
+         * Same shape as [MIGRATION_1_2] and for the same reason. Stored as INTEGER because
+         * that is what SQLite gives a Kotlin Boolean, and defaulted to 0 so every existing
+         * event is simply not pinned.
+         */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE events ADD COLUMN isPinned INTEGER NOT NULL DEFAULT 0",
+                )
+            }
+        }
+
         @Volatile
         private var instance: KhmerCalendarDatabase? = null
 
@@ -60,7 +75,7 @@ abstract class KhmerCalendarDatabase : RoomDatabase() {
 
         private fun build(context: Context, scope: CoroutineScope): KhmerCalendarDatabase =
             Room.databaseBuilder(context, KhmerCalendarDatabase::class.java, NAME)
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         // Seeding runs off the creation callback so first launch is never

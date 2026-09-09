@@ -35,12 +35,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.khmercalendar.core.khmer.KhmerTerms
+import com.khmercalendar.core.schedule.TimeSpan
+import com.khmercalendar.core.schedule.FreeTime
 import com.khmercalendar.domain.DayConflicts
 import com.khmercalendar.ui.components.EmptyState
 import com.khmercalendar.ui.components.localeNumber
 import java.time.LocalDate
+import java.time.LocalTime
 import com.khmercalendar.ui.components.localeTimeRange
 import com.khmercalendar.ui.theme.LocalAppSettings
+import com.khmercalendar.ui.home.rememberCurrentMinute
 
 /**
  * Seven day columns as stacked rows, which reads better one-handed than a grid of columns.
@@ -157,6 +161,21 @@ fun DayScreen(
     // ask about it.
     val clashing = remember(timed) { DayConflicts.overlapping(timed) }
 
+    // When you are free, from the same subtraction the assistant uses - but computed here,
+    // because this answer must not require the AI module to be switched on. Bounded to the
+    // user's own day, and on today it will not offer a morning that has already gone.
+    val now = rememberCurrentMinute()
+    val free = remember(timed, date, settings.dayStartHour, settings.dayEndHour, now.toLocalDate()) {
+        FreeTime.onDay(
+            busy = timed.map { TimeSpan(it.start, it.end) },
+            date = date,
+            dayStart = LocalTime.of(settings.dayStartHour, 0),
+            dayEnd = LocalTime.of(settings.dayEndHour, 0),
+            minimumMinutes = MIN_FREE_MINUTES,
+            notBefore = now,
+        )
+    }
+
     // The preferred window, widened to whatever the day actually holds.
     val hours = remember(timed, settings.dayStartHour, settings.dayEndHour) {
         val starts = timed.map { it.start.hour }
@@ -172,6 +191,9 @@ fun DayScreen(
         item {
             DayHeadline(date, Modifier.padding(horizontal = 16.dp, vertical = 12.dp))
             if (clashing.isNotEmpty()) ConflictBanner(clashing.size)
+            // Only where it is useful: on an empty day "you are free 08:00-18:00" is the
+            // same information the empty state already gives, in more words.
+            if (free.isNotEmpty() && timed.isNotEmpty()) FreeTimeRow(free)
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         }
 
@@ -318,3 +340,52 @@ private fun ConflictTag() {
         )
     }
 }
+
+/**
+ * When you are free.
+ *
+ * Two slots at most. The point is to answer "can I fit this in", which the first couple of
+ * gaps do; listing every twenty-minute hole between meetings turns an answer back into the
+ * timetable you were already looking at.
+ */
+@Composable
+private fun FreeTimeRow(slots: List<TimeSpan>) {
+    val settings = LocalAppSettings.current
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .padding(bottom = 10.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Text(
+            text = "ទំនេរ",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.width(48.dp).padding(top = 2.dp),
+        )
+        Spacer(Modifier.width(8.dp))
+        Column {
+            slots.take(2).forEach { slot ->
+                Text(
+                    text = localeTimeRange(
+                        slot.start.toLocalTime(),
+                        slot.end.toLocalTime(),
+                        settings,
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            if (slots.size > 2) {
+                Text(
+                    text = "និង ${localeNumber(slots.size - 2)} ចន្លោះទៀត",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+/** Shorter than this is a gap between meetings rather than time you could use. */
+private const val MIN_FREE_MINUTES = 30L

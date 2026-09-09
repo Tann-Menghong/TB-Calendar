@@ -3,6 +3,7 @@ package com.khmercalendar.data.prefs
 import com.khmercalendar.core.khmer.CalendarWeek
 import com.khmercalendar.core.work.WorkSchedule
 import com.khmercalendar.domain.CalendarViewMode
+import com.khmercalendar.domain.CountdownStyle
 import com.khmercalendar.domain.DockLayout
 import com.khmercalendar.domain.DockSlot
 import java.time.DayOfWeek
@@ -191,6 +192,13 @@ data class AppSettings(
      * read back by one Text. The app has no account and this does not create one.
      */
     val displayName: String = "",
+    /**
+     * How a countdown's remaining time is written.
+     *
+     * Held as the enum rather than the stored key so no screen has to know the storage
+     * format; [com.khmercalendar.domain.CountdownStyle] is the only place that does.
+     */
+    val countdownStyle: CountdownStyle = CountdownStyle.DAYS,
 
     // --- work schedule ---
     /**

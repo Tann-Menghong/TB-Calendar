@@ -10,6 +10,8 @@ import com.khmercalendar.core.khmer.KhmerLunarDate
 import com.khmercalendar.data.prefs.AppSettings
 import com.khmercalendar.data.repo.EventRepository
 import com.khmercalendar.domain.DayLoad
+import com.khmercalendar.domain.CountdownItem
+import com.khmercalendar.domain.Countdowns
 import com.khmercalendar.domain.EventOccurrence
 import com.khmercalendar.domain.MonthOverview
 import com.khmercalendar.domain.MonthWeek
@@ -33,15 +35,6 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
-import java.time.temporal.ChronoUnit
-
-/** An upcoming date the dashboard counts down to. */
-data class Countdown(
-    val title: String,
-    val date: LocalDate,
-    val daysAway: Long,
-    val isHoliday: Boolean,
-)
 
 data class HomeStats(
     val eventsThisMonth: Int = 0,
@@ -59,7 +52,7 @@ data class HomeState(
     val upcoming: List<EventOccurrence> = emptyList(),
     val tasks: List<EventOccurrence> = emptyList(),
     val holidays: List<Holiday> = emptyList(),
-    val countdowns: List<Countdown> = emptyList(),
+    val countdowns: List<CountdownItem> = emptyList(),
     /** The seven days of the current week, including the ones already behind today. */
     val week: List<DayLoad> = emptyList(),
     val weekTotals: WeekOverview.Totals = WeekOverview.Totals(0, 0, 0, null),
@@ -129,9 +122,10 @@ class HomeViewModel(
                     maxOf(day.plusDays(WINDOW_DAYS), YearMonth.from(day).atEndOfMonth()),
                 ),
                 repository.observeNote(day),
+                repository.observeCountdowns(day),
                 settings,
-            ) { byDate, note, prefs ->
-                build(day, byDate, note.orEmpty(), prefs)
+            ) { byDate, note, pinned, prefs ->
+                build(day, byDate, note.orEmpty(), pinned, prefs)
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeState())
@@ -153,6 +147,7 @@ class HomeViewModel(
         day: LocalDate,
         byDate: Map<LocalDate, List<EventOccurrence>>,
         note: String,
+        pinned: List<CountdownItem>,
         prefs: AppSettings,
     ): HomeState = withContext(Dispatchers.Default) {
         val now = LocalDateTime.now()
@@ -189,21 +184,24 @@ class HomeViewModel(
             emptyList()
         }
 
-        val countdowns = buildList {
-            holidays.firstOrNull()?.let {
-                add(Countdown(it.nameKm, it.date, ChronoUnit.DAYS.between(day, it.date), true))
-            }
-            flat.firstOrNull { it.occurrenceDate.isAfter(day) }?.let {
-                add(
-                    Countdown(
-                        title = it.title,
-                        date = it.occurrenceDate,
-                        daysAway = ChronoUnit.DAYS.between(day, it.occurrenceDate),
-                        isHoliday = false,
-                    ),
+        // Pinned dates, or the next public holidays while nothing is pinned. The old card
+        // picked for the user - next holiday, next event - which is a reasonable default and
+        // not a countdown feature: the point is that you choose what is worth counting.
+        val countdowns = Countdowns.build(
+            pinned = pinned,
+            fallback = holidays.map { holiday ->
+                CountdownItem(
+                    eventId = 0L,
+                    title = holiday.nameKm,
+                    date = holiday.date,
+                    at = holiday.date.atStartOfDay(),
+                    allDay = true,
+                    isHoliday = true,
+                    isPinned = false,
                 )
-            }
-        }
+            },
+            today = day,
+        )
 
         val week = WeekOverview.build(
             today = day,

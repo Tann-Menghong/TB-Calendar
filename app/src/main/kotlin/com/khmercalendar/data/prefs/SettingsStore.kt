@@ -14,6 +14,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.khmercalendar.core.khmer.CalendarWeek
 import com.khmercalendar.core.work.WorkSchedule
 import com.khmercalendar.core.work.WorkScheduleCodec
+import com.khmercalendar.domain.CountdownStyle
 import com.khmercalendar.domain.DockLayout
 import com.khmercalendar.domain.DockSlot
 import kotlinx.coroutines.flow.Flow
@@ -81,6 +82,7 @@ class SettingsStore(context: Context) {
         animationLevel = enumOf(this[Keys.ANIMATION_LEVEL], AnimationLevel.STANDARD),
         dockSlots = DockLayout.decode(this[Keys.DOCK_SLOTS]?.split(",").orEmpty()),
         displayName = this[Keys.DISPLAY_NAME].orEmpty(),
+        countdownStyle = CountdownStyle.of(this[Keys.COUNTDOWN_STYLE]),
 
         workSchedule = WorkScheduleCodec
             .decode(this[Keys.WORK_SCHEDULE])
@@ -177,6 +179,8 @@ class SettingsStore(context: Context) {
     /** Trimmed and capped: the header has one line for it, and no screen validates it. */
     suspend fun setDisplayName(name: String) =
         put(Keys.DISPLAY_NAME, name.trim().take(24))
+
+    suspend fun setCountdownStyle(style: CountdownStyle) = put(Keys.COUNTDOWN_STYLE, style.key)
 
     suspend fun setWorkSchedule(schedule: WorkSchedule) {
         // The blocks and the on/off switch are separate keys but one user action, so they are
@@ -293,6 +297,7 @@ class SettingsStore(context: Context) {
         val ANIMATION_LEVEL = stringPreferencesKey("animation_level")
         val DOCK_SLOTS = stringPreferencesKey("dock_slots")
         val DISPLAY_NAME = stringPreferencesKey("display_name")
+        val COUNTDOWN_STYLE = stringPreferencesKey("countdown_style")
 
         val WORK_SCHEDULE = stringPreferencesKey("work_schedule")
         val WORK_ENABLED = booleanPreferencesKey("work_enabled")

@@ -84,6 +84,16 @@ data class EventEntity(
      * Ordinary events carry it and ignore it, exactly as they do [isCompleted].
      */
     val priority: Int = 0,
+    /**
+     * Whether this date is pinned as a countdown.
+     *
+     * A countdown is a named future date, which is exactly what a row of this table already
+     * is - so an exam, a deadline or a birthday is an event with this flag rather than a
+     * second table. It inherits recurrence for nothing, which is what makes a birthday
+     * countdown work at all: the row repeats yearly and the countdown reads its next
+     * occurrence. It also inherits search, categories, colours, backup and ICS export.
+     */
+    val isPinned: Boolean = false,
     val completedAtMillis: Long? = null,
     val createdAtMillis: Long,
     val updatedAtMillis: Long,

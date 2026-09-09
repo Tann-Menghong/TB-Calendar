@@ -38,6 +38,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.khmercalendar.core.khmer.Chhankitek
 import com.khmercalendar.core.khmer.KhmerTerms
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material3.LocalContentColor
+import com.khmercalendar.domain.CountdownItem
+import com.khmercalendar.domain.Countdowns
 import com.khmercalendar.ui.components.localeNumber
 import com.khmercalendar.ui.components.localeWrittenDate
 import com.khmercalendar.ui.theme.LocalAppSettings
@@ -72,6 +77,30 @@ fun EventDetailScreen(
                     }
                 },
                 actions = {
+                    // Pinning is here rather than in the editor because it is a one-tap
+                    // property of a date, not a field you fill in: you decide something is
+                    // worth counting down to while looking at it.
+                    IconButton(
+                        onClick = { viewModel.setPinned(eventId, !state.isPinned) },
+                    ) {
+                        Icon(
+                            imageVector = if (state.isPinned) {
+                                Icons.Filled.PushPin
+                            } else {
+                                Icons.Outlined.PushPin
+                            },
+                            contentDescription = if (state.isPinned) {
+                                "ដកចេញពីរាប់ថយក្រោយ"
+                            } else {
+                                "រាប់ថយក្រោយ"
+                            },
+                            tint = if (state.isPinned) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                LocalContentColor.current
+                            },
+                        )
+                    }
                     IconButton(onClick = { onEdit(eventId) }) {
                         Icon(Icons.Default.Edit, contentDescription = "កែសម្រួល")
                     }
@@ -132,6 +161,27 @@ fun EventDetailScreen(
                         else -> "${localeNumber(m / 1440, khmerDigits)} ថ្ងៃមុន"
                     }
                 })
+            }
+            // Says what the pin did, because an icon changing state in a top bar is easy
+            // to miss and the effect is on a different screen.
+            if (state.isPinned) {
+                DetailLine(
+                    label = "រាប់ថយក្រោយ",
+                    value = Countdowns.remaining(
+                        item = CountdownItem(
+                            eventId = eventId,
+                            title = draft.title,
+                            date = occurrenceDate,
+                            at = java.time.LocalDateTime.of(occurrenceDate, draft.startTime),
+                            allDay = draft.allDay,
+                            isHoliday = false,
+                            isPinned = true,
+                        ),
+                        now = java.time.LocalDateTime.now(),
+                        style = LocalAppSettings.current.countdownStyle,
+                        khmerNumerals = LocalAppSettings.current.useKhmerNumerals,
+                    ),
+                )
             }
             if (draft.description.isNotBlank()) {
                 Spacer(Modifier.height(4.dp))
