@@ -3,6 +3,14 @@ package com.khmercalendar.ui.agenda
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.khmercalendar.data.db.CategoryEntity
+import com.khmercalendar.data.prefs.AppSettings
+import com.khmercalendar.domain.SearchResults
+import com.khmercalendar.domain.SearchResult
+import com.khmercalendar.domain.CalendarSearch
+import com.khmercalendar.data.db.EventEntity
+import com.khmercalendar.data.db.DayNoteEntity
+import com.khmercalendar.core.search.DateQuery
+import com.khmercalendar.core.holiday.KhmerHolidays
 import com.khmercalendar.data.repo.EventRepository
 import com.khmercalendar.domain.EventOccurrence
 import com.khmercalendar.domain.EventTimes
@@ -34,14 +42,6 @@ data class AgendaFilter(
     val tasksOnly: Boolean = false,
 )
 
-data class SearchHit(
-    val eventId: Long,
-    val title: String,
-    val subtitle: String,
-    val date: LocalDate,
-    val colorArgb: Int,
-)
-
 /**
  * Backs the agenda list and the search screen.
  *
@@ -52,6 +52,7 @@ data class SearchHit(
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class AgendaViewModel(
     private val repository: EventRepository,
+    private val settings: StateFlow<AppSettings>,
 ) : ViewModel() {
 
     private val rangeEnd = MutableStateFlow(LocalDate.now().plusDays(INITIAL_DAYS))
@@ -89,27 +90,101 @@ class AgendaViewModel(
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val searchResults: StateFlow<List<SearchHit>> = _query
+    /**
+     * Everything matching the query, in sections.
+     *
+     * ## What changed
+     *
+     * This searched the event table and nothing else, so a word written in a note, the name
+     * of a holiday, a category, or a date typed as a date all returned "រកមិនឃើញ" - which
+     * reads as *you do not have that*, not as *search does not look there*. The spec asked
+     * for events, tasks, notes, holidays, dates, categories and locations from the start.
+     *
+     * ## How the pieces are combined
+     *
+     * Events and notes come from the database as flows and re-run themselves when the data
+     * changes. Dates and holidays are computed: a holiday is not a row anywhere, it is a
+     * function of the year, so it is searched by generating the window and filtering it. That
+     * keeps holidays searchable offline with no table to migrate, which is the same reason
+     * they are not stored in the first place.
+     *
+     * The whole thing is debounced once, at the query, rather than per source - four sources
+     * each debouncing separately would produce four staggered redraws per keystroke.
+     */
+    val searchResults: StateFlow<SearchResults> = _query
         .debounce(SEARCH_DEBOUNCE_MS)
-        .flatMapLatest { q ->
-            if (q.isBlank()) flowOf(emptyList()) else repository.search(q).map { rows ->
-                val zone = ZoneId.systemDefault()
-                rows.map { row ->
-                    val start = EventTimes.fromUtcMillis(row.startUtcMillis, zone, row.allDay)
-                    SearchHit(
-                        eventId = row.id,
-                        title = row.title,
-                        subtitle = listOfNotNull(
-                            row.location?.takeIf { it.isNotBlank() },
-                            row.description?.takeIf { it.isNotBlank() },
-                        ).joinToString(" · ").take(80),
-                        date = start.toLocalDate(),
-                        colorArgb = row.colorArgb ?: 0,
-                    )
+        .flatMapLatest { raw ->
+            val q = raw.trim()
+            if (!CalendarSearch.isSearchable(q)) {
+                flowOf(SearchResults())
+            } else {
+                combine(
+                    repository.search(q),
+                    repository.searchNotes(q),
+                    repository.observeCategories(),
+                ) { events, notes, categories ->
+                    build(q, events, notes, categories)
                 }
             }
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchResults())
+
+    private fun build(
+        query: String,
+        events: List<EventEntity>,
+        notes: List<DayNoteEntity>,
+        categories: List<CategoryEntity>,
+    ): SearchResults {
+        val zone = ZoneId.systemDefault()
+        val today = LocalDate.now()
+        val categoryById = categories.associateBy { it.id }
+
+        // Events whose category name matched are already here: the query joins categories,
+        // so "search by category" costs no second lookup and nothing to de-duplicate.
+        val eventHits = events
+            .take(CalendarSearch.LIMIT_PER_SECTION)
+            .map { row ->
+                val start = EventTimes.fromUtcMillis(row.startUtcMillis, zone, row.allDay)
+                SearchResult.Event(
+                    eventId = row.id,
+                    title = row.title,
+                    subtitle = listOfNotNull(
+                        row.location?.takeIf { it.isNotBlank() },
+                        categoryById[row.categoryId]?.name,
+                        row.description?.takeIf { it.isNotBlank() },
+                    ).joinToString(" · ").take(80),
+                    date = start.toLocalDate(),
+                    colorArgb = row.colorArgb ?: categoryById[row.categoryId]?.colorArgb ?: 0,
+                    isTask = row.isTask,
+                    isCompleted = row.isCompleted,
+                )
+            }
+
+        val dateFormat = settings.value.dateFormat
+        val dateMatches = DateQuery.parse(query, today, dateFormat.searchOrder)
+            .map { SearchResult.DateJump(it.date, it.yearAssumed) }
+
+        val holidayHits = KhmerHolidays
+            .inRange(today.minusYears(1).withDayOfYear(1), today.plusYears(2).withDayOfYear(1))
+            .filter { CalendarSearch.matches(it.nameKm, query) || CalendarSearch.matches(it.nameEn, query) }
+            // Nearest first, and past ones after the ones still to come: a holiday search is
+            // almost always about the next one.
+            .sortedWith(compareBy({ it.date.isBefore(today) }, { it.date }))
+            .take(CalendarSearch.LIMIT_PER_SECTION)
+            .map { SearchResult.Holiday(it.date, it.nameKm) }
+
+        return SearchResults(
+            dates = dateMatches,
+            events = eventHits,
+            notes = notes.take(CalendarSearch.LIMIT_PER_SECTION).map { note ->
+                SearchResult.Note(
+                    date = LocalDate.ofEpochDay(note.epochDay),
+                    snippet = CalendarSearch.snippet(note.text, query),
+                )
+            },
+            holidays = holidayHits,
+        )
+    }
 
     fun setQuery(value: String) {
         _query.value = value

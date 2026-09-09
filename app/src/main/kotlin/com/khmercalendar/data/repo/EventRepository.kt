@@ -158,6 +158,10 @@ class EventRepository(
     fun search(query: String): Flow<List<EventEntity>> =
         eventDao.search(escapeForLike(query.trim()))
 
+    /** Day notes matching [query]. Same escaping as [search]; see [escapeForLike]. */
+    fun searchNotes(query: String): Flow<List<DayNoteEntity>> =
+        noteDao.search(escapeForLike(query.trim()))
+
     /**
      * Makes a user's text safe to drop into a LIKE pattern.
      *

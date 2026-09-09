@@ -75,13 +75,20 @@ interface EventDao {
      * [query] must already have its LIKE metacharacters escaped - see
      * [com.khmercalendar.data.repo.EventRepository.escapeForLike]. Without that, searching for
      * "%" returns the entire calendar and "_" matches any single character.
+     *
+     * The join is how a category is searched. A category is not a thing you can open,
+     * so "search by category" can only mean "the events in it" - and doing that in SQL
+     * keeps it one query and one flow, rather than a second lookup whose results have to
+     * be merged and de-duplicated in Kotlin.
      */
     @Query(
-        "SELECT * FROM events " +
-            "WHERE title LIKE '%' || :query || '%' ESCAPE '\\' " +
-            "   OR description LIKE '%' || :query || '%' ESCAPE '\\' " +
-            "   OR location LIKE '%' || :query || '%' ESCAPE '\\' " +
-            "ORDER BY startUtcMillis DESC LIMIT 300"
+        "SELECT events.* FROM events " +
+            "LEFT JOIN categories ON events.categoryId = categories.id " +
+            "WHERE events.title LIKE '%' || :query || '%' ESCAPE '\\' " +
+            "   OR events.description LIKE '%' || :query || '%' ESCAPE '\\' " +
+            "   OR events.location LIKE '%' || :query || '%' ESCAPE '\\' " +
+            "   OR categories.name LIKE '%' || :query || '%' ESCAPE '\\' " +
+            "ORDER BY events.startUtcMillis DESC LIMIT 300"
     )
     fun search(query: String): Flow<List<EventEntity>>
 
@@ -178,6 +185,20 @@ interface DayNoteDao {
 
     @Query("SELECT * FROM day_notes")
     suspend fun all(): List<DayNoteEntity>
+
+    /**
+     * Free-text search over day notes.
+     *
+     * Same LIKE scan and the same escaping contract as [EventDao.search], for the same
+     * reason: an FTS tokeniser splits Khmer where words do not end. Notes were not searchable
+     * at all before - typing a word you had written into a note found nothing, which reads as
+     * the note being gone.
+     */
+    @Query(
+        "SELECT * FROM day_notes WHERE text LIKE '%' || :query || '%' ESCAPE '\\' " +
+            "ORDER BY epochDay DESC LIMIT 100"
+    )
+    fun search(query: String): Flow<List<DayNoteEntity>>
 
     @Upsert
     suspend fun upsert(note: DayNoteEntity)

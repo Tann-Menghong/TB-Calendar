@@ -1,5 +1,58 @@
 # Changelog
 
+## 1.11.0 — 2026-09-09
+
+Search that looks everywhere, instead of only at event titles.
+
+### ស្វែងរក · It was looking in one place
+
+Search read the event table and nothing else. A word you had written in a note, the name of a public holiday, a category, or a date typed as a date all came back **រកមិនឃើញ**.
+
+That is the worse of the two ways to fail. "Not found" is indistinguishable from *you do not have that* — so a note you were sure you had written looked deleted, and a holiday you knew was in there looked missing. Search now covers what a calendar actually holds.
+
+**កំណត់ចំណាំ · Notes.** Day notes were never searchable. They are now, with the matching part of the note shown beside the hit rather than its first sixty characters, which are usually not the ones that matched. Tapping opens the day.
+
+**បុណ្យជាតិ · Holidays.** Searchable by their Khmer or English name, nearest first — a holiday search is almost always about the next one, not the last. Holidays are not rows in any table; they are calculated from the year, so this searches the calculation. No table, no migration, and it still works with no network, which is the same reason they were never stored.
+
+**ប្រភេទ · Categories.** Searching a category name finds the events in it, even when nothing in the event itself says so. A category is not something you can open, so "search by category" can only sensibly mean its events.
+
+**កាលបរិច្ឆេទ · Dates, which is the new one.**
+
+Type **15/1** and search offers to take you to that day. Also `15-1-2027`, `2027-01-15`, `15 មករា ២០២៧`, and all of it in Khmer numerals, because the app writes dates in Khmer numerals by default and copying what you see must work.
+
+- **The order follows your own date setting.** If the app writes ថ្ងៃ/ខែ/ឆ្នាំ, that is how your typing is read first.
+- **Ambiguity is shown, not guessed.** "1/2" is the 1st of February and the 2nd of January. Both are offered, your format's reading first. Silently picking one is how a jump-to-date lands you in the wrong month.
+- **The year is optional.** "15/1" means the next 15th of January, and the row says the year was assumed rather than leaving you to notice you have been sent to next year.
+- **Dates come first in the results.** Typing a date is the one query where you already know exactly where you want to go.
+
+A bare number is deliberately *not* a date. "15" is far more likely to be part of a title than a request to jump to the 15th, and offering a date row for every number typed is noise.
+
+### Sections, not one ranked list
+
+There is no honest way to rank "the note on the 3rd" against "a holiday called ចូលឆ្នាំ". A single mixed list would need a relevance score nobody could explain and everybody would argue with, so results are grouped, and a group with nothing in it is not drawn at all rather than shown as an empty heading.
+
+Search also now waits for two characters. One character matches most of a calendar and answers nothing.
+
+### Where the code went
+
+The date reader is in the calendar engine beside the lunar and recurrence code, not in the search screen — it is date arithmetic, it is deterministic, and it earned 20 tests on its own: every separator, Khmer numerals, written month names, ambiguous pairs, 29 February rolling to a year that has one, and the readings that are not dates at all (31 April, month 13, a year outside 1900–2199).
+
+The category match is a join in the existing query rather than a second lookup merged in Kotlin, so it costs one query and has nothing to de-duplicate.
+
+### Tested
+
+**331 unit tests** pass and lint is clean, including 29 new ones covering date parsing and the snippet logic — which is the only place in search that cuts Khmer text, and cutting Khmer badly has caused real bugs here before.
+
+Checked on an **Android 8.0 (API 26)** emulator: a date query offering the right day with its year noted, a word found in a note with the snippet centred on it, an event found only through its category's name, holidays found by English name in date order, and every kind of result opening the right day.
+
+### Privacy
+
+Unchanged: no account, no analytics, no tracking, no ads. Your calendar never leaves the device, and search runs entirely on it. The AI is optional, off by default, and runs entirely on-device.
+
+### Install
+
+Android 8.0 (API 26) or later. Download `TB-Calendar-1.11.0.apk` below. Upgrading keeps your events, tasks, notes and settings; the database is unchanged from 1.10.0.
+
 ## 1.10.0 — 2026-09-09
 
 Countdowns you choose yourself, free time where you need it, and a task urgency that stopped disappearing.

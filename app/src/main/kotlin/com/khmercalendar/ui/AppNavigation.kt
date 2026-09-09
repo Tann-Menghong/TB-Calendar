@@ -255,6 +255,14 @@ fun KhmerCalendarNavHost(
                     viewModel = vm,
                     onBack = navController::popBackStack,
                     onOpenEvent = { id, date -> navController.navigate(Routes.eventDetail(id, date.toString())) },
+                    // A date, a note or a holiday all resolve to a day rather than to a
+                    // row, so they select it and hand over to the day view - the same
+                    // landing the widget's day link and the month grid already use.
+                    onOpenDay = { date ->
+                        calendarViewModel.select(date)
+                        calendarViewModel.show(CalendarViewMode.DAY)
+                        navController.navigateTopLevel(Routes.CALENDAR)
+                    },
                 )
             }
 

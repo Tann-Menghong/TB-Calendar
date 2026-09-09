@@ -15,6 +15,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.material.icons.automirrored.outlined.StickyNote2
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Celebration
+import androidx.compose.ui.text.style.TextDecoration
+import com.khmercalendar.data.prefs.AppSettings
+import com.khmercalendar.domain.CalendarSearch
+import com.khmercalendar.domain.SearchResult
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -194,13 +202,33 @@ private fun FilterBar(
     }
 }
 
-/** Full-text style search over titles, descriptions and locations. */
+/**
+ * Search across everything the calendar holds.
+ *
+ * ## What it used to look at
+ *
+ * The event table, and nothing else. A word you had written in a note, the name of a public
+ * holiday, a category, or a date typed as a date all returned "រកមិនឃើញ" — which reads as
+ * *you do not have that*, not as *search does not look there*. That is the worse of the two
+ * failures, because it is indistinguishable from the data being gone.
+ *
+ * ## Sections rather than one ranked list
+ *
+ * There is no honest way to rank "the note on the 3rd" against "a holiday called ចូលឆ្នាំ",
+ * so the results are grouped and each group is dropped when empty. A single mixed list would
+ * need a relevance score nobody could explain and everybody would argue with.
+ *
+ * Dates lead, because typing a date is the one query where the user already knows exactly
+ * where they want to go; making them scroll past text matches to reach it would be answering
+ * a different question first.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
     viewModel: AgendaViewModel,
     onBack: () -> Unit,
     onOpenEvent: (Long, LocalDate) -> Unit,
+    onOpenDay: (LocalDate) -> Unit,
 ) {
     val query by viewModel.query.collectAsStateWithLifecycle()
     val results by viewModel.searchResults.collectAsStateWithLifecycle()
@@ -223,7 +251,7 @@ fun SearchScreen(
                         value = query,
                         onValueChange = viewModel::setQuery,
                         modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
-                        placeholder = { Text("ស្វែងរកព្រឹត្តិការណ៍...") },
+                        placeholder = { Text("ស្វែងរក...") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }),
@@ -239,61 +267,174 @@ fun SearchScreen(
         },
     ) { padding ->
         when {
-            query.isBlank() -> EmptyState(
+            !CalendarSearch.isSearchable(query) -> EmptyState(
                 icon = Icons.Outlined.Search,
                 title = "ស្វែងរក",
-                message = "វាយចំណងជើង ទីតាំង ឬការពិពណ៌នា",
+                message = "ចំណងជើង ទីតាំង ប្រភេទ កំណត់ចំណាំ បុណ្យជាតិ ឬកាលបរិច្ឆេទ",
                 modifier = Modifier.padding(padding),
             )
 
-            results.isEmpty() -> EmptyState(
+            results.isEmpty -> EmptyState(
                 icon = Icons.Outlined.EventBusy,
                 title = "រកមិនឃើញ",
-                message = "គ្មានព្រឹត្តិការណ៍ត្រូវនឹង “$query”",
+                message = "គ្មានអ្វីត្រូវនឹង “$query”",
                 modifier = Modifier.padding(padding),
             )
 
             else -> LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(12.dp),
+                contentPadding = PaddingValues(bottom = 24.dp),
             ) {
-                items(results.size) { index ->
-                    val hit = results[index]
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable { onOpenEvent(hit.eventId, hit.date) }
-                            .padding(vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        ColorDot(Color(hit.colorArgb.takeIf { it != 0 } ?: 0xFF2F6FED.toInt()))
-                        Spacer(Modifier.width(10.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                hit.title,
-                                style = MaterialTheme.typography.bodyLarge,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            Text(
-                                listOfNotNull(
-                                    CalendarFormats.date(
-                                        hit.date,
-                                        settings.dateFormat,
-                                        settings.useKhmerNumerals,
-                                    ),
-                                    hit.subtitle.takeIf { it.isNotBlank() },
-                                ).joinToString(" · "),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                    }
-                    HorizontalDivider()
+                section("កាលបរិច្ឆេទ", results.dates) { hit ->
+                    DateJumpRow(hit, settings) { onOpenDay(hit.date) }
+                }
+                section("ព្រឹត្តិការណ៍", results.events) { hit ->
+                    EventHitRow(hit, settings) { onOpenEvent(hit.eventId, hit.date) }
+                }
+                section("កំណត់ចំណាំ", results.notes) { hit ->
+                    NoteHitRow(hit, settings) { onOpenDay(hit.date) }
+                }
+                section("បុណ្យជាតិ", results.holidays) { hit ->
+                    HolidayHitRow(hit, settings) { onOpenDay(hit.date) }
                 }
             }
         }
     }
+}
+
+/**
+ * A titled block of results, or nothing at all.
+ *
+ * An empty section is not drawn — a heading over nothing is a promise the screen cannot keep —
+ * which is also what lets all four be declared unconditionally at the call site.
+ */
+private fun <T> LazyListScope.section(
+    title: String,
+    items: List<T>,
+    row: @Composable (T) -> Unit,
+) {
+    if (items.isEmpty()) return
+    item(key = "header-$title") {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
+        )
+    }
+    items(items.size, key = { "$title-$it" }) { index ->
+        row(items[index])
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+    }
+}
+
+/** The shape every hit shares: an icon or dot, a title, and a quiet second line. */
+@Composable
+private fun HitRow(
+    onClick: () -> Unit,
+    leading: @Composable () -> Unit,
+    title: String,
+    subtitle: String,
+    strikethrough: Boolean = false,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        leading()
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textDecoration = if (strikethrough) TextDecoration.LineThrough else null,
+            )
+            if (subtitle.isNotBlank()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * "Go to this day."
+ *
+ * Names the weekday, because the reason for jumping to a date is usually to find out what day
+ * it falls on. When the query carried no year it says the year was assumed, rather than
+ * leaving the user to notice they have been sent to next January.
+ */
+@Composable
+private fun DateJumpRow(hit: SearchResult.DateJump, settings: AppSettings, onClick: () -> Unit) {
+    HitRow(
+        onClick = onClick,
+        leading = {
+            Icon(
+                imageVector = Icons.Outlined.CalendarMonth,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        },
+        title = "ថ្ងៃ" + KhmerTerms.dayOfWeek(hit.date.dayOfWeek) + " " +
+            CalendarFormats.writtenDate(hit.date, settings.dateFormat, settings.useKhmerNumerals),
+        subtitle = if (hit.yearAssumed) "ឆ្នាំបន្ទាប់ដែលមានថ្ងៃនេះ" else "",
+    )
+}
+
+@Composable
+private fun EventHitRow(hit: SearchResult.Event, settings: AppSettings, onClick: () -> Unit) {
+    HitRow(
+        onClick = onClick,
+        leading = { ColorDot(Color(hit.colorArgb.takeIf { it != 0 } ?: 0xFF2F6FED.toInt())) },
+        title = hit.title,
+        subtitle = listOfNotNull(
+            CalendarFormats.date(hit.date, settings.dateFormat, settings.useKhmerNumerals),
+            "កិច្ចការ".takeIf { hit.isTask },
+            hit.subtitle.takeIf { it.isNotBlank() },
+        ).joinToString(" · "),
+        strikethrough = hit.isCompleted,
+    )
+}
+
+/** A note has no identity apart from its day, so the snippet is the title and the day is under it. */
+@Composable
+private fun NoteHitRow(hit: SearchResult.Note, settings: AppSettings, onClick: () -> Unit) {
+    HitRow(
+        onClick = onClick,
+        leading = {
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.StickyNote2,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+        title = hit.snippet,
+        subtitle = CalendarFormats.date(hit.date, settings.dateFormat, settings.useKhmerNumerals),
+    )
+}
+
+@Composable
+private fun HolidayHitRow(hit: SearchResult.Holiday, settings: AppSettings, onClick: () -> Unit) {
+    HitRow(
+        onClick = onClick,
+        leading = {
+            Icon(
+                imageVector = Icons.Outlined.Celebration,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.tertiary,
+            )
+        },
+        title = hit.name,
+        subtitle = CalendarFormats.date(hit.date, settings.dateFormat, settings.useKhmerNumerals),
+    )
 }

@@ -1,6 +1,7 @@
 package com.khmercalendar.data.prefs
 
 import com.khmercalendar.core.khmer.CalendarWeek
+import com.khmercalendar.core.search.DateQuery
 import com.khmercalendar.core.work.WorkSchedule
 import com.khmercalendar.domain.CalendarViewMode
 import com.khmercalendar.domain.CountdownStyle
@@ -35,6 +36,22 @@ enum class DateFormat(val labelKm: String, val pattern: String) {
     DMY("ថ្ងៃ/ខែ/ឆ្នាំ", "dd/MM/yyyy"),
     YMD("ឆ្នាំ-ខែ-ថ្ងៃ", "yyyy-MM-dd"),
     MDY("ខែ/ថ្ងៃ/ឆ្នាំ", "MM/dd/yyyy"),
+    ;
+
+    /**
+     * How a date typed into search should be read first.
+     *
+     * Whatever order the app prints dates in is the order the user will type one back, so
+     * this makes "1/2" mean to search what it means everywhere else on screen. It only
+     * orders the readings - [com.khmercalendar.core.search.DateQuery] still offers the
+     * others, because a preference is not proof of intent.
+     */
+    val searchOrder: DateQuery.Order
+        get() = when (this) {
+            KHMER, DMY -> DateQuery.Order.DMY
+            YMD -> DateQuery.Order.YMD
+            MDY -> DateQuery.Order.MDY
+        }
 }
 
 /** How dense the month grid is drawn. */

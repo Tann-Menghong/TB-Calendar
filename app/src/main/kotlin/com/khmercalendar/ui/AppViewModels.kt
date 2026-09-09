@@ -28,7 +28,7 @@ fun appViewModelFactory(container: AppContainer): ViewModelProvider.Factory = vi
         EventEditViewModel(container.eventRepository, container.reminderScheduler, container.settings)
     }
     initializer { HomeViewModel(container.eventRepository, container.settings) }
-    initializer { AgendaViewModel(container.eventRepository) }
+    initializer { AgendaViewModel(container.eventRepository, container.settings) }
     initializer { TaskListViewModel(container.eventRepository, container.settings) }
     initializer { CountdownViewModel(container.eventRepository) }
     initializer {

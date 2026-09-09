@@ -1,11 +1,11 @@
 {
-  "versionCode": 14,
-  "versionName": "1.10.0",
-  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v1.10.0/TB-Calendar-1.10.0.apk",
-  "apkSizeBytes": 60232092,
-  "apkSha256": "7188e9831aa47664b3c693941dd2443795b53737c63e600dd4ae9ede57775516",
+  "versionCode": 15,
+  "versionName": "1.11.0",
+  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v1.11.0/TB-Calendar-1.11.0.apk",
+  "apkSizeBytes": 60248476,
+  "apkSha256": "110cd4c0f960f212cdd604741dc585ba7f2cc2eaa3fe1624dfe0f5835b47aaaf",
   "minSdk": 26,
-  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v1.10.0",
-  "releaseNotesKm": "រាប់ថយក្រោយតាមចិត្តអ្នក៖ បើកព្រឹត្តិការណ៍ណាមួយ រួចចុចរូបខ្ទាស់។ ថ្ងៃកំណើតប្រចាំឆ្នាំរាប់ទៅវេនបន្ទាប់ដោយស្វ័យប្រវត្តិ។ បីរបៀបសរសេរ៖ ថ្ងៃ, ថ្ងៃនិងម៉ោង, សប្តាហ៍។ ពេលទំនេរបង្ហាញក្នុងទិដ្ឋភាពថ្ងៃ។ ជួសជុល៖ កម្រិតសំខាន់របស់កិច្ចការបាត់ពេលរក្សាទុក។",
-  "releaseNotesEn": "Countdowns you choose: open any event and tap the pin. A pinned yearly birthday counts to its next occurrence by itself, because a countdown is an event rather than a second kind of thing. Three ways to write the remaining time. Your free stretches now show on the day itself, trimmed at the current minute. Fixed: setting a task to important and then saving it from the full editor silently reset it."
+  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v1.11.0",
+  "releaseNotesKm": "ស្វែងរកឥឡូវរកឃើញគ្រប់យ៉ាង៖ កំណត់ចំណាំ បុណ្យជាតិ ប្រភេទ និងកាលបរិច្ឆេទ។ វាយ ១៥/១ ដើម្បីលោតទៅថ្ងៃនោះ ទាំងលេខខ្មែរ និងឈ្មោះខែជាអក្សរ។ លទ្ធផលបែងចែកជាផ្នែក។",
+  "releaseNotesEn": "Search used to read the event table and nothing else, so a word in a note, a holiday name, a category or a typed date all came back empty - which looks the same as not having it. It now covers notes, holidays, categories and dates: type 15/1 and it offers to take you there, in Khmer numerals or written month names, following your own date order and showing both readings when a date is ambiguous rather than guessing."
 }
