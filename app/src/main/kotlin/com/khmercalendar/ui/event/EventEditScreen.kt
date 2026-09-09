@@ -73,7 +73,18 @@ fun EventEditScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (state.isNew) "ព្រឹត្តិការណ៍ថ្មី" else "កែសម្រួល") },
+                // Named for what is being made. Opening "add a task" onto a bar that says
+                // "new event" reads as the wrong action having been taken, even though the
+                // switch below it is already set correctly.
+                title = {
+                    Text(
+                        when {
+                            !state.isNew -> "កែសម្រួល"
+                            draft.isTask -> "កិច្ចការថ្មី"
+                            else -> "ព្រឹត្តិការណ៍ថ្មី"
+                        },
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onClose) {
                         Icon(Icons.Default.Close, contentDescription = "បិទ")

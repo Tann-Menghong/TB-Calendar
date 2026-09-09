@@ -1,5 +1,59 @@
 # Changelog
 
+## 1.12.0 — 2026-09-09
+
+The year, at a glance — and a gesture that had never worked.
+
+### ឆ្នាំ · The year view
+
+A fifth view joins the switcher: **ឆ្នាំ · ខែ · សប្តាហ៍ · ថ្ងៃ · បញ្ជី**.
+
+The month view answers "what is this month like". The week and day answer what is on. None of them answers *when is the quiet stretch*, *which month is the exam in*, or *how far away is that* — the questions you ask when planning a trip, a term or a deadline. A year is the only span where those are visible at once, and it was the last standard calendar view this app did not have.
+
+**It draws real dates, not twelve shaded rectangles.** The cheap version of a year view is a heatmap, and a heatmap is a chart rather than a calendar: you cannot point at a date in it. Twelve real grids let you find the 15th of March and tap it, which is what a year view is actually for.
+
+- **Density is a dot under the number.** At this size a shaded cell and a selected cell look the same, and shading twelve grids turns the page into noise. A small dot says "something is on" without competing with the date.
+- **Today keeps a filled disc**, so it is still findable among 365 cells.
+- **Holidays stay red**, the same as everywhere else in the app.
+- **Tap a month name** to open that month; **tap a day** to open that day.
+- **A line above the grid** names the busiest month, which is the one thing twelve grids of dots are worst at — two nearly equal months look identical, and "which month is worst" is exactly what you are scanning for.
+
+The header shows the Buddhist Era year underneath. Stepping moves a year at a time; the switcher's arrows already knew to step in whatever unit is on screen.
+
+The year is only loaded while you are looking at it. A year is 365 days of events with every repeating series expanded across all of them, and paying for that on every launch — for a view most people open rarely — is not a trade worth making.
+
+### Long-press a date
+
+Long-press any date in the month grid and you get that day's actions: **បន្ថែមព្រឹត្តិការណ៍**, **បន្ថែមកិច្ចការ**, **បើកថ្ងៃ**.
+
+Creating something on a particular day used to mean tapping the day, finding the add button, and then correcting the date it had guessed. The date was already under your finger.
+
+**Adding a task from here opens a task**, all-day, on that date — not an event you then have to convert. The editor's title says កិច្ចការថ្មី when that is what you are making, instead of calling everything a new event.
+
+Three actions and no more. A "countdown" row would open the same event editor — a countdown *is* a pinned event — and a "note" row would go to the day view, which the last row already does. Two labels for one destination teaches people that labels do not mean anything.
+
+### Double-tapping a date has never worked
+
+The month grid's day cell took an `onDoubleClick`, the grid passed one in, and the cell only ever wired up a plain click. The parameter was read by nobody. Double-tapping a date did exactly nothing, silently, from the day it was added.
+
+That is the sixth time this codebase has produced the same shape of bug: a value passed in and never read. Nothing fails — not the compiler, not lint, not any test that does not perform the gesture. All three gestures now go through one modifier, so the next one cannot be dropped the same way.
+
+Double-tapping a date opens that day, as it was always supposed to.
+
+### Tested
+
+**346 unit tests** pass and lint is clean, including 15 new ones for the year grid — column alignment under both week starts, every day of every month appearing exactly once, February in a leap year, counts landing on the right days and not leaking into neighbouring months, and the busiest month of an empty year being nothing rather than January.
+
+Checked on an **Android 8.0 (API 26)** emulator: all five views in the switcher, the year rendering twelve aligned months with today's disc and density dots in the right places, tapping a month and a day, long-press offering the sheet on the right date, adding a task from it arriving as an all-day task on that date, and the repaired double-tap opening the day.
+
+### Privacy
+
+Unchanged: no account, no analytics, no tracking, no ads. Your calendar never leaves the device. The AI is optional, off by default, and runs entirely on-device.
+
+### Install
+
+Android 8.0 (API 26) or later. Download `TB-Calendar-1.12.0.apk` below. Upgrading keeps your events, tasks, notes and settings; the database is unchanged from 1.10.0.
+
 ## 1.11.0 — 2026-09-09
 
 Search that looks everywhere, instead of only at event titles.

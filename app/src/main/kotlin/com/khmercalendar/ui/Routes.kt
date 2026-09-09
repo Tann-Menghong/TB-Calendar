@@ -41,9 +41,16 @@ object Routes {
     const val SETTINGS_ABOUT = "settings/about"
 
     const val EVENT_DETAIL = "event/{eventId}?date={date}"
-    const val EVENT_EDIT = "edit/{eventId}?date={date}"
+    const val EVENT_EDIT = "edit/{eventId}?date={date}&task={task}"
 
     fun eventDetail(eventId: Long, date: String): String = "event/$eventId?date=$date"
 
-    fun eventEdit(eventId: Long, date: String): String = "edit/$eventId?date=$date"
+    /**
+     * The editor, optionally opening as a task.
+     *
+     * [asTask] exists so "add a task on this date" is one step rather than "add an event,
+     * then find the task switch". It seeds the draft; the switch in the editor still decides.
+     */
+    fun eventEdit(eventId: Long, date: String, asTask: Boolean = false): String =
+        "edit/$eventId?date=$date&task=$asTask"
 }

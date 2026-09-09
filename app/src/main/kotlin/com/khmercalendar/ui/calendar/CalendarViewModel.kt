@@ -10,6 +10,9 @@ import com.khmercalendar.data.repo.EventRepository
 import com.khmercalendar.domain.CalendarNavigation
 import com.khmercalendar.domain.CalendarViewMode
 import com.khmercalendar.domain.EventOccurrence
+import kotlinx.coroutines.flow.distinctUntilChanged
+import com.khmercalendar.domain.YearOverview
+import com.khmercalendar.domain.YearState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -74,6 +77,57 @@ class CalendarViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MonthState())
 
+    /**
+     * The twelve miniature months of the visible year.
+     *
+     * Only collected while the year view is on screen - `WhileSubscribed` on a flow that is
+     * only subscribed from that screen - because a year is 365 days of occurrences and every
+     * repeating series expanded across all of them. Building that eagerly, for a view most
+     * people open rarely, would be paid for on every launch by everyone.
+     */
+    val yearState: StateFlow<YearState> = combine(_visibleMonth, settings) { month, prefs ->
+        month.year to prefs
+    }
+        .distinctUntilChanged()
+        .flatMapLatest { (year, prefs) ->
+            val from = LocalDate.of(year, 1, 1)
+            val to = LocalDate.of(year, 12, 31)
+            repository.observeOccurrences(from, to).map { byDate ->
+                buildYear(year, prefs, byDate)
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), YearState())
+
+    private suspend fun buildYear(
+        year: Int,
+        prefs: AppSettings,
+        byDate: Map<LocalDate, List<EventOccurrence>>,
+    ): YearState = withContext(Dispatchers.Default) {
+        val today = LocalDate.now()
+        val holidayDates = if (prefs.showHolidays) {
+            KhmerHolidays.inRange(LocalDate.of(year, 1, 1), LocalDate.of(year, 12, 31))
+                .map { it.date }
+                .toSet()
+        } else {
+            emptySet()
+        }
+
+        val counts = byDate.mapValues { (_, events) -> events.size }
+        val grids = YearOverview.build(year, today, prefs.weekStart, counts, holidayDates)
+
+        YearState(
+            year = year,
+            months = grids,
+            summary = YearOverview.summarise(grids, holidayDates, year),
+            isLoading = false,
+            outOfRangeMessage = when {
+                !YearOverview.isSupported(year) ->
+                    "ចន្ទគតិខ្មែរគណនាបានចាប់ពីឆ្នាំ ១៩០០ ដល់ ២១៩៩"
+                else -> null
+            },
+        )
+    }
+
     /** Occurrences on the selected day, for the panel under the grid and the day view. */
     val selectedDayEvents: StateFlow<List<EventOccurrence>> = _selectedDate
         .flatMapLatest { date -> repository.observeOccurrences(date, date).map { it[date].orEmpty() } }
@@ -114,6 +168,11 @@ class CalendarViewModel(
      */
     fun step(forward: Boolean) {
         when (_viewMode.value) {
+            // The year browses by year, from the same anchor the month uses, so switching
+            // between the two keeps you where you were rather than snapping back to today.
+            CalendarViewMode.YEAR ->
+                showMonth(_visibleMonth.value.plusYears(if (forward) 1 else -1))
+
             CalendarViewMode.MONTH ->
                 showMonth(if (forward) _visibleMonth.value.plusMonths(1) else _visibleMonth.value.minusMonths(1))
 

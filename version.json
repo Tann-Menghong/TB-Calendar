@@ -1,11 +1,11 @@
 {
-  "versionCode": 15,
-  "versionName": "1.11.0",
-  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v1.11.0/TB-Calendar-1.11.0.apk",
-  "apkSizeBytes": 60248476,
-  "apkSha256": "110cd4c0f960f212cdd604741dc585ba7f2cc2eaa3fe1624dfe0f5835b47aaaf",
+  "versionCode": 16,
+  "versionName": "1.12.0",
+  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v1.12.0/TB-Calendar-1.12.0.apk",
+  "apkSizeBytes": 60264860,
+  "apkSha256": "16deca9a21705b3951e45074d6163fe9b842c5e5d3f1020a4030e4486046c555",
   "minSdk": 26,
-  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v1.11.0",
-  "releaseNotesKm": "ស្វែងរកឥឡូវរកឃើញគ្រប់យ៉ាង៖ កំណត់ចំណាំ បុណ្យជាតិ ប្រភេទ និងកាលបរិច្ឆេទ។ វាយ ១៥/១ ដើម្បីលោតទៅថ្ងៃនោះ ទាំងលេខខ្មែរ និងឈ្មោះខែជាអក្សរ។ លទ្ធផលបែងចែកជាផ្នែក។",
-  "releaseNotesEn": "Search used to read the event table and nothing else, so a word in a note, a holiday name, a category or a typed date all came back empty - which looks the same as not having it. It now covers notes, holidays, categories and dates: type 15/1 and it offers to take you there, in Khmer numerals or written month names, following your own date order and showing both readings when a date is ambiguous rather than guessing."
+  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v1.12.0",
+  "releaseNotesKm": "ទិដ្ឋភាពឆ្នាំថ្មី៖ ១២ ខែក្នុងអេក្រង់តែមួយ ជាមួយថ្ងៃពិត បុណ្យជាតិ និងចំណុចបង្ហាញថ្ងៃមមាញឹក។ ចុចខែដើម្បីបើកខែ ចុចថ្ងៃដើម្បីបើកថ្ងៃ។ ចុចឱ្យយូរលើថ្ងៃណាមួយ ដើម្បីបន្ថែមព្រឹត្តិការណ៍ ឬកិច្ចការ។ ជួសជុល៖ ការចុចពីរដងលើថ្ងៃមិនដំណើរការ។",
+  "releaseNotesEn": "A year view - twelve real month grids on one screen, with holidays, today's disc and a dot on every day that has something on it, so you can see the shape of the year and still tap a date in it. Tap a month to open it, a day to open that day. Long-press any date for its actions: add an event, add a task, open the day. Fixed: double-tapping a date in the month grid did nothing at all - the handler was passed in and never wired up."
 }

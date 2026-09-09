@@ -47,7 +47,12 @@ class EventEditViewModel(
     private val _state = MutableStateFlow(EventEditState())
     val state: StateFlow<EventEditState> = _state.asStateFlow()
 
-    fun load(eventId: Long, initialDate: LocalDate?) {
+    /**
+     * @param asTask seeds a brand-new draft as a task, so "add a task on this date" is one
+     *   step rather than "add an event, then find the switch". Ignored when opening an
+     *   existing event, whose own stored value is the answer.
+     */
+    fun load(eventId: Long, initialDate: LocalDate?, asTask: Boolean = false) {
         viewModelScope.launch {
             val categories = repository.categories()
             if (eventId <= 0L) {
@@ -68,6 +73,11 @@ class EventEditViewModel(
                         endTime = times.endTime,
                         categoryId = categories.firstOrNull()?.id,
                         reminderMinutes = listOf(prefs.defaultReminderMinutes),
+                        isTask = asTask,
+                        // A task is a day, not an appointment: the task list creates all-day
+                        // tasks, and one created from a date should match rather than arrive
+                        // with an hour somebody has to clear.
+                        allDay = asTask,
                     ),
                     categories = categories,
                     isNew = true,

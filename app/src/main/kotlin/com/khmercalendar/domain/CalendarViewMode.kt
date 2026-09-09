@@ -16,8 +16,13 @@ import java.time.YearMonth
  * The key is what a saved preference stores, so it must stay stable; the enum order is the
  * order of the switcher, which runs from the widest span to the narrowest and then to the
  * list.
+ *
+ * The year came last (v1.12.0) and is the widest, so it sits first - which is also why the
+ * order is written here rather than in the switcher: a view added later must land in the
+ * right place by construction, not because somebody remembered to reorder a `when`.
  */
 enum class CalendarViewMode(val key: String, val labelKm: String) {
+    YEAR("year", "ឆ្នាំ"),
     MONTH("month", "ខែ"),
     WEEK("week", "សប្តាហ៍"),
     DAY("day", "ថ្ងៃ"),
@@ -32,6 +37,14 @@ enum class CalendarViewMode(val key: String, val labelKm: String) {
      * The header hides its own navigation rather than showing arrows that do nothing.
      */
     val isDated: Boolean get() = this != AGENDA
+
+    /**
+     * Whether this view browses by the visible month rather than by the selection.
+     *
+     * The year and the month both do: stepping either should move what you are looking at
+     * without moving the day whose events are listed underneath.
+     */
+    val browsesByMonth: Boolean get() = this == YEAR || this == MONTH
 
     companion object {
         fun of(key: String?): CalendarViewMode = entries.firstOrNull { it.key == key } ?: MONTH
@@ -52,6 +65,7 @@ object CalendarNavigation {
     fun step(mode: CalendarViewMode, date: LocalDate, forward: Boolean): LocalDate {
         val sign = if (forward) 1L else -1L
         return when (mode) {
+            CalendarViewMode.YEAR -> date.plusYears(sign)
             CalendarViewMode.MONTH -> date.plusMonths(sign)
             CalendarViewMode.WEEK -> date.plusWeeks(sign)
             CalendarViewMode.DAY -> date.plusDays(sign)
@@ -62,6 +76,9 @@ object CalendarNavigation {
     /** The span [mode] is showing around [date], inclusive at both ends. */
     fun span(mode: CalendarViewMode, date: LocalDate, weekStart: DayOfWeek): Pair<LocalDate, LocalDate> =
         when (mode) {
+            CalendarViewMode.YEAR ->
+                LocalDate.of(date.year, 1, 1) to LocalDate.of(date.year, 12, 31)
+
             CalendarViewMode.MONTH -> {
                 val month = YearMonth.from(date)
                 month.atDay(1) to month.atEndOfMonth()

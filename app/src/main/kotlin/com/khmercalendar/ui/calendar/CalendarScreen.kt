@@ -30,6 +30,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -76,6 +79,7 @@ fun CalendarScreen(
     viewModel: CalendarViewModel,
     onOpenEvent: (Long, LocalDate) -> Unit,
     onAdd: (LocalDate) -> Unit,
+    onAddTask: (LocalDate) -> Unit,
     onSearch: () -> Unit,
     modifier: Modifier = Modifier,
     agenda: @Composable () -> Unit,
@@ -88,9 +92,14 @@ fun CalendarScreen(
 
     // The month browses independently of the selection - see CalendarViewModel.step - so the
     // header's idea of "where am I" is the visible month there, and the selected day elsewhere.
-    val anchor = if (mode == CalendarViewMode.MONTH) visibleMonth.atDay(1) else selected
+    // The year and the month both browse independently of the selection - see
+    // CalendarViewModel.step - so for them the header's "where am I" is the visible month.
+    val anchor = if (mode.browsesByMonth) visibleMonth.atDay(1) else selected
     val today = LocalDate.now()
     val showingToday = CalendarNavigation.showsToday(mode, anchor, today, settings.weekStart)
+
+    /** The date whose action sheet is open, if any. */
+    var actionsFor by remember { mutableStateOf<LocalDate?>(null) }
 
     Scaffold(
         modifier = modifier,
@@ -134,6 +143,20 @@ fun CalendarScreen(
                 label = "calendar-view",
             ) { current ->
                 when (current) {
+                    CalendarViewMode.YEAR -> YearScreen(
+                        viewModel = viewModel,
+                        // A month name opens that month; a date opens that day. Both are
+                        // what somebody pointing at a year grid means by tapping.
+                        onOpenMonth = { month ->
+                            viewModel.showMonth(month)
+                            viewModel.show(CalendarViewMode.MONTH)
+                        },
+                        onOpenDay = { date ->
+                            viewModel.select(date)
+                            viewModel.show(CalendarViewMode.DAY)
+                        },
+                    )
+
                     CalendarViewMode.MONTH -> MonthScreen(
                         viewModel = viewModel,
                         onOpenDay = { date ->
@@ -141,6 +164,7 @@ fun CalendarScreen(
                             viewModel.show(CalendarViewMode.DAY)
                         },
                         onOpenEvent = onOpenEvent,
+                        onLongPressDate = { actionsFor = it },
                     )
 
                     CalendarViewMode.WEEK -> WeekScreen(
@@ -162,6 +186,20 @@ fun CalendarScreen(
                 }
             }
         }
+    }
+
+    actionsFor?.let { date ->
+        DateActionsSheet(
+            date = date,
+            onDismiss = { actionsFor = null },
+            onAddEvent = { actionsFor = null; onAdd(date) },
+            onAddTask = { actionsFor = null; onAddTask(date) },
+            onOpenDay = {
+                actionsFor = null
+                viewModel.select(date)
+                viewModel.show(CalendarViewMode.DAY)
+            },
+        )
     }
 }
 
@@ -275,6 +313,7 @@ private fun ViewSwitcher(mode: CalendarViewMode, onSelect: (CalendarViewMode) ->
 /** The loud line: the month, the week's span, the day, or the agenda's name. */
 @Composable
 private fun headlineOf(mode: CalendarViewMode, anchor: LocalDate): String = when (mode) {
+    CalendarViewMode.YEAR -> "ឆ្នាំ" + localeNumber(anchor.year)
     CalendarViewMode.MONTH -> KhmerTerms.solarMonth(anchor.monthValue)
 
     CalendarViewMode.WEEK -> {
@@ -300,6 +339,7 @@ private fun headlineOf(mode: CalendarViewMode, anchor: LocalDate): String = when
 @Composable
 private fun captionOf(mode: CalendarViewMode, anchor: LocalDate, weekStart: DayOfWeek): String =
     when (mode) {
+        CalendarViewMode.YEAR -> "ព.ស." + localeNumber(anchor.year + BUDDHIST_ERA_OFFSET)
         CalendarViewMode.MONTH -> "ឆ្នាំ" + localeNumber(anchor.year)
 
         CalendarViewMode.WEEK ->
@@ -311,3 +351,13 @@ private fun captionOf(mode: CalendarViewMode, anchor: LocalDate, weekStart: DayO
 
         CalendarViewMode.AGENDA -> "ព្រឹត្តិការណ៍ខាងមុខ"
     }
+
+/**
+ * Gregorian year plus this is the Buddhist Era year, for most of the Gregorian year.
+ *
+ * The exact changeover is Visakha Bochea rather than 1 January, so this is right for the bulk
+ * of the year and can be one out either side of it. It is a caption on a year grid, not a
+ * date the app calculates anything from - everything that has to be exact goes through
+ * [com.khmercalendar.core.khmer.Chhankitek], which does the conversion properly.
+ */
+private const val BUDDHIST_ERA_OFFSET = 544

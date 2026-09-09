@@ -3,6 +3,7 @@ package com.khmercalendar.ui.calendar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -65,6 +66,7 @@ fun MonthScreen(
     viewModel: CalendarViewModel,
     onOpenDay: (java.time.LocalDate) -> Unit,
     onOpenEvent: (Long, java.time.LocalDate) -> Unit,
+    onLongPressDate: (java.time.LocalDate) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.monthState.collectAsStateWithLifecycle()
@@ -118,6 +120,7 @@ fun MonthScreen(
                     cellHeight = cellHeight,
                     onSelect = viewModel::select,
                     onOpenDay = onOpenDay,
+                    onLongPressDate = onLongPressDate,
                 )
             } else {
                 // The neighbouring page during a swipe, before its data arrives.
@@ -187,6 +190,7 @@ private fun MonthGrid(
     cellHeight: androidx.compose.ui.unit.Dp,
     onSelect: (java.time.LocalDate) -> Unit,
     onOpenDay: (java.time.LocalDate) -> Unit,
+    onLongPressDate: (java.time.LocalDate) -> Unit,
 ) {
     val settings = LocalAppSettings.current
     Column(Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
@@ -207,6 +211,7 @@ private fun MonthGrid(
                         modifier = Modifier.weight(1f),
                         onClick = { onSelect(cell.date) },
                         onDoubleClick = { onOpenDay(cell.date) },
+                        onLongClick = { onLongPressDate(cell.date) },
                     )
                 }
             }
@@ -238,6 +243,7 @@ private fun WeekNumberCell(week: List<DayCellState>, weekStart: DayOfWeek, heigh
 
 private val WEEK_NUMBER_WIDTH = 24.dp
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun DayCell(
     cell: DayCellState,
@@ -246,6 +252,7 @@ private fun DayCell(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
     onDoubleClick: () -> Unit,
+    onLongClick: () -> Unit,
 ) {
     val settings = LocalAppSettings.current
     val scheme = MaterialTheme.colorScheme
@@ -271,7 +278,18 @@ private fun DayCell(
                     Modifier
                 }
             )
-            .clickable(onClick = onClick),
+            // combinedClickable, not clickable.
+            //
+            // `onDoubleClick` was declared on this composable and passed in by the grid, and
+            // the Box only ever wired `clickable` - so double-tapping a date opened nothing,
+            // silently, from the day the parameter was added. Nothing failed; the gesture
+            // simply did not exist. Long-press is here now too, and all three go through one
+            // modifier so the next one cannot be forgotten the same way.
+            .combinedClickable(
+                onClick = onClick,
+                onDoubleClick = onDoubleClick,
+                onLongClick = onLongClick,
+            ),
         contentAlignment = Alignment.TopCenter,
     ) {
         Column(

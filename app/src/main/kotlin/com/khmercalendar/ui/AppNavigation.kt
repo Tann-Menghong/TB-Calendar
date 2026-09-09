@@ -216,6 +216,9 @@ fun KhmerCalendarNavHost(
                     viewModel = calendarViewModel,
                     onOpenEvent = { id, date -> navController.navigate(Routes.eventDetail(id, date.toString())) },
                     onAdd = { date -> navController.navigate(Routes.eventEdit(0L, date.toString())) },
+                    onAddTask = { date ->
+                        navController.navigate(Routes.eventEdit(0L, date.toString(), asTask = true))
+                    },
                     onSearch = { navController.navigate(Routes.SEARCH) },
                 ) {
                     // The agenda keeps its own view model - it pages a rolling window that
@@ -397,13 +400,15 @@ fun KhmerCalendarNavHost(
                 arguments = listOf(
                     navArgument("eventId") { type = NavType.LongType },
                     navArgument("date") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("task") { type = NavType.StringType; defaultValue = "false" },
                 ),
             ) { entry ->
                 val vm: EventEditViewModel = viewModel(factory = factory)
                 val eventId = entry.arguments?.getLong("eventId") ?: 0L
                 val date = entry.arguments?.getString("date")
                     ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
-                LaunchedEffect(eventId, date) { vm.load(eventId, date) }
+                val asTask = entry.arguments?.getString("task").toBoolean()
+                LaunchedEffect(eventId, date, asTask) { vm.load(eventId, date, asTask) }
                 EventEditScreen(
                     viewModel = vm,
                     onClose = navController::popBackStack,
