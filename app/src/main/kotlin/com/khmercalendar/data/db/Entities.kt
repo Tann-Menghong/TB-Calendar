@@ -205,3 +205,35 @@ data class HabitEntryEntity(
     val epochDay: Long,
     val completedAtMillis: Long,
 )
+
+/**
+ * One line of a task's checklist.
+ *
+ * Its own table rather than a `parentId` on [EventEntity], by the rule the habit tables set:
+ * a checklist line is not a date. It has no time, no reminder and no place on a calendar, and
+ * making it an event row would put every step of every task onto the day the task falls on -
+ * burying the day it was meant to describe.
+ *
+ * The cascade is what keeps that honest: delete the task and its steps go with it, rather
+ * than leaving rows nothing can reach.
+ */
+@Entity(
+    tableName = "checklist_items",
+    foreignKeys = [
+        ForeignKey(
+            entity = EventEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["eventId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index("eventId")],
+)
+data class ChecklistItemEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val eventId: Long,
+    val text: String,
+    val isDone: Boolean = false,
+    val sortOrder: Int = 0,
+    val createdAtMillis: Long,
+)

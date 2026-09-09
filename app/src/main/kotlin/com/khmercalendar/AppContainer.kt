@@ -55,6 +55,7 @@ class AppContainer(
             reminderDao = database.reminderDao(),
             exceptionDao = database.eventExceptionDao(),
             noteDao = database.dayNoteDao(),
+            database.checklistDao(),
         )
     }
 

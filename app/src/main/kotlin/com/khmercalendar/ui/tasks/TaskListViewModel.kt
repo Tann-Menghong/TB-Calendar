@@ -5,11 +5,13 @@ import androidx.lifecycle.viewModelScope
 import com.khmercalendar.data.prefs.AppSettings
 import com.khmercalendar.data.repo.EventRepository
 import com.khmercalendar.domain.EventDraftModel
+import com.khmercalendar.domain.Checklist
 import com.khmercalendar.domain.TaskBoard
 import com.khmercalendar.domain.TaskGroup
 import com.khmercalendar.domain.TaskItem
 import com.khmercalendar.domain.TaskPriority
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +30,8 @@ data class TaskListState(
     val groups: List<TaskGroup> = emptyList(),
     val progress: TaskBoard.Progress = TaskBoard.Progress(0, 0, 0),
     val showCompleted: Boolean = false,
+    /** Checklist progress per task id; a task with no steps is simply absent. */
+    val checklists: Map<Long, Checklist.Progress> = emptyMap(),
     val isLoading: Boolean = true,
 ) {
     val isEmpty: Boolean get() = groups.all { it.tasks.isEmpty() }
@@ -61,7 +65,8 @@ class TaskListViewModel(
     /** The id of the task just added, so the list can flash it. Cleared once consumed. */
     val lastAdded: StateFlow<Long?> = _lastAdded.asStateFlow()
 
-    val state: StateFlow<TaskListState> = today
+    /** The list itself, before checklist progress is attached. */
+    private val baseState: StateFlow<TaskListState> = today
         .flatMapLatest { day ->
             combine(
                 repository.observeOccurrences(day.minusDays(PAST_DAYS), day.plusDays(FUTURE_DAYS)),
@@ -94,6 +99,24 @@ class TaskListViewModel(
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TaskListState())
+
+    /**
+     * Checklist progress for whatever the list is currently showing.
+     *
+     * Derived from [baseState] rather than joined into the query that builds it, so ticking a
+     * step does not re-run the occurrence expansion for a year of tasks. The ids are
+     * distinct-until-changed, so it re-queries when the visible set changes and not when a
+     * tick merely changes a figure inside it.
+     */
+    private val checklistProgress: Flow<Map<Long, Checklist.Progress>> = baseState
+        .map { state -> state.groups.flatMap { it.tasks }.map { task -> task.occurrence.eventId } }
+        .distinctUntilChanged()
+        .flatMapLatest { ids -> repository.observeChecklistProgress(ids) }
+
+    val state: StateFlow<TaskListState> =
+        combine(baseState, checklistProgress) { base, progress ->
+            base.copy(checklists = progress)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TaskListState())
 
     /** Called when the app returns to the foreground, so "overdue" does not mean yesterday. */
     fun refreshToday() {

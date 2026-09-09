@@ -97,6 +97,7 @@ class MigrationTest {
                 KhmerCalendarDatabase.MIGRATION_1_2,
                 KhmerCalendarDatabase.MIGRATION_2_3,
                 KhmerCalendarDatabase.MIGRATION_3_4,
+                KhmerCalendarDatabase.MIGRATION_4_5,
             )
             .allowMainThreadQueries()
             .build()
@@ -298,12 +299,76 @@ class MigrationTest {
     }
 
     @Test
+    fun `a version 4 calendar gains the checklist table and its tasks survive`() = runBlocking {
+        createVersion(4)
+        SQLiteDatabase.openOrCreateDatabase(dbFile, null).use { raw ->
+            raw.execSQL(
+                "INSERT INTO events (id, title, description, location, startUtcMillis, " +
+                    "endUtcMillis, allDay, zoneId, rrule, categoryId, colorArgb, isTask, " +
+                    "isCompleted, priority, isPinned, completedAtMillis, createdAtMillis, " +
+                    "updatedAtMillis) VALUES " +
+                    "(31, 'រៀបចំរបាយការណ៍', NULL, NULL, 1000, 2000, 1, '$ZONE', NULL, " +
+                    "NULL, NULL, 1, 0, 1, 0, NULL, 500, 600)",
+            )
+            raw.execSQL(
+                "INSERT INTO habits (name, colorArgb, scheduleKind, scheduleDays, " +
+                    "weeklyTarget, sortOrder, archivedAtMillis, createdAtMillis) " +
+                    "VALUES ('អានសៀវភៅ', 255, 'daily', '', 1, 0, NULL, 1)",
+            )
+        }
+
+        val migrated = openMigrated()
+        val task = migrated.eventDao().byId(31)
+
+        assertNotNull("the task was lost by the 4 to 5 migration", task)
+        requireNotNull(task)
+        assertEquals("រៀបចំរបាយការណ៍", task.title)
+        assertTrue(task.isTask)
+        assertEquals(1, task.priority)
+        // Everything version 4 added is still there too.
+        assertEquals(1, migrated.habitDao().activeCount())
+        assertEquals(0, migrated.checklistDao().countForEvent(31))
+    }
+
+    @Test
+    fun `checklist lines are writable and go with their task`() = runBlocking {
+        createVersion(4)
+        val migrated = openMigrated()
+
+        val taskId = migrated.eventDao().insert(
+            EventEntity(
+                title = "រៀបចំកិច្ចប្រជុំ",
+                startUtcMillis = 10,
+                endUtcMillis = 20,
+                zoneId = ZONE,
+                isTask = true,
+                createdAtMillis = 1,
+                updatedAtMillis = 1,
+            ),
+        )
+        migrated.checklistDao().insert(
+            ChecklistItemEntity(eventId = taskId, text = "កក់បន្ទប់", sortOrder = 0, createdAtMillis = 1),
+        )
+        migrated.checklistDao().insert(
+            ChecklistItemEntity(eventId = taskId, text = "ផ្ញើរបៀបវារៈ", sortOrder = 1, createdAtMillis = 1),
+        )
+
+        val items = migrated.checklistDao().observeForEvent(taskId).first()
+        assertEquals(2, items.size)
+        assertEquals(listOf("កក់បន្ទប់", "ផ្ញើរបៀបវារៈ"), items.map { it.text })
+
+        // Deleting the task takes its steps with it rather than orphaning them.
+        migrated.eventDao().deleteById(taskId)
+        assertEquals(0, migrated.checklistDao().countForEvent(taskId))
+    }
+
+    @Test
     fun `a fresh install opens at the current version without a migration`() = runBlocking {
         // The migration path and the create-from-scratch path produce different code in Room,
         // and only one of them is exercised by the tests above.
         val fresh = openMigrated()
 
         assertEquals(0, fresh.eventDao().count())
-        assertEquals(4, fresh.openHelper.writableDatabase.version)
+        assertEquals(5, fresh.openHelper.writableDatabase.version)
     }
 }

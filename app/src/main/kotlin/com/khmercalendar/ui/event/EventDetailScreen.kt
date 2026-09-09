@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -65,7 +66,10 @@ fun EventDetailScreen(
     val context = LocalContext.current
     var showDelete by remember { mutableStateOf(false) }
 
-    LaunchedEffect(eventId) { viewModel.load(eventId, occurrenceDate) }
+    LaunchedEffect(eventId) {
+        viewModel.load(eventId, occurrenceDate)
+        viewModel.watchChecklist(eventId)
+    }
 
     Scaffold(
         topBar = {
@@ -186,6 +190,22 @@ fun EventDetailScreen(
             if (draft.description.isNotBlank()) {
                 Spacer(Modifier.height(4.dp))
                 Text(draft.description, style = MaterialTheme.typography.bodyMedium)
+            }
+
+            // Steps, on tasks only. An ordinary event does not get one: a checklist on a
+            // meeting is an agenda, which is what the description is for, and offering it
+            // everywhere would put an empty section on every event in the calendar.
+            if (draft.isTask) {
+                Spacer(Modifier.height(12.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(12.dp))
+                ChecklistSection(
+                    items = state.checklist,
+                    onAdd = { text -> viewModel.addChecklistItem(eventId, text) },
+                    onToggle = viewModel::setChecklistItemDone,
+                    onDelete = viewModel::deleteChecklistItem,
+                    onMove = { from, to -> viewModel.moveChecklistItem(eventId, from, to) },
+                )
             }
 
             Spacer(Modifier.height(12.dp))

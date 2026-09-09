@@ -1,5 +1,53 @@
 # Changelog
 
+## 2.1.0 — 2026-09-09
+
+Tasks can have steps.
+
+### ជំហាន · A checklist inside a task
+
+Open any task and there is now a **ជំហាន** section: the steps inside that piece of work, ticked off one at a time, with a count and a bar showing how far through it you are.
+
+The task list shows the same count beside the due date — **ម្សិលមិញ · ១/៣** — so you can see which of your tasks are half-finished without opening any of them. A task with no steps shows nothing extra.
+
+**Ticking the last box does not complete the task.** Nor does completing the task tick the boxes. People finish work in ways their own checklist did not predict — three of five steps turn out to be unnecessary, or the job gets done and the list was never updated — and an app that helpfully flips the parent is an app overwriting a decision you already made. The bar reports; it does not act.
+
+**The order is the procedure, so nothing reorders it for you.** A ticked step stays exactly where it is. This is the opposite of how the habit list behaves, and deliberately: habits are a set to be cleared, and a checklist is usually a sequence — the steps in the order they have to happen. Moving a done step to the bottom would destroy the only information the order carries.
+
+Reordering is by arrows rather than dragging, for the same reasons the dashboard editor uses them: a drag is hostile one-handed, invisible to a screen reader, and cannot be driven at all on the oldest device this app supports.
+
+Steps live on **tasks only**. A checklist on a meeting is an agenda, which is what the description field is for, and offering the section everywhere would put an empty box on every event in your calendar.
+
+### Why steps are not subtasks on the calendar
+
+The obvious implementation is to let a task have child tasks. It was not chosen, and the reason is the rule this app set when habits arrived: **is this a date?**
+
+"Book the room" has no time, no reminder and no place on a calendar. Making it a calendar row would put every step of every task onto the day that task falls on — burying the day it was meant to describe under eight lines of somebody's procedure.
+
+So a checklist line is its own small thing, belonging to its task and seen only there. Anything that genuinely needs its own date, reminder or recurrence is not a step — it is another task, and this app already has those.
+
+### The database changed, and it was tested before it shipped
+
+One new table, so the schema moved to version 5. Additive, and the SQL is copied from the schema Room exported rather than typed by hand — the only way a migrated database and a fresh install are provably identical, and the migration test opens the result and lets Room compare them.
+
+Deleting a task takes its steps with it rather than leaving rows nothing can reach.
+
+The test now covers every step separately — 1→5 for anyone still on an early version, and 4→5 on its own, because a long chain can hide a broken last link. Then it was run the way you will run it, over a real version-4 database on an Android 8.0 device: all twelve events intact, the new table present, habits from 2.0.0 untouched.
+
+### Tested
+
+**393 unit tests** pass and lint is clean, including 20 new ones. The ordering rules carry most of them, because a checklist is a procedure and anything that quietly reorders it destroys what the order means: a new line taking a position after a deletion rather than colliding with an existing one, a move that renumbers from zero, an out-of-range move that repairs drifted positions rather than throwing, and progress that does not divide by zero on an empty list.
+
+Checked on an **Android 8.0 (API 26)** emulator: the upgrade over a real version-4 database, typing three steps straight through without the field losing focus, ticking one and watching the count and bar move while the step stayed in place, moving a step up and having it persist, and the count appearing on the task list beside the due date.
+
+### Privacy
+
+Unchanged: no account, no analytics, no tracking, no ads. Your calendar never leaves the device. The AI is optional, off by default, and runs entirely on-device.
+
+### Install
+
+Android 8.0 (API 26) or later. Download `TB-Calendar-2.1.0.apk` below. Upgrading keeps your events, tasks, notes, countdowns, habits and settings.
+
 ## 2.0.0 — 2026-09-09
 
 A new pillar: habits. And the database that will carry the ones after it.

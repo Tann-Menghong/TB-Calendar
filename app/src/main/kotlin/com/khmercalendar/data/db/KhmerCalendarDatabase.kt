@@ -19,8 +19,9 @@ import kotlinx.coroutines.launch
         DayNoteEntity::class,
         HabitEntity::class,
         HabitEntryEntity::class,
+        ChecklistItemEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 abstract class KhmerCalendarDatabase : RoomDatabase() {
@@ -31,6 +32,7 @@ abstract class KhmerCalendarDatabase : RoomDatabase() {
     abstract fun eventExceptionDao(): EventExceptionDao
     abstract fun dayNoteDao(): DayNoteDao
     abstract fun habitDao(): HabitDao
+    abstract fun checklistDao(): ChecklistDao
 
     companion object {
         private const val NAME = "khmer_calendar.db"
@@ -107,6 +109,31 @@ abstract class KhmerCalendarDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Adds the checklist table.
+         *
+         * Additive, and the SQL is copied from Room's exported version-5 schema rather than
+         * written by hand - the same discipline as [MIGRATION_3_4], and the only way a
+         * migrated database and a fresh install are provably identical.
+         */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `checklist_items` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`eventId` INTEGER NOT NULL, `text` TEXT NOT NULL, " +
+                        "`isDone` INTEGER NOT NULL, `sortOrder` INTEGER NOT NULL, " +
+                        "`createdAtMillis` INTEGER NOT NULL, " +
+                        "FOREIGN KEY(`eventId`) REFERENCES `events`(`id`) " +
+                        "ON UPDATE NO ACTION ON DELETE CASCADE )",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_checklist_items_eventId` " +
+                        "ON `checklist_items` (`eventId`)",
+                )
+            }
+        }
+
         @Volatile
         private var instance: KhmerCalendarDatabase? = null
 
@@ -117,7 +144,7 @@ abstract class KhmerCalendarDatabase : RoomDatabase() {
 
         private fun build(context: Context, scope: CoroutineScope): KhmerCalendarDatabase =
             Room.databaseBuilder(context, KhmerCalendarDatabase::class.java, NAME)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         // Seeding runs off the creation callback so first launch is never

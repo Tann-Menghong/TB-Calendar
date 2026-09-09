@@ -47,6 +47,7 @@ class EventRepositoryTest {
             reminderDao = db.reminderDao(),
             exceptionDao = db.eventExceptionDao(),
             noteDao = db.dayNoteDao(),
+            checklistDao = db.checklistDao(),
             zoneProvider = { zone },
         )
     }
@@ -147,6 +148,7 @@ class EventRepositoryTest {
             reminderDao = db.reminderDao(),
             exceptionDao = db.eventExceptionDao(),
             noteDao = db.dayNoteDao(),
+            checklistDao = db.checklistDao(),
             zoneProvider = { ZoneId.of("America/Los_Angeles") },
         )
         val days = elsewhere.occurrences(date.minusDays(1), date.plusDays(1))

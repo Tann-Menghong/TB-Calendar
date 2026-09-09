@@ -254,3 +254,37 @@ interface HabitDao {
     @Query("SELECT COUNT(*) FROM habits WHERE archivedAtMillis IS NULL")
     suspend fun activeCount(): Int
 }
+
+@Dao
+interface ChecklistDao {
+
+    @Query("SELECT * FROM checklist_items WHERE eventId = :eventId ORDER BY sortOrder, id")
+    fun observeForEvent(eventId: Long): Flow<List<ChecklistItemEntity>>
+
+    /**
+     * Every line belonging to any of [eventIds].
+     *
+     * One query for a screenful of tasks rather than one per task: the task list draws its
+     * progress figures from this, and a query per row is how a list starts stuttering.
+     */
+    @Query("SELECT * FROM checklist_items WHERE eventId IN (:eventIds)")
+    fun observeForEvents(eventIds: List<Long>): Flow<List<ChecklistItemEntity>>
+
+    @Insert
+    suspend fun insert(item: ChecklistItemEntity): Long
+
+    @Query("UPDATE checklist_items SET isDone = :done WHERE id = :id")
+    suspend fun setDone(id: Long, done: Boolean)
+
+    @Query("UPDATE checklist_items SET text = :text WHERE id = :id")
+    suspend fun setText(id: Long, text: String)
+
+    @Query("UPDATE checklist_items SET sortOrder = :sortOrder WHERE id = :id")
+    suspend fun setSortOrder(id: Long, sortOrder: Int)
+
+    @Query("DELETE FROM checklist_items WHERE id = :id")
+    suspend fun deleteById(id: Long)
+
+    @Query("SELECT COUNT(*) FROM checklist_items WHERE eventId = :eventId")
+    suspend fun countForEvent(eventId: Long): Int
+}

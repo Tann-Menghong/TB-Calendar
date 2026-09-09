@@ -3,6 +3,8 @@ package com.khmercalendar.data.repo
 import com.khmercalendar.core.recurrence.RecurrenceExpander
 import com.khmercalendar.core.recurrence.RecurrenceRule
 import com.khmercalendar.data.db.CategoryDao
+import com.khmercalendar.data.db.ChecklistItemEntity
+import com.khmercalendar.data.db.ChecklistDao
 import com.khmercalendar.data.db.CategoryEntity
 import com.khmercalendar.data.db.DayNoteDao
 import com.khmercalendar.data.db.DayNoteEntity
@@ -12,11 +14,15 @@ import com.khmercalendar.data.db.EventExceptionDao
 import com.khmercalendar.data.db.EventExceptionEntity
 import com.khmercalendar.data.db.ReminderDao
 import com.khmercalendar.domain.CountdownItem
+import com.khmercalendar.domain.ChecklistItem
+import com.khmercalendar.domain.Checklist
 import com.khmercalendar.domain.EventDraftModel
 import com.khmercalendar.domain.EventOccurrence
 import com.khmercalendar.domain.EventTimes
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.time.Duration
 import java.time.LocalDate
@@ -36,6 +42,7 @@ class EventRepository(
     private val reminderDao: ReminderDao,
     private val exceptionDao: EventExceptionDao,
     private val noteDao: DayNoteDao,
+    private val checklistDao: ChecklistDao,
     private val zoneProvider: () -> ZoneId = { ZoneId.systemDefault() },
 ) {
 
@@ -255,6 +262,67 @@ class EventRepository(
     suspend fun setPriority(eventId: Long, priority: com.khmercalendar.domain.TaskPriority) {
         eventDao.setPriority(eventId, priority.stored, System.currentTimeMillis())
     }
+
+    // --- checklists -----------------------------------------------------------------
+
+    /** The steps inside one task, in their own order. */
+    fun observeChecklist(eventId: Long): Flow<List<ChecklistItem>> =
+        checklistDao.observeForEvent(eventId).map { rows -> rows.map { it.toItem() } }
+
+    /**
+     * Checklist progress for a screenful of tasks, keyed by task.
+     *
+     * One query for the whole list rather than one per row - the task list draws a progress
+     * figure on every task it shows, and a query per row is how a list starts stuttering.
+     */
+    fun observeChecklistProgress(eventIds: List<Long>): Flow<Map<Long, Checklist.Progress>> {
+        if (eventIds.isEmpty()) return flowOf(emptyMap())
+        return checklistDao.observeForEvents(eventIds).map { rows ->
+            rows.groupBy { it.eventId }
+                .mapValues { (_, items) -> Checklist.progress(items.map { it.toItem() }) }
+        }
+    }
+
+    suspend fun addChecklistItem(eventId: Long, text: String): Long? {
+        val clean = Checklist.clean(text)
+        if (clean.isBlank()) return null
+        val existing = checklistDao.observeForEvent(eventId).first().map { it.toItem() }
+        if (!Checklist.canAdd(existing)) return null
+        return checklistDao.insert(
+            ChecklistItemEntity(
+                eventId = eventId,
+                text = clean,
+                sortOrder = Checklist.nextSortOrder(existing),
+                createdAtMillis = System.currentTimeMillis(),
+            ),
+        )
+    }
+
+    suspend fun setChecklistItemDone(itemId: Long, done: Boolean) =
+        checklistDao.setDone(itemId, done)
+
+    suspend fun deleteChecklistItem(itemId: Long) = checklistDao.deleteById(itemId)
+
+    /**
+     * Moves a line and writes the whole new order.
+     *
+     * Every position is rewritten rather than only the two that swapped, because that also
+     * repairs a list whose positions have drifted apart after deletions - and a checklist is
+     * at most fifty rows, so the cost is nothing.
+     */
+    suspend fun moveChecklistItem(eventId: Long, from: Int, to: Int) {
+        val items = checklistDao.observeForEvent(eventId).first().map { it.toItem() }
+        for ((id, order) in Checklist.reorder(items, from, to)) {
+            checklistDao.setSortOrder(id, order)
+        }
+    }
+
+    private fun ChecklistItemEntity.toItem() = ChecklistItem(
+        id = id,
+        text = text,
+        isDone = isDone,
+        sortOrder = sortOrder,
+    )
 
     /** Pins or unpins a date as a countdown. */
     suspend fun setPinned(eventId: Long, pinned: Boolean) {

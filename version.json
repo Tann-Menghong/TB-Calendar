@@ -1,11 +1,11 @@
 {
-  "versionCode": 17,
-  "versionName": "2.0.0",
-  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v2.0.0/TB-Calendar-2.0.0.apk",
+  "versionCode": 18,
+  "versionName": "2.1.0",
+  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v2.1.0/TB-Calendar-2.1.0.apk",
   "apkSizeBytes": 60297628,
-  "apkSha256": "2131c819947ba0679d77cdf4817aaa71fb271c9dae9657539df6f551bf425a1c",
+  "apkSha256": "d1d884f420bdd32667a4bb72dd765b6788ad54f0d3590dab22d6bd41cdfd08e3",
   "minSdk": 26,
-  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v2.0.0",
-  "releaseNotesKm": "ទម្លាប់ថ្មី៖ តាមដានអ្វីដែលអ្នកចង់ធ្វើឱ្យបានទៀងទាត់ រៀងរាល់ថ្ងៃ ថ្ងៃជាក់លាក់ ឬប៉ុន្មានដងក្នុងសប្តាហ៍។ ស្ទ្រីកមិនដាច់ពេលចុងសប្តាហ៍ដែលអ្នកមិនបានសន្យា ហើយថ្ងៃនេះដែលមិនទាន់ធីកមិនធ្វើឱ្យដាច់ទេ។ ទិន្នន័យទាំងអស់នៅក្នុងឧបករណ៍។",
-  "releaseNotesEn": "Habits - the first thing in TB-Calendar that is not a date. Track something daily, on particular weekdays, or a number of times a week, and the arithmetic respects which you chose: a Mon/Wed/Fri streak survives the weekend, a weekly target cannot be failed on a Tuesday, and an unticked today never breaks anything because the day is not over. No points, no badges, no nagging. Everything stays on the device."
+  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v2.1.0",
+  "releaseNotesKm": "កិច្ចការអាចមានជំហានហើយ៖ បញ្ជីជំហានក្នុងកិច្ចការនីមួយៗ ព្រមទាំងចំនួន ១/៣ នៅក្បែរកាលបរិច្ឆេទក្នុងបញ្ជីកិច្ចការ។ ធីកជំហានចុងក្រោយមិនធ្វើឱ្យកិច្ចការរួចរាល់ដោយស្វ័យប្រវត្តិទេ ហើយជំហានដែលធីករួចមិនផ្លាស់ទីទេ។",
+  "releaseNotesEn": "Tasks can have steps. Open a task for its checklist, and see the count beside the due date in the list. Ticking the last step does not complete the task and completing the task does not tick the steps - the bar reports, it does not act. A ticked step stays where it is, because a checklist is usually a sequence and moving it would destroy the only thing the order tells you."
 }

@@ -9,9 +9,12 @@ import com.khmercalendar.data.prefs.AppSettings
 import com.khmercalendar.data.repo.EventRepository
 import com.khmercalendar.domain.EventDraftDefaults
 import com.khmercalendar.domain.EventDraftModel
+import com.khmercalendar.domain.ChecklistItem
+import com.khmercalendar.domain.Checklist
 import com.khmercalendar.domain.TaskPriority
 import com.khmercalendar.domain.EventTimes
 import com.khmercalendar.notify.ReminderScheduler
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,6 +38,8 @@ data class EventEditState(
      * the draft would be saved back by the editor and could unpin what you were editing.
      */
     val isPinned: Boolean = false,
+    /** The steps inside this task, in their own order. Empty for an ordinary event. */
+    val checklist: List<ChecklistItem> = emptyList(),
 )
 
 /** Backs the add and edit form, and the delete paths on the detail screen. */
@@ -43,6 +48,8 @@ class EventEditViewModel(
     private val scheduler: ReminderScheduler,
     private val settings: StateFlow<AppSettings>,
 ) : ViewModel() {
+
+    private var checklistJob: Job? = null
 
     private val _state = MutableStateFlow(EventEditState())
     val state: StateFlow<EventEditState> = _state.asStateFlow()
@@ -194,6 +201,39 @@ class EventEditViewModel(
 
     fun setCompleted(eventId: Long, completed: Boolean) {
         viewModelScope.launch { repository.setCompleted(eventId, completed) }
+    }
+
+    /**
+     * Watches this event's checklist.
+     *
+     * A second collection rather than part of [load]: the list has to update as lines are
+     * ticked and added, and re-running the whole load for a tick would reset every field the
+     * user is part-way through editing.
+     */
+    fun watchChecklist(eventId: Long) {
+        if (eventId <= 0L) return
+        checklistJob?.cancel()
+        checklistJob = viewModelScope.launch {
+            repository.observeChecklist(eventId).collect { items ->
+                _state.update { it.copy(checklist = Checklist.ordered(items)) }
+            }
+        }
+    }
+
+    fun addChecklistItem(eventId: Long, text: String) {
+        viewModelScope.launch { repository.addChecklistItem(eventId, text) }
+    }
+
+    fun setChecklistItemDone(itemId: Long, done: Boolean) {
+        viewModelScope.launch { repository.setChecklistItemDone(itemId, done) }
+    }
+
+    fun deleteChecklistItem(itemId: Long) {
+        viewModelScope.launch { repository.deleteChecklistItem(itemId) }
+    }
+
+    fun moveChecklistItem(eventId: Long, from: Int, to: Int) {
+        viewModelScope.launch { repository.moveChecklistItem(eventId, from, to) }
     }
 
     /**

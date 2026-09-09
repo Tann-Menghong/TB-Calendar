@@ -55,6 +55,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.khmercalendar.core.khmer.KhmerTerms
 import com.khmercalendar.domain.TaskBucket
 import com.khmercalendar.domain.TaskItem
+import com.khmercalendar.domain.Checklist
 import com.khmercalendar.domain.TaskPriority
 import com.khmercalendar.ui.components.ProgressBar
 import com.khmercalendar.ui.components.localeNumber
@@ -135,6 +136,7 @@ fun TaskListScreen(
                     }
                     items(group.tasks, key = { "${group.bucket.name}-${it.eventId}" }) { task ->
                         TaskRow(
+                            checklist = state.checklists[task.occurrence.eventId],
                             task = task,
                             today = state.today,
                             onToggle = { done -> viewModel.setCompleted(task.eventId, done) },
@@ -343,6 +345,7 @@ private fun NothingToday() {
 private fun TaskRow(
     task: TaskItem,
     today: LocalDate,
+    checklist: Checklist.Progress?,
     onToggle: (Boolean) -> Unit,
     onCyclePriority: () -> Unit,
     onOpen: () -> Unit,
@@ -376,15 +379,32 @@ private fun TaskRow(
                 overflow = TextOverflow.Ellipsis,
             )
             Spacer(Modifier.height(2.dp))
-            Text(
-                dueText(task.date, today),
-                style = MaterialTheme.typography.labelMedium,
-                color = if (!done && task.date.isBefore(today)) {
-                    CardAccent.WARNING.color()
-                } else {
-                    scheme.onSurfaceVariant
-                },
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    dueText(task.date, today),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (!done && task.date.isBefore(today)) {
+                        CardAccent.WARNING.color()
+                    } else {
+                        scheme.onSurfaceVariant
+                    },
+                )
+                // Steps, when there are any. Beside the due date rather than on its own line:
+                // it is the same kind of fact about the task, and a second line for "២/៥"
+                // would make every task with a checklist taller than every task without one.
+                if (checklist != null && !checklist.isEmpty) {
+                    Text(
+                        text = "  ·  " + localeNumber(checklist.done) + "/" +
+                            localeNumber(checklist.total),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (checklist.isComplete) {
+                            CardAccent.TASKS.color()
+                        } else {
+                            scheme.onSurfaceVariant
+                        },
+                    )
+                }
+            }
         }
         // The flag is its own target, so cycling urgency never opens the task by accident.
         Box(
