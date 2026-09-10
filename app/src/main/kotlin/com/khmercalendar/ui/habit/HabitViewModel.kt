@@ -88,7 +88,15 @@ class HabitViewModel(
                 isDueToday = habit.schedule.isDue(day),
                 currentStreak = HabitStreaks.current(habit.schedule, history, day),
                 longestStreak = HabitStreaks.longest(habit.schedule, history),
-                completionRate = HabitStreaks.completionRate(habit.schedule, history, day),
+                completionRate = HabitStreaks.completionRate(
+                    schedule = habit.schedule,
+                    done = history,
+                    today = day,
+                    // Measured from the day the habit began. Without this a habit started on
+                    // Friday reported 10%, describing twenty-seven days it never promised.
+                    since = habit.createdAt,
+                    until = habit.archivedAt,
+                ),
                 weeklyDone = HabitStreaks.weeklyProgress(history, day, prefs.weekStart),
                 recent = (6 downTo 0).map { offset -> day.minusDays(offset.toLong()) in history },
             )

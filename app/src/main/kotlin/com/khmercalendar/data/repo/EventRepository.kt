@@ -13,6 +13,7 @@ import com.khmercalendar.data.db.EventEntity
 import com.khmercalendar.data.db.EventExceptionDao
 import com.khmercalendar.data.db.EventExceptionEntity
 import com.khmercalendar.data.db.ReminderDao
+import com.khmercalendar.domain.CompletedTask
 import com.khmercalendar.domain.CountdownItem
 import com.khmercalendar.domain.ChecklistItem
 import com.khmercalendar.domain.Checklist
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -254,8 +256,21 @@ class EventRepository(
         exceptionDao.insert(EventExceptionEntity(eventId, date.toEpochDay()))
     }
 
+    /**
+     * Ticks or unticks a task.
+     *
+     * Un-ticking clears the completion time rather than overwriting it with now. Nothing read
+     * that column until statistics did, at which point a task ticked in January and un-ticked
+     * in March would have counted as March's work.
+     */
     suspend fun setCompleted(eventId: Long, completed: Boolean) {
-        eventDao.setCompleted(eventId, completed, System.currentTimeMillis())
+        val now = System.currentTimeMillis()
+        eventDao.setCompleted(
+            id = eventId,
+            completed = completed,
+            completedAt = if (completed) now else null,
+            atMillis = now,
+        )
     }
 
     /** Changes a task's urgency in place, without going through the full editor. */
@@ -406,9 +421,29 @@ class EventRepository(
 
     suspend fun allEvents(): List<EventEntity> = eventDao.allEvents()
 
-    suspend fun eventCount(): Int = eventDao.count()
-
-    suspend fun completedTaskCount(): Int = eventDao.completedTaskCount()
+    /**
+     * Tasks ticked off between two dates, as the statistics screen counts them.
+     *
+     * The window is widened to whole local days at both ends before it becomes an instant,
+     * so a task finished at ten past eleven at night belongs to that day rather than to
+     * whichever day the UTC boundary happened to fall in.
+     */
+    fun observeCompletedTasks(from: LocalDate, to: LocalDate): Flow<List<CompletedTask>> {
+        val zone = ZoneId.systemDefault()
+        val fromMillis = from.atStartOfDay(zone).toInstant().toEpochMilli()
+        val toMillis = to.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1
+        return eventDao.observeCompletedTasksBetween(fromMillis, toMillis).map { rows ->
+            rows.mapNotNull { row ->
+                val at = row.completedAtMillis ?: return@mapNotNull null
+                CompletedTask(
+                    eventId = row.id,
+                    date = Instant.ofEpochMilli(at).atZone(zone).toLocalDate(),
+                    priority = com.khmercalendar.domain.TaskPriority.of(row.priority),
+                    categoryId = row.categoryId,
+                )
+            }
+        }
+    }
 
     // --- day notes -------------------------------------------------------------------
 

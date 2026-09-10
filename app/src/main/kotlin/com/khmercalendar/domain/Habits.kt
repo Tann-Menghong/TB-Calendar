@@ -63,13 +63,23 @@ data class HabitSchedule(
     }
 }
 
-/** A habit and everything the UI needs to draw one row of it. */
+/**
+ * A habit and everything the UI needs to draw one row of it.
+ *
+ * @property createdAt the day it was started. Every rate is measured from here rather than
+ *   from the beginning of the window, because a habit begun on Friday did not fail on
+ *   Monday. [LocalDate.MIN] means "not known", which reads as no clipping at all - the
+ *   behaviour every existing construction of this class had before the field existed.
+ * @property archivedAt the day it was put away, if it was. Nothing is owed after it.
+ */
 data class Habit(
     val id: Long,
     val name: String,
     val colorArgb: Int,
     val schedule: HabitSchedule,
     val isArchived: Boolean = false,
+    val createdAt: LocalDate = LocalDate.MIN,
+    val archivedAt: LocalDate? = null,
 )
 
 /**
@@ -165,17 +175,27 @@ object HabitStreaks {
      * Counted against days the habit was actually *due*, so a three-day-a-week habit is not
      * reported at 43% for doing exactly what it promised. Today is excluded for the same
      * reason it cannot break a streak.
+     *
+     * @param since the day the habit was created. Days before it are not counted as missed:
+     *   a habit started three days ago was reporting 10% here, which is not a slow start but
+     *   a false statement about twenty-seven days that were never promised. [LocalDate.MIN]
+     *   means the whole window counts, which is what callers that do not know got before.
+     * @param until the day it was archived, if it was. Nothing is owed afterwards.
      */
     fun completionRate(
         schedule: HabitSchedule,
         done: Set<LocalDate>,
         today: LocalDate,
         days: Int = 30,
+        since: LocalDate = LocalDate.MIN,
+        until: LocalDate? = null,
     ): Int {
         var due = 0
         var completed = 0
         for (offset in 1..days) {
             val date = today.minusDays(offset.toLong())
+            if (date.isBefore(since)) continue
+            if (until != null && date.isAfter(until)) continue
             if (!schedule.isDue(date)) continue
             due++
             if (date in done) completed++

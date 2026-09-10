@@ -287,6 +287,14 @@ fun KhmerCalendarNavHost(
                 HolidayScreen(onBack = navController::popBackStack)
             }
 
+            composable(Routes.STATS) {
+                val vm: com.khmercalendar.ui.stats.StatsViewModel = viewModel(factory = factory)
+                com.khmercalendar.ui.stats.StatsScreen(
+                    viewModel = vm,
+                    onBack = navController::popBackStack,
+                )
+            }
+
             composable(Routes.FOCUS) {
                 val vm: FocusViewModel = viewModel(factory = factory)
                 FocusScreen(viewModel = vm, onBack = navController::popBackStack)

@@ -38,6 +38,19 @@ class FocusRepository(
     }
 
     /**
+     * Sessions started inside [from]..[to], for the statistics screen.
+     *
+     * Both ends bounded, and widened to whole local days: a session begun at ten past eleven
+     * at night belongs to that evening, not to whichever day the UTC boundary landed in.
+     */
+    fun observeBetween(from: LocalDate, to: LocalDate): Flow<List<FocusSession>> {
+        val zone = zoneProvider()
+        val fromMillis = from.atStartOfDay(zone).toInstant().toEpochMilli()
+        val toMillis = to.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1
+        return focusDao.observeBetween(fromMillis, toMillis).map { rows -> rows.map { it.toSession() } }
+    }
+
+    /**
      * Starts a session, ending any that was already running.
      *
      * There is at most one at a time by construction rather than by hope: two overlapping

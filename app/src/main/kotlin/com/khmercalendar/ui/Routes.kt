@@ -35,6 +35,9 @@ object Routes {
     /** The focus timer. */
     const val FOCUS = "focus"
 
+    /** What you actually did, counted from data already on the device. */
+    const val STATS = "stats"
+
     const val SETTINGS = "settings"
     const val SETTINGS_APPEARANCE = "settings/appearance"
     const val SETTINGS_DASHBOARD = "settings/dashboard"

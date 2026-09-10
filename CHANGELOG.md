@@ -1,5 +1,67 @@
 # Changelog
 
+## 2.3.0 — 2026-09-10
+
+Statistics that report rather than grade — and three bugs found while building them.
+
+### ស្ថិតិ · What you actually did
+
+A new screen counting what is already on your phone: tasks finished, focus minutes, habits kept, events, notes, planned working hours, and where your time went by category. By **ថ្ងៃ · សប្តាហ៍ · ខែ · ឆ្នាំ**, with arrows to travel back through them.
+
+Nothing new is recorded to make this work. No table was added, no timestamp started being collected, nothing is uploaded and there is no identifier anywhere in it. It is the data you have been looking at all along, counted.
+
+### The part that took the thinking: not lying
+
+A statistics screen is easy to build and easy to make dishonest. Four decisions here exist only to stop it misleading you.
+
+**A month that has not finished is not counted as though it had.** On the third of the month, dividing by thirty-one reads as a catastrophe, and putting that beside a complete previous month reads as a collapse. Periods still running are marked **ដល់ថ្ងៃនេះ** and every total stops at today.
+
+**This period is compared against the same *part* of the last one.** On a Tuesday, "this week" is measured against last Monday and Tuesday — not against all of last week. Compare a Tuesday morning with a finished week and every week begins in failure and ends in triumph, and the little arrow is reporting the day of the week rather than anything you did.
+
+**Days that have not happened are drawn as absent, not as zero.** At zero height, "I did nothing on Friday" and "Friday has not arrived" are the same picture.
+
+**Work hours are the ones you planned.** The app cannot see your desk, and a figure labelled "worked" would be inventing it.
+
+There is no score, no grade and no sentence telling you that you were less productive than last week. The figures are reported and you draw the conclusion. A productivity screen that grades its user is one they stop opening in exactly the weeks they would most benefit from opening it.
+
+### Three bugs, found by building this
+
+Each was invisible until something finally read the data it had been quietly getting wrong.
+
+**Un-ticking a task recorded that you had just completed it.** Ticking a task stored the time; *un*-ticking it stored the current time too, instead of clearing it. Nothing ever read that column, so nothing showed it — until a screen that counts what was done when. A task ticked in January and un-ticked in March would have counted as March's work. Fixed at the source. Existing rows need no repair: every query that reads the column also requires the task to be complete.
+
+**A habit was judged for days before it existed.** Start a habit on Friday and the thirty-day rate on the habits screen read 10% — not a slow start, but a false statement about twenty-seven days you never promised. Rates are now measured from the day a habit was created, and stop when it is archived.
+
+**A habit with a weekly target was measured per day.** "Twice a week", done exactly twice, reported 29%. It is now measured against its target.
+
+And a smaller one: two unused database queries that had been sitting there since an earlier release have been removed rather than left to rot.
+
+### Honest about its own limits
+
+**A repeating task counts once.** A repeating series is one row carrying one completion flag, so somebody using a daily repeating task as a checklist is under-reported. Under-reporting is the safe direction to be wrong in, and the alternative is inventing completions nobody recorded.
+
+**All-day entries are counted, never timed.** A day marked "leave" is not twenty-four hours of an activity, and adding it to a time budget would swamp every real hour beside it.
+
+**Breaks are not focus time**, and a focus session you forgot to stop is still capped at what you planned.
+
+### Accessibility
+
+The chart is a row of labelled bars rather than a drawing, so a screen reader moving across a week hears "ច័ន្ទ៖ ៣" and reads the whole chart. Future days announce themselves as not yet arrived. Bars respect the reduced-motion setting, and Khmer numerals apply throughout.
+
+### Tested
+
+**445 unit tests** pass and lint is clean, including 31 new ones. All of it is arithmetic that cannot be seen on a phone without waiting for a calendar to turn over: a month that has not finished, a leap February, a week straddling two months, a habit created three days ago, a weekly-target habit, an archived habit, a session that crossed midnight, a multi-day event that must not be counted twice, and an event running past the end of the window.
+
+Checked on an **Android 8.0 (API 26)** emulator over a real database from the previous version.
+
+### Privacy
+
+Unchanged, and worth restating for a screen like this one: no account, no analytics, no tracking, no ads. Every figure is computed on the device from your own rows. There is nowhere for any of it to go.
+
+### Install
+
+Android 8.0 (API 26) or later. Download `TB-Calendar-2.3.0.apk` below. Upgrading keeps your events, tasks, notes, countdowns, habits, checklists and focus sessions — the database is unchanged this release.
+
 ## 2.2.0 — 2026-09-09
 
 A focus timer that cannot lose your session, and does not sit in the background burning battery.

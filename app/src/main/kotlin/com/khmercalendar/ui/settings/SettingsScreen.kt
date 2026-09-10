@@ -17,6 +17,7 @@ import androidx.compose.material.icons.outlined.HourglassEmpty
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.WorkOutline
 import androidx.compose.material.icons.outlined.SystemUpdateAlt
 import androidx.compose.material.icons.outlined.Lock
@@ -107,6 +108,12 @@ fun SettingsScreen(
                     subtitle = "ថ្ងៃដែលអ្នករាប់ថយក្រោយទៅរក",
                     icon = Icons.Outlined.HourglassEmpty,
                     onClick = { onNavigate(Routes.COUNTDOWNS) },
+                )
+                SettingsRow(
+                    title = "ស្ថិតិ",
+                    subtitle = "អ្វីដែលអ្នកបានធ្វើ គិតតាមថ្ងៃ សប្តាហ៍ ខែ និងឆ្នាំ",
+                    icon = Icons.Outlined.Insights,
+                    onClick = { onNavigate(Routes.STATS) },
                 )
             }
 

@@ -1,11 +1,11 @@
 {
-  "versionCode": 19,
-  "versionName": "2.2.0",
-  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v2.2.0/TB-Calendar-2.2.0.apk",
-  "apkSizeBytes": 60314036,
-  "apkSha256": "f81c54a83f81f979d99bc37a4e5c94627da18cf543abd8f5a7a680e3e60d0af0",
+  "versionCode": 20,
+  "versionName": "2.3.0",
+  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v2.3.0/TB-Calendar-2.3.0.apk",
+  "apkSizeBytes": 60330424,
+  "apkSha256": "70e18a8b261836c2d7d920cc239afa73e23deaba78261da5fa5838309c762073",
   "minSdk": 26,
-  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v2.2.0",
-  "releaseNotesKm": "ម៉ោងផ្តោតអារម្មណ៍ថ្មី៖ ធ្វើការជាវគ្គ ហើយសម្រាករវាងវគ្គ ព្រមទាំងចំនួននាទីថ្ងៃនេះ និងសប្តាហ៍នេះ។ គ្មានអ្វីរត់ក្នុងផ្ទៃខាងក្រោយឡើយ ដូច្នេះទោះបិទកម្មវិធីក៏វគ្គនៅតែត្រឹមត្រូវ។ វគ្គដែលបញ្ចប់មុនកំណត់រាប់តែពេលដែលធ្វើពិត។",
-  "releaseNotesEn": "A focus timer built so it cannot lose your session. Nothing ticks in the background - a running session is a start time and a length in the database, so force-stopping the app mid-session changes nothing and the battery cost is one alarm. It is honest about what you did: a session stopped early records the minutes it really ran, and one you forgot to stop is capped at what you planned rather than crediting nine hours."
+  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v2.3.0",
+  "releaseNotesKm": "អេក្រង់ស្ថិតិថ្មី៖ កិច្ចការរួចរាល់ នាទីផ្តោតអារម្មណ៍ ទម្លាប់ ព្រឹត្តិការណ៍ និងពេលវេលាតាមប្រភេទ គិតតាមថ្ងៃ សប្តាហ៍ ខែ និងឆ្នាំ។ រយៈពេលដែលមិនទាន់ចប់បង្ហាញថា «ដល់ថ្ងៃនេះ» ហើយធៀបនឹងចំណុចដូចគ្នានៃរយៈពេលមុន។ គណនាទាំងអស់ក្នុងទូរស័ព្ទ។ ជួសជុលបញ្ហា៖ ការដកសញ្ញាកិច្ចការរួចរាល់មិនរក្សាពេលវេលាទៀតទេ ហើយទម្លាប់ត្រូវវាស់ចាប់ពីថ្ងៃដែលបានបង្កើត។",
+  "releaseNotesEn": "A statistics screen that reports rather than grades: tasks completed, focus minutes, habits, events and time by category, by day, week, month and year. A period still running is marked and compared against the same point in the previous one, so a Tuesday is not measured against a whole week. Everything is computed on the device from data already there - no new table, nothing collected, nothing uploaded. Three bugs fixed along the way: un-ticking a task recorded a completion time instead of clearing it, habits were judged for days before they were created, and a weekly-target habit was measured per day."
 }

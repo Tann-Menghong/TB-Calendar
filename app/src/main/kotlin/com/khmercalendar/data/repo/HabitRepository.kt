@@ -16,6 +16,12 @@ data class HabitWithHistory(
     val done: Set<LocalDate>,
 )
 
+/** Every habit and its ticks over one window, shaped for [com.khmercalendar.domain.Statistics]. */
+data class HabitTicks(
+    val habits: List<Habit> = emptyList(),
+    val ticks: Map<Long, Set<LocalDate>> = emptyMap(),
+)
+
 /**
  * The door to habit data.
  *
@@ -51,6 +57,27 @@ class HabitRepository(
                 )
             }
         }
+    }
+
+    /**
+     * Every habit, with the ticks that fall inside [from]..[to].
+     *
+     * A window rather than "the last year", because statistics can be asked about 2024 and
+     * [observeAll] would read everything since then only to throw most of it away. Archived
+     * habits are included: they are part of what happened in the window, and dropping them
+     * would quietly rewrite a month somebody actually kept.
+     */
+    fun observeTicksBetween(from: LocalDate, to: LocalDate): Flow<HabitTicks> = combine(
+        habitDao.observeAll(),
+        habitDao.observeEntriesBetween(from.toEpochDay(), to.toEpochDay()),
+    ) { habits, entries ->
+        val byHabit = entries.groupBy { it.habitId }
+        HabitTicks(
+            habits = habits.map { it.toHabit() },
+            ticks = byHabit.mapValues { (_, rows) ->
+                rows.mapTo(HashSet()) { LocalDate.ofEpochDay(it.epochDay) }
+            },
+        )
     }
 
     suspend fun save(habit: Habit): Long {
@@ -113,7 +140,19 @@ class HabitRepository(
             target = weeklyTarget,
         ),
         isArchived = archivedAtMillis != null,
+        createdAt = dateOf(createdAtMillis),
+        archivedAt = archivedAtMillis?.let { dateOf(it) },
     )
+
+    /**
+     * A stored instant as a local day.
+     *
+     * The zone is read at call time rather than captured, so a habit created in Phnom Penh
+     * and read in Paris is attributed to the day it is being read in - which is the same
+     * convention every other date in the app follows.
+     */
+    private fun dateOf(millis: Long): LocalDate =
+        java.time.Instant.ofEpochMilli(millis).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
 
     private companion object {
         /** A year: further back than any figure on screen looks. */

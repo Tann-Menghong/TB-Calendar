@@ -36,6 +36,14 @@ fun appViewModelFactory(container: AppContainer): ViewModelProvider.Factory = vi
     initializer { HabitViewModel(container.habitRepository, container.settings) }
     initializer { FocusViewModel(container.focusRepository, container.settings) }
     initializer {
+        com.khmercalendar.ui.stats.StatsViewModel(
+            events = container.eventRepository,
+            focus = container.focusRepository,
+            habits = container.habitRepository,
+            settings = container.settings,
+        )
+    }
+    initializer {
         AssistantViewModel(
             assistant = container.aiAssistant,
             engine = container.aiEngine,

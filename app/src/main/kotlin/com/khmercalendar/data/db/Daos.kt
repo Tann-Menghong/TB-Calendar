@@ -101,11 +101,42 @@ interface EventDao {
     @Query("DELETE FROM events WHERE id = :id")
     suspend fun deleteById(id: Long)
 
+    /**
+     * Ticks or unticks a task.
+     *
+     * [completedAt] is separate from [atMillis] because un-ticking must *clear* it. The
+     * single-parameter form wrote the current time into `completedAtMillis` whichever way the
+     * flag went, so a task ticked in January and un-ticked in March was left claiming it had
+     * been completed in March. Nothing read the column, so nothing showed it - until the
+     * statistics screen, which reads exactly this column to decide what was done when.
+     *
+     * Rows already carrying a stale timestamp need no repair: every query that reads it also
+     * requires `isCompleted = 1`, and an un-ticked row is excluded by that alone.
+     */
     @Query(
-        "UPDATE events SET isCompleted = :completed, completedAtMillis = :atMillis, " +
+        "UPDATE events SET isCompleted = :completed, completedAtMillis = :completedAt, " +
             "updatedAtMillis = :atMillis WHERE id = :id"
     )
-    suspend fun setCompleted(id: Long, completed: Boolean, atMillis: Long)
+    suspend fun setCompleted(id: Long, completed: Boolean, completedAt: Long?, atMillis: Long)
+
+    /**
+     * Tasks ticked off inside a window, for the statistics screen.
+     *
+     * Keyed on when it was *completed* rather than when it was due, which is what "finished
+     * this week" means. A null timestamp is excluded rather than treated as the epoch: a row
+     * whose completion date is unknown is not a task completed in 1970.
+     *
+     * A repeating task contributes at most one row, because a series is one row and carries
+     * one flag. That under-reports somebody who uses a daily repeating task as a checklist,
+     * and under-reporting is the safe direction to be wrong in.
+     */
+    @Query(
+        "SELECT * FROM events WHERE isTask = 1 AND isCompleted = 1 " +
+            "AND completedAtMillis IS NOT NULL " +
+            "AND completedAtMillis BETWEEN :fromMillis AND :toMillis " +
+            "ORDER BY completedAtMillis"
+    )
+    fun observeCompletedTasksBetween(fromMillis: Long, toMillis: Long): Flow<List<EventEntity>>
 
     @Query("UPDATE events SET priority = :priority, updatedAtMillis = :atMillis WHERE id = :id")
     suspend fun setPriority(id: Long, priority: Int, atMillis: Long)
@@ -126,9 +157,6 @@ interface EventDao {
 
     @Query("SELECT COUNT(*) FROM events")
     suspend fun count(): Int
-
-    @Query("SELECT COUNT(*) FROM events WHERE isTask = 1 AND isCompleted = 1")
-    suspend fun completedTaskCount(): Int
 }
 
 @Dao
@@ -239,6 +267,16 @@ interface HabitDao {
     fun observeEntriesSince(fromEpochDay: Long): Flow<List<HabitEntryEntity>>
 
     /**
+     * Ticks inside a window, both ends bounded.
+     *
+     * [observeEntriesSince] is anchored on today, which is right for the habits screen and
+     * wrong for statistics: looking at last year would otherwise read every tick since then
+     * and throw away all but twelve months of them.
+     */
+    @Query("SELECT * FROM habit_entries WHERE epochDay BETWEEN :fromEpochDay AND :toEpochDay")
+    fun observeEntriesBetween(fromEpochDay: Long, toEpochDay: Long): Flow<List<HabitEntryEntity>>
+
+    /**
      * Ticks a habit for a day.
      *
      * IGNORE rather than REPLACE: the unique index already makes a second tick meaningless,
@@ -307,6 +345,19 @@ interface FocusDao {
      */
     @Query("SELECT * FROM focus_sessions WHERE startedAtMillis >= :fromMillis ORDER BY startedAtMillis DESC")
     fun observeSince(fromMillis: Long): Flow<List<FocusSessionEntity>>
+
+    /**
+     * Sessions inside a window, both ends bounded, for the statistics screen.
+     *
+     * A session is attributed to the day it *started*, so the bound is on `startedAtMillis`
+     * alone. One that runs past midnight belongs to the evening it began in, which is how the
+     * person who sat through it would describe it.
+     */
+    @Query(
+        "SELECT * FROM focus_sessions WHERE startedAtMillis BETWEEN :fromMillis AND :toMillis " +
+            "ORDER BY startedAtMillis DESC"
+    )
+    fun observeBetween(fromMillis: Long, toMillis: Long): Flow<List<FocusSessionEntity>>
 
     @Insert
     suspend fun insert(session: FocusSessionEntity): Long
