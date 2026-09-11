@@ -1,11 +1,11 @@
 {
-  "versionCode": 20,
-  "versionName": "2.3.0",
-  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v2.3.0/TB-Calendar-2.3.0.apk",
-  "apkSizeBytes": 60330424,
-  "apkSha256": "70e18a8b261836c2d7d920cc239afa73e23deaba78261da5fa5838309c762073",
+  "versionCode": 21,
+  "versionName": "2.4.0",
+  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v2.4.0/TB-Calendar-2.4.0.apk",
+  "apkSizeBytes": 60363192,
+  "apkSha256": "3f3040bb5e2cb8be8f143b1ef9b32fb4ad8ad58f4b2c98a8b9ad8181df3ad110",
   "minSdk": 26,
-  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v2.3.0",
-  "releaseNotesKm": "អេក្រង់ស្ថិតិថ្មី៖ កិច្ចការរួចរាល់ នាទីផ្តោតអារម្មណ៍ ទម្លាប់ ព្រឹត្តិការណ៍ និងពេលវេលាតាមប្រភេទ គិតតាមថ្ងៃ សប្តាហ៍ ខែ និងឆ្នាំ។ រយៈពេលដែលមិនទាន់ចប់បង្ហាញថា «ដល់ថ្ងៃនេះ» ហើយធៀបនឹងចំណុចដូចគ្នានៃរយៈពេលមុន។ គណនាទាំងអស់ក្នុងទូរស័ព្ទ។ ជួសជុលបញ្ហា៖ ការដកសញ្ញាកិច្ចការរួចរាល់មិនរក្សាពេលវេលាទៀតទេ ហើយទម្លាប់ត្រូវវាស់ចាប់ពីថ្ងៃដែលបានបង្កើត។",
-  "releaseNotesEn": "A statistics screen that reports rather than grades: tasks completed, focus minutes, habits, events and time by category, by day, week, month and year. A period still running is marked and compared against the same point in the previous one, so a Tuesday is not measured against a whole week. Everything is computed on the device from data already there - no new table, nothing collected, nothing uploaded. Three bugs fixed along the way: un-ticking a task recorded a completion time instead of clearing it, habits were judged for days before they were created, and a weekly-target habit was measured per day."
+  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v2.4.0",
+  "releaseNotesKm": "ជួសជុលកំណត់ចំណាំ៖ ការកែកំណត់ចំណាំប្រចាំថ្ងៃលែងបាត់ទៀតហើយ។ ការបម្រុងទុកឥឡូវរក្សាទុកអ្វីៗទាំងអស់ រួមទាំងអាទិភាពកិច្ចការ ការរាប់ថយក្រោយ ជំហានកិច្ចការ ទម្លាប់ និងការផ្តោតអារម្មណ៍។ ការស្តារបង្ហាញជាមុន មិនស្ទួន មិនសរសេរជាន់លើ ហើយបើមានបញ្ហា គ្មានអ្វីត្រូវបានផ្លាស់ប្តូរឡើយ។",
+  "releaseNotesEn": "Editing a day's note was silently discarded since the first release - only the first note of each day ever saved. Fixed. The backup file now keeps everything the app gained since version 1: task priority, pinned countdowns, completion times, checklist steps, habits and focus sessions. Restore shows a preview first, skips what the phone already has so restoring twice adds nothing, never overwrites a note, and runs all-or-nothing. Settings can be restored separately; the PIN and AI settings are never exported."
 }

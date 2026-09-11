@@ -228,7 +228,21 @@ interface DayNoteDao {
     )
     fun search(query: String): Flow<List<DayNoteEntity>>
 
-    @Upsert
+    /**
+     * Writes a day's note, replacing whatever that day held.
+     *
+     * `REPLACE`, not `@Upsert`. Every save builds a fresh entity with id 0, and Room's upsert
+     * falls back from a failed insert to an `UPDATE ... WHERE id = ?` - so when the day
+     * already had a note, the conflict was on `epochDay`, the update matched id 0, and nothing
+     * was written. Editing an existing note was silently discarded from the first release:
+     * the dashboard field snapped back to the old text, and only the first note of each day
+     * ever saved.
+     *
+     * Not SQLite's `ON CONFLICT ... DO UPDATE` either, which would keep the row id: that
+     * arrived in SQLite 3.24, and Android 8.0 ships 3.18. `REPLACE` deletes the old row and
+     * inserts the new one, which is harmless here because nothing refers to a note by its id.
+     */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(note: DayNoteEntity)
 
     @Query("DELETE FROM day_notes WHERE epochDay = :epochDay")
@@ -291,6 +305,10 @@ interface HabitDao {
 
     @Query("SELECT COUNT(*) FROM habits WHERE archivedAtMillis IS NULL")
     suspend fun activeCount(): Int
+
+    /** Every tick ever recorded, for a backup. Unbounded, because a backup is everything. */
+    @Query("SELECT * FROM habit_entries ORDER BY habitId, epochDay")
+    suspend fun allEntries(): List<HabitEntryEntity>
 }
 
 @Dao
@@ -325,6 +343,10 @@ interface ChecklistDao {
 
     @Query("SELECT COUNT(*) FROM checklist_items WHERE eventId = :eventId")
     suspend fun countForEvent(eventId: Long): Int
+
+    /** Every step of every task, for a backup. */
+    @Query("SELECT * FROM checklist_items ORDER BY eventId, sortOrder, id")
+    suspend fun all(): List<ChecklistItemEntity>
 }
 
 @Dao
@@ -370,4 +392,8 @@ interface FocusDao {
 
     @Query("SELECT COUNT(*) FROM focus_sessions")
     suspend fun count(): Int
+
+    /** Every session, for a backup. */
+    @Query("SELECT * FROM focus_sessions ORDER BY startedAtMillis")
+    suspend fun all(): List<FocusSessionEntity>
 }

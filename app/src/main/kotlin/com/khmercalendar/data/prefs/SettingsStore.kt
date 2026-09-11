@@ -14,12 +14,15 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.khmercalendar.core.khmer.CalendarWeek
 import com.khmercalendar.core.work.WorkSchedule
 import com.khmercalendar.core.work.WorkScheduleCodec
+import com.khmercalendar.data.backup.BackupSettings
+import com.khmercalendar.data.backup.PortableSettings
 import com.khmercalendar.domain.CountdownStyle
 import com.khmercalendar.domain.FocusSettings
 import com.khmercalendar.domain.DockLayout
 import com.khmercalendar.domain.DockSlot
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.io.IOException
 import java.security.MessageDigest
@@ -35,7 +38,7 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
  * grid react to a change without a listener, and writes are transactional rather than
  * fire-and-forget.
  */
-class SettingsStore(context: Context) {
+class SettingsStore(context: Context) : PortableSettings {
 
     private val store = context.applicationContext.dataStore
 
@@ -271,6 +274,153 @@ class SettingsStore(context: Context) {
     }
 
     private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it) }
+
+    // --- backup ------------------------------------------------------------------------
+
+    /**
+     * The settings a backup carries, as they are in effect right now.
+     *
+     * Effective values rather than only the ones ever changed: a phone still on the default
+     * accent, restored onto a phone with a custom one, should come back with the default -
+     * otherwise the restored app looks like neither phone.
+     *
+     * What is deliberately left out, and why, is documented on [BackupSettings].
+     */
+    override suspend fun exportPortable(): BackupSettings {
+        val current = settings.first()
+        return BackupSettings(
+            themeMode = current.themeMode.name,
+            accentArgb = current.accentArgb,
+            useDynamicColor = current.useDynamicColor,
+            fontScale = current.fontScale,
+            density = current.density.name,
+            backgroundOpacity = current.backgroundOpacity,
+            weekStart = current.weekStart.value,
+            showKhmerLunarDates = current.showKhmerLunarDates,
+            showGregorianDates = current.showGregorianDates,
+            showHolidays = current.showHolidays,
+            showEventDots = current.showEventDots,
+            showWeekNumbers = current.showWeekNumbers,
+            useKhmerNumerals = current.useKhmerNumerals,
+            highlightWeekends = current.highlightWeekends,
+            timeFormat = current.timeFormat.name,
+            dateFormat = current.dateFormat.name,
+            dayStartHour = current.dayStartHour,
+            dayEndHour = current.dayEndHour,
+            startScreen = current.startScreen.name,
+            defaultReminderMinutes = current.defaultReminderMinutes,
+            defaultEventDurationMinutes = current.defaultEventDurationMinutes,
+            dashboardOrder = current.dashboardCards.map { it.key },
+            dashboardHidden = current.hiddenDashboardCards.sorted(),
+            dashboardDensity = current.dashboardDensity.name,
+            animationLevel = current.animationLevel.name,
+            dockSlots = current.dockSlots.map { it.key },
+            displayName = current.displayName,
+            countdownStyle = current.countdownStyle.key,
+            focusMinutes = current.focusSettings.focusMinutes,
+            shortBreakMinutes = current.focusSettings.shortBreakMinutes,
+            longBreakMinutes = current.focusSettings.longBreakMinutes,
+            sessionsBeforeLongBreak = current.focusSettings.sessionsBeforeLongBreak,
+            workSchedule = WorkScheduleCodec.encode(current.workSchedule),
+            workEnabled = current.workSchedule.enabled,
+            workNotifications = current.workNotifications,
+            workNotifyLeadMinutes = current.workNotifyLeadMinutes,
+            widgetTheme = current.widgetTheme.name,
+            widgetOpacity = current.widgetOpacity,
+            widgetShowLunar = current.widgetShowLunar,
+            notificationsEnabled = current.notificationsEnabled,
+            notificationVibrate = current.notificationVibrate,
+            holidayNotifications = current.holidayNotifications,
+        )
+    }
+
+    /**
+     * Writes a backup's settings in a single edit.
+     *
+     * One edit, so a failure cannot leave half a theme applied. Every value passes through the
+     * same bounds the individual setters apply, and a value this version does not recognise -
+     * an enum a newer app added, a dashboard card that no longer exists - is skipped rather than
+     * stored, where it would otherwise be read back as a default on every launch without anyone
+     * being told. A field absent from the file leaves the current setting alone.
+     */
+    override suspend fun applyPortable(incoming: BackupSettings) {
+        store.edit { p ->
+            incoming.themeMode?.takeIf { it.isNameOf<ThemeMode>() }?.let { p[Keys.THEME] = it }
+            incoming.accentArgb?.let { p[Keys.ACCENT] = it }
+            incoming.useDynamicColor?.let { p[Keys.DYNAMIC_COLOR] = it }
+            incoming.fontScale?.let { p[Keys.FONT_SCALE] = it.coerceIn(0.8f, 1.6f) }
+            incoming.density?.takeIf { it.isNameOf<CalendarDensity>() }?.let { p[Keys.DENSITY] = it }
+            incoming.backgroundOpacity?.let { p[Keys.BACKGROUND_OPACITY] = it.coerceIn(0f, 0.6f) }
+
+            incoming.weekStart?.takeIf { it in 1..7 }?.let { p[Keys.WEEK_START] = it }
+            incoming.showKhmerLunarDates?.let { p[Keys.SHOW_LUNAR] = it }
+            incoming.showGregorianDates?.let { p[Keys.SHOW_GREGORIAN] = it }
+            incoming.showHolidays?.let { p[Keys.SHOW_HOLIDAYS] = it }
+            incoming.showEventDots?.let { p[Keys.SHOW_DOTS] = it }
+            incoming.showWeekNumbers?.let { p[Keys.SHOW_WEEK_NUMBERS] = it }
+            incoming.useKhmerNumerals?.let { p[Keys.KHMER_NUMERALS] = it }
+            incoming.highlightWeekends?.let { p[Keys.HIGHLIGHT_WEEKENDS] = it }
+
+            incoming.timeFormat?.takeIf { it.isNameOf<TimeFormat>() }?.let { p[Keys.TIME_FORMAT] = it }
+            incoming.dateFormat?.takeIf { it.isNameOf<DateFormat>() }?.let { p[Keys.DATE_FORMAT] = it }
+            // One interval, bounded together exactly as setWorkingHours bounds it: an inverted
+            // working day would break free-slot search.
+            if (incoming.dayStartHour != null || incoming.dayEndHour != null) {
+                val from = (incoming.dayStartHour ?: p[Keys.DAY_START_HOUR] ?: 8).coerceIn(0, 23)
+                val to = (incoming.dayEndHour ?: p[Keys.DAY_END_HOUR] ?: 18).coerceIn(from + 1, 24)
+                p[Keys.DAY_START_HOUR] = from
+                p[Keys.DAY_END_HOUR] = to
+            }
+
+            incoming.startScreen?.takeIf { it.isNameOf<StartScreen>() }?.let { p[Keys.START_SCREEN] = it }
+            incoming.defaultReminderMinutes?.let { p[Keys.DEFAULT_REMINDER] = it }
+            incoming.defaultEventDurationMinutes?.let { p[Keys.DEFAULT_DURATION] = it }
+            incoming.dashboardOrder
+                ?.filter { key -> DashboardCard.entries.any { it.key == key } }
+                ?.takeIf { it.isNotEmpty() }
+                ?.let { p[Keys.DASHBOARD_ORDER] = it.joinToString(",") }
+            incoming.dashboardHidden
+                ?.filter { key -> DashboardCard.entries.any { it.key == key } }
+                ?.let { p[Keys.DASHBOARD_HIDDEN] = it.toSet() }
+            incoming.dashboardDensity?.takeIf { it.isNameOf<DashboardDensity>() }
+                ?.let { p[Keys.DASHBOARD_DENSITY] = it }
+            incoming.animationLevel?.takeIf { it.isNameOf<AnimationLevel>() }
+                ?.let { p[Keys.ANIMATION_LEVEL] = it }
+            incoming.dockSlots
+                ?.filter { key -> DockSlot.entries.any { it.key == key } }
+                ?.let { p[Keys.DOCK_SLOTS] = it.joinToString(",") }
+            incoming.displayName?.let { p[Keys.DISPLAY_NAME] = it.trim().take(24) }
+            incoming.countdownStyle
+                ?.takeIf { key -> CountdownStyle.entries.any { it.key == key } }
+                ?.let { p[Keys.COUNTDOWN_STYLE] = it }
+
+            val minutes = FocusSettings.MIN_MINUTES..FocusSettings.MAX_MINUTES
+            incoming.focusMinutes?.let { p[Keys.FOCUS_MINUTES] = it.coerceIn(minutes) }
+            incoming.shortBreakMinutes?.let { p[Keys.FOCUS_SHORT_BREAK] = it.coerceIn(minutes) }
+            incoming.longBreakMinutes?.let { p[Keys.FOCUS_LONG_BREAK] = it.coerceIn(minutes) }
+            incoming.sessionsBeforeLongBreak?.let { p[Keys.FOCUS_CYCLE] = it.coerceAtLeast(1) }
+
+            // A schedule string that failed to decode would fail on every settings read after
+            // it, so it is proven readable before it is allowed in.
+            incoming.workSchedule
+                ?.takeIf { runCatching { WorkScheduleCodec.decode(it) }.isSuccess }
+                ?.let { p[Keys.WORK_SCHEDULE] = it }
+            incoming.workEnabled?.let { p[Keys.WORK_ENABLED] = it }
+            incoming.workNotifications?.let { p[Keys.WORK_NOTIFICATIONS] = it }
+            incoming.workNotifyLeadMinutes?.let { p[Keys.WORK_NOTIFY_LEAD] = it.coerceIn(0, 60) }
+
+            incoming.widgetTheme?.takeIf { it.isNameOf<ThemeMode>() }?.let { p[Keys.WIDGET_THEME] = it }
+            incoming.widgetOpacity?.let { p[Keys.WIDGET_OPACITY] = it.coerceIn(0.2f, 1f) }
+            incoming.widgetShowLunar?.let { p[Keys.WIDGET_SHOW_LUNAR] = it }
+
+            incoming.notificationsEnabled?.let { p[Keys.NOTIFICATIONS] = it }
+            incoming.notificationVibrate?.let { p[Keys.VIBRATE] = it }
+            incoming.holidayNotifications?.let { p[Keys.HOLIDAY_NOTIFICATIONS] = it }
+        }
+    }
+
+    private inline fun <reified T : Enum<T>> String.isNameOf(): Boolean =
+        enumValues<T>().any { it.name == this }
 
     // --- plumbing ----------------------------------------------------------------------
 

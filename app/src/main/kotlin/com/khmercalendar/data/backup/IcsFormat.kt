@@ -1,5 +1,6 @@
 package com.khmercalendar.data.backup
 
+import androidx.room.withTransaction
 import android.content.Context
 import android.net.Uri
 import com.khmercalendar.data.db.EventEntity
@@ -121,7 +122,11 @@ object IcsFormat {
         unfolded: String,
         zone: ZoneId,
         now: Long,
-    ): ImportResult {
+    ): ImportResult = database.withTransaction {
+        // One transaction for the whole file. Rows used to be written one at a time, so a file
+        // that failed halfway left half of itself in the calendar while the screen reported
+        // that the import had failed - and the user had no way to tell which events came in.
+        //
         // A natural key over what is already stored. An .ics carries a UID, but this app has
         // never had a column for one, and adding a schema migration purely to deduplicate an
         // import is a larger risk to the user's data than the thing it prevents.
@@ -175,7 +180,7 @@ object IcsFormat {
             if (minutes.isNotEmpty()) database.reminderDao().replaceForEvent(id, minutes)
             imported++
         }
-        return ImportResult(imported = imported, skipped = skipped)
+        ImportResult(imported = imported, skipped = skipped)
     }
 
     /**

@@ -66,7 +66,9 @@ class AppContainer(
         ReminderScheduler(context, eventRepository, settingsStore)
     }
 
-    val backupManager: BackupManager by lazy { BackupManager(context, database, appVersion) }
+    val backupManager: BackupManager by lazy {
+        BackupManager(context, database, appVersion, settings = settingsStore)
+    }
 
     val modelStore: ModelStore by lazy { ModelStore(context) }
 

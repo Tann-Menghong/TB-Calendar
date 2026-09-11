@@ -1,5 +1,88 @@
 # Changelog
 
+## 2.4.0 — 2026-09-11
+
+Note edits that finally save, and a backup that keeps everything.
+
+### Editing a day's note did nothing — since the first release
+
+Write a note on the dashboard, save it: fine. Change it and save again: **the text snapped back to what it was, and the change was gone.** Only the first note of each day ever saved.
+
+The note table has one row per day, and every save built a fresh row and asked the database to "insert or update" it. The insert collided with the day's existing note, the update looked for a row numbered zero, found nothing, and reported success. No error, no crash, no test — just edits quietly thrown away.
+
+It was reproduced on an Android 8.0 device on the old version before being fixed, then the same install was upgraded and the same edit made twice: both saved, and the day still has exactly one note.
+
+The fix deliberately avoids SQLite's newer "on conflict, update" syntax, which would have been tidier: it arrived in SQLite 3.24, and Android 8.0 ships 3.18.
+
+### A backup that keeps everything
+
+The backup file had not changed since the first version, and the app had. Backing up and restoring silently lost:
+
+- every task's **priority**
+- every **pinned countdown**
+- **when** each task was completed
+- every **checklist step**
+- every **habit**, and every day you kept it
+- every **focus session**
+
+All of it is in the file now (backup format 2). Older backups still restore.
+
+### A restore that never destroys
+
+**It shows you before it writes.** Choosing a file opens a preview: when the backup was made, how many events, notes, habits and sessions it holds, how many of those the phone already has, and how many could not be read. Nothing is written until you confirm.
+
+**Restoring the same file twice adds nothing the second time.** It used to double your calendar. Identical events, notes, habit days and sessions are recognised and skipped, and the summary says how many.
+
+**Nothing on the phone is overwritten.** A day whose note differs from the backup's keeps its own note, with the backup's text added beneath it. A habit with the same name gains the backup's history instead of appearing twice — and keeps its own schedule.
+
+**It is all or nothing.** The restore runs in one transaction. Before, a failure halfway left half a backup in your calendar under a message saying the restore had failed — and trying again doubled the half that had made it in. Importing an .ics file now works the same way.
+
+**One bad row no longer costs you the rest.** An event with an unknown time zone or an end before its start is skipped and counted, and everything else is restored.
+
+### Choose what comes back
+
+The preview lets you restore your calendar, your habits and focus sessions, and your settings — separately.
+
+**Settings are off by default.** Your data is merged and nothing is lost; settings can only be *replaced*, so bringing them back is a separate choice rather than a side effect.
+
+Some settings are deliberately never in the file:
+
+- **The app lock and PIN.** A backup is a file you might copy anywhere, and restoring a lock whose PIN nobody remembers onto a new phone is a lockout, not a convenience.
+- **The background image and notification sound.** Both point at files on the phone that made the backup, and mean nothing on another.
+- **Anything about the AI.** The model is not in the backup, so the AI stays off until you turn it on — as it does everywhere else.
+
+### Also fixed
+
+- **Calendar files shared from another app failed with a JSON error.** The screen guessed the file type from the name ending in ".ics", and shared files arrive with no name at all. Files are now recognised by their content.
+- **Restored completed tasks were stamped as completed on the day of the restore**, putting every task you had ever finished into today's statistics. Older backups never recorded when a task was done, and it is now left unknown rather than invented.
+- **Errors were shown in English parser language** ("Unexpected JSON token at offset 0"). They now say, in Khmer, whether the file is not a backup, is damaged, or comes from a newer version of the app — which is the one that tells you what to do.
+- Backup messages now follow your choice of Khmer or Arabic numerals, and a progress bar shows while a large restore runs.
+
+### Honest limits
+
+- **A restore cannot be undone by the app.** It only adds, and a restored event is indistinguishable from one you made — which is exactly why it now shows you what it will do first.
+- **A focus session that was running when the backup was made is not restored.** It was not a finished record yet, and restoring it would resurrect a days-old timer.
+- **Backups made by this version cannot be read by 2.3.0 or earlier.** An older app refuses them and says to update, rather than restoring the events and silently dropping the habits.
+
+### Tested
+
+**474 unit tests** pass and lint is clean, including 29 new ones. The backup tests run against two real databases — the phone that made the backup and the phone restoring it — because nearly everything that can go wrong is a link that has to be rewritten on the way across. They cover every field format 1 dropped surviving a round trip; the same file restored twice; a note already on the phone; a habit that already exists; a failure after the second event leaving nothing behind; a format 1 file; a file from a newer version; rows that cannot be read; a session still running; restoring only part of a file; and settings applied only when chosen, with a settings failure not undoing the calendar.
+
+On an **Android 8.0 (API 26)** emulator:
+
+- **The note bug, reproduced first on the old version.** A note saved as "first", then edited and saved: the database still said "first" and the field snapped back. The same install upgraded to 2.4.0 and the same edit made twice: both saved, and the day kept exactly one note.
+- **A real round trip.** A pinned, high-priority, completed task with two checklist steps, a habit with two days, and a focus session for the task — exported through Android's own file picker, deleted from the phone, and restored from the file. Every field came back, and the steps and the session were reattached to the task under its new identity.
+- **The same file restored a second time.** Sixteen items skipped, nothing added, every count unchanged.
+- **The release build**, installed over 2.3.0, exported a format 2 file and restored it, with the preview and the summary shown in full.
+
+### Privacy
+
+Unchanged: no account, no analytics, no tracking, no ads. A backup is a file you choose where to put, through Android's own file picker — the app needs no storage permission and sends it nowhere.
+
+### Install
+
+Android 8.0 (API 26) or later. Download `TB-Calendar-2.4.0.apk` below. Upgrading keeps all your data; the database itself is unchanged this release.
+
 ## 2.3.0 — 2026-09-10
 
 Statistics that report rather than grade — and three bugs found while building them.
