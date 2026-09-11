@@ -196,6 +196,35 @@ object TaskBoard {
         overdue = tasks.count { !it.isCompleted && it.date.isBefore(today) },
     )
 
+    /**
+     * One occurrence per task: the one a list should show and a tick should land on.
+     *
+     * A repeating task produces an occurrence per period, and a list would otherwise show the
+     * same chore fifty times. The one you can act on is the nearest occurrence from today that
+     * is still to do.
+     *
+     * Chosen *after sorting*. Occurrences arrive grouped under a hash map of days, so their
+     * order is arbitrary, and "the first undone one from today" used to mean whichever day
+     * happened to hash first: a daily chore appeared dated eleven months ahead. That was only
+     * wrong-looking until each occurrence could be ticked on its own - then ticking it ticked
+     * that far-off day and left tomorrow's still to do.
+     *
+     * With nothing left to do from today on, the most recent occurrence up to today is shown,
+     * so a finished task still appears among the finished, and an overdue one-off stays overdue.
+     */
+    fun representatives(occurrences: List<EventOccurrence>, today: LocalDate): List<EventOccurrence> =
+        occurrences
+            .groupBy { it.eventId }
+            .values
+            .map { forTask ->
+                // By start first: a task running past midnight is listed under both days with the
+                // same start, and the earlier listing is the real occurrence.
+                val ordered = forTask.sortedWith(compareBy({ it.start }, { it.occurrenceDate }))
+                ordered.firstOrNull { !it.isCompleted && !it.occurrenceDate.isBefore(today) }
+                    ?: ordered.lastOrNull { !it.occurrenceDate.isAfter(today) }
+                    ?: ordered.first()
+            }
+
     data class Progress(val done: Int, val total: Int, val overdue: Int) {
         /** 0f..1f, and 0f rather than a division by zero when there is nothing to do. */
         val fraction: Float get() = if (total <= 0) 0f else done.toFloat() / total.toFloat()

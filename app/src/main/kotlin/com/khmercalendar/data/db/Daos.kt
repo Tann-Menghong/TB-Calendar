@@ -132,7 +132,7 @@ interface EventDao {
      */
     @Query(
         "SELECT * FROM events WHERE isTask = 1 AND isCompleted = 1 " +
-            "AND completedAtMillis IS NOT NULL " +
+            "AND completedAtMillis IS NOT NULL AND rrule IS NULL " +
             "AND completedAtMillis BETWEEN :fromMillis AND :toMillis " +
             "ORDER BY completedAtMillis"
     )
@@ -396,4 +396,57 @@ interface FocusDao {
     /** Every session, for a backup. */
     @Query("SELECT * FROM focus_sessions ORDER BY startedAtMillis")
     suspend fun all(): List<FocusSessionEntity>
+}
+
+/** A ticked occurrence of a repeating task, with what statistics need from its series. */
+data class CompletedOccurrenceRow(
+    val eventId: Long,
+    val epochDay: Long,
+    val completedAtMillis: Long,
+    val priority: Int,
+    val categoryId: Long?,
+)
+
+@Dao
+interface TaskCompletionDao {
+
+    /**
+     * Ticks inside a window of days, for expanding occurrences.
+     *
+     * Bounded by the day the occurrence falls on, the same window the occurrence query uses, so
+     * a year of a daily chore is never read to draw one week.
+     */
+    @Query("SELECT * FROM task_completions WHERE epochDay BETWEEN :fromEpochDay AND :toEpochDay")
+    fun observeBetween(fromEpochDay: Long, toEpochDay: Long): Flow<List<TaskCompletionEntity>>
+
+    @Query("SELECT * FROM task_completions WHERE epochDay BETWEEN :fromEpochDay AND :toEpochDay")
+    suspend fun between(fromEpochDay: Long, toEpochDay: Long): List<TaskCompletionEntity>
+
+    @Query("SELECT * FROM task_completions WHERE eventId = :eventId AND epochDay = :epochDay")
+    suspend fun find(eventId: Long, epochDay: Long): TaskCompletionEntity?
+
+    /** IGNORE, so a second tap keeps the first completion time rather than moving it. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insert(completion: TaskCompletionEntity)
+
+    @Query("DELETE FROM task_completions WHERE eventId = :eventId AND epochDay = :epochDay")
+    suspend fun delete(eventId: Long, epochDay: Long)
+
+    /**
+     * Occurrences ticked inside a window of instants, for statistics.
+     *
+     * Keyed on when each was *ticked*, the same rule a one-off task follows.
+     */
+    @Query(
+        "SELECT c.eventId AS eventId, c.epochDay AS epochDay, " +
+            "c.completedAtMillis AS completedAtMillis, e.priority AS priority, " +
+            "e.categoryId AS categoryId " +
+            "FROM task_completions c JOIN events e ON e.id = c.eventId " +
+            "WHERE c.completedAtMillis BETWEEN :fromMillis AND :toMillis"
+    )
+    fun observeCompletedBetween(fromMillis: Long, toMillis: Long): Flow<List<CompletedOccurrenceRow>>
+
+    /** Every tick, for a backup. */
+    @Query("SELECT * FROM task_completions ORDER BY eventId, epochDay")
+    suspend fun all(): List<TaskCompletionEntity>
 }

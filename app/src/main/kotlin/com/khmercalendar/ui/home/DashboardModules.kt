@@ -582,7 +582,7 @@ private fun TimelineEntry.accentColor(): Color = when (kind) {
 @Composable
 fun FocusModule(
     tasks: List<EventOccurrence>,
-    onToggle: (Long, Boolean) -> Unit,
+    onToggle: (Long, LocalDate, Boolean) -> Unit,
     onOpen: (Long, LocalDate) -> Unit,
     onViewAll: () -> Unit,
     modifier: Modifier = Modifier,
@@ -637,7 +637,7 @@ fun FocusModule(
                         .size(28.dp)
                         .clip(CircleShape)
                         .border(1.5.dp, accent.copy(alpha = 0.6f), CircleShape)
-                        .clickable { onToggle(task.eventId, true) },
+                        .clickable { onToggle(task.eventId, task.occurrenceDate, true) },
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(

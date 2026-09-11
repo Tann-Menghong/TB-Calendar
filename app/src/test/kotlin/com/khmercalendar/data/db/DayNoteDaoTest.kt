@@ -43,6 +43,7 @@ class DayNoteDaoTest {
             db.eventExceptionDao(),
             db.dayNoteDao(),
             db.checklistDao(),
+            db.taskCompletionDao(),
         )
     }
 

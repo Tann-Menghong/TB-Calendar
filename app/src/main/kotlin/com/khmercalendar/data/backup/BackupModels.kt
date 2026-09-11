@@ -21,6 +21,11 @@ import kotlinx.serialization.Serializable
  * would restore the events and quietly drop the habits, and a restore that reports success
  * while losing data is worse than one that refuses and says why.
  *
+ * ## Format 3
+ *
+ * Adds the days each repeating task was ticked ([BackupEvent.completedOccurrences]). A format 2
+ * reader would drop them silently, so the number moved again for the same reason as before.
+ *
  * [formatVersion], [appVersion] and [exportedAtMillis] have no defaults on purpose. They are
  * what tells this file apart from any other JSON object; with defaults, `{}` would decode as a
  * valid empty backup, and restore would cheerfully report that there was nothing to add.
@@ -40,7 +45,7 @@ data class BackupArchive(
 ) {
     companion object {
         /** Bumped for any change after which an older reader would lose data, not only crash. */
-        const val FORMAT_VERSION = 2
+        const val FORMAT_VERSION = 3
     }
 }
 
@@ -87,6 +92,9 @@ data class BackupEvent(
     val createdAtMillis: Long? = null,
     val updatedAtMillis: Long? = null,
     val checklist: List<BackupChecklistItem> = emptyList(),
+    // --- format 3 ---
+    /** The occurrences of a repeating task that were ticked off, by the day each falls on. */
+    val completedOccurrences: List<BackupOccurrenceCompletion> = emptyList(),
 )
 
 @Serializable
@@ -95,6 +103,12 @@ data class BackupChecklistItem(
     val isDone: Boolean = false,
     val sortOrder: Int = 0,
     val createdAtMillis: Long? = null,
+)
+
+@Serializable
+data class BackupOccurrenceCompletion(
+    val epochDay: Long,
+    val completedAtMillis: Long? = null,
 )
 
 @Serializable

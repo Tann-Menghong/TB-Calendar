@@ -207,9 +207,6 @@ class AgendaViewModel(
         rangeStart.value = if (include) LocalDate.now().minusDays(PAST_DAYS) else LocalDate.now()
     }
 
-    fun setCompleted(eventId: Long, completed: Boolean) {
-        viewModelScope.launch { repository.setCompleted(eventId, completed) }
-    }
 
     private fun MutableStateFlow<AgendaFilter>.update(block: (AgendaFilter) -> AgendaFilter) {
         value = block(value)

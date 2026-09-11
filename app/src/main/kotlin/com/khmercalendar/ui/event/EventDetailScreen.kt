@@ -211,10 +211,14 @@ fun EventDetailScreen(
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (draft.isTask) {
+                    // The occurrence being looked at, not the series: this screen is opened on a
+                    // date, and "done" on a daily chore means done that day.
                     OutlinedButton(
-                        onClick = { viewModel.setCompleted(eventId, !draft.isCompleted) },
+                        onClick = {
+                            viewModel.setCompleted(eventId, occurrenceDate, !state.occurrenceCompleted)
+                        },
                     ) {
-                        Text(if (draft.isCompleted) "សម្គាល់ថាមិនទាន់រួច" else "សម្គាល់ថារួចរាល់")
+                        Text(if (state.occurrenceCompleted) "សម្គាល់ថាមិនទាន់រួច" else "សម្គាល់ថារួចរាល់")
                     }
                 }
                 val use24Hour = LocalUses24Hour.current

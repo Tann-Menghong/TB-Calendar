@@ -73,21 +73,10 @@ class TaskListViewModel(
                 settings.map { it.weekStart }.distinctUntilChanged(),
                 _showCompleted,
             ) { byDate, weekStart, showCompleted ->
-                val tasks = byDate.values
-                    .asSequence()
-                    .flatten()
-                    .filter { it.isTask }
-                    // A repeating task produces one occurrence per period; the list would
-                    // otherwise show the same chore fifty times. The nearest one still to do
-                    // is the one you can act on.
-                    .groupBy { it.eventId }
-                    .values
-                    .map { occurrences ->
-                        occurrences.firstOrNull { !it.isCompleted && !it.occurrenceDate.isBefore(day) }
-                            ?: occurrences.first()
-                    }
+                // One row per task, on the occurrence you can act on - see representatives().
+                val tasks = TaskBoard
+                    .representatives(byDate.values.flatten().filter { it.isTask }, day)
                     .map { TaskItem(it, it.taskPriority) }
-                    .toList()
 
                 TaskListState(
                     today = day,
@@ -128,8 +117,9 @@ class TaskListViewModel(
         _showCompleted.value = show
     }
 
-    fun setCompleted(eventId: Long, completed: Boolean) {
-        viewModelScope.launch { repository.setCompleted(eventId, completed) }
+    /** Ticks the occurrence on [date]; for a repeating task, that one occurrence only. */
+    fun setCompleted(eventId: Long, date: LocalDate, completed: Boolean) {
+        viewModelScope.launch { repository.setCompleted(eventId, date, completed) }
     }
 
     fun setPriority(eventId: Long, priority: TaskPriority) {

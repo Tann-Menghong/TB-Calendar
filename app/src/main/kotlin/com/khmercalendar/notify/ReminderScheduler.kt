@@ -4,6 +4,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.util.Log
 import androidx.core.content.getSystemService
@@ -32,11 +33,18 @@ import java.time.ZoneId
  * it is not granted by default. When it is missing the scheduler falls back to an inexact
  * alarm rather than throwing: a slightly late reminder is worth far more than a crash, and
  * the settings screen tells the user what to grant to make it precise.
+ *
+ * ## Why every re-arm starts by cancelling from [AlarmRegistry]
+ *
+ * Re-arming is only correct if what was armed before is gone first. Until 2.5.0 it never was -
+ * see [AlarmRegistry] for why - so an event moved to another day kept its old reminder, a
+ * deleted event kept firing, and turning notifications off disarmed nothing.
  */
 class ReminderScheduler(
     private val context: Context,
     private val repository: EventRepository,
     private val settingsStore: SettingsStore,
+    private val registry: AlarmRegistry = AlarmRegistry(context),
 ) {
 
     /**
@@ -73,7 +81,7 @@ class ReminderScheduler(
         val settings = settingsStore.settings.first()
         val alarmManager = context.getSystemService<AlarmManager>() ?: return 0
 
-        cancelAll(alarmManager)
+        cancelArmed(alarmManager)
         if (!settings.notificationsEnabled) return 0
 
         NotificationChannels.ensure(context, settings.notificationSoundUri, settings.notificationVibrate)
@@ -81,18 +89,28 @@ class ReminderScheduler(
         val now = LocalDateTime.now()
         val zone = ZoneId.systemDefault()
         val occurrences = repository.upcoming(now, WINDOW_DAYS)
+            // A timed event that runs past midnight is listed under every day it covers, so
+            // that each day's grid can draw it - but it starts once. Keyed by the day it was
+            // listed under, each copy armed its own alarm for the same minute, and the user got
+            // the same reminder twice.
+            .distinctBy { it.eventId to it.start }
 
-        var armed = 0
+        val armedNow = HashSet<AlarmRegistry.Armed>()
         for (occurrence in occurrences) {
-            if (occurrence.isCompleted) continue
+            // A finished task needs no reminder. An ordinary event is never "finished": the flag
+            // on one could only have come from the notification that used to offer "done" on
+            // meetings too, and honouring it silenced that meeting's reminders for good.
+            if (occurrence.isTask && occurrence.isCompleted) continue
+
+            val occurrenceDay = occurrence.start.toLocalDate()
             val minutes = repository.reminders(occurrence.eventId)
             for (minutesBefore in minutes) {
-                if (armed >= MAX_ALARMS) return armed
+                if (armedNow.size >= MAX_ALARMS) break
                 val fireAt = occurrence.start.minusMinutes(minutesBefore.toLong())
                 if (fireAt.isBefore(now)) continue
 
                 val triggerMillis = fireAt.atZone(zone).toInstant().toEpochMilli()
-                val requestCode = requestCode(occurrence.eventId, occurrence.occurrenceDate.toEpochDay(), minutesBefore)
+                val requestCode = requestCode(occurrence.eventId, occurrenceDay.toEpochDay(), minutesBefore)
                 val intent = ReminderReceiver.intent(
                     context = context,
                     eventId = occurrence.eventId,
@@ -102,14 +120,15 @@ class ReminderScheduler(
                     allDay = occurrence.allDay,
                     minutesBefore = minutesBefore,
                     requestCode = requestCode,
+                    isTask = occurrence.isTask,
+                    occurrenceEpochDay = occurrenceDay.toEpochDay(),
                 )
                 val pending = PendingIntent.getBroadcast(
                     context, requestCode, intent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                 )
                 schedule(alarmManager, triggerMillis, pending)
-                trackedRequestCodes += requestCode
-                armed++
+                armedNow += AlarmRegistry.Armed(requestCode, intent.data.toString())
             }
         }
         // Work-shift notices ride the same daily re-arm as event reminders, so they renew
@@ -122,10 +141,11 @@ class ReminderScheduler(
         )
 
         if (settings.holidayNotifications) {
-            armed += armHolidayReminders(alarmManager, now, zone, armed)
+            armHolidayReminders(alarmManager, now, zone, armedNow)
         }
-        Log.i(TAG, "Armed $armed reminders over the next $WINDOW_DAYS days")
-        return armed
+        registry.replace(armedNow)
+        Log.i(TAG, "Armed ${armedNow.size} reminders over the next $WINDOW_DAYS days")
+        return armedNow.size
     }
 
     /**
@@ -139,17 +159,16 @@ class ReminderScheduler(
         alarmManager: AlarmManager,
         now: LocalDateTime,
         zone: ZoneId,
-        alreadyArmed: Int,
-    ): Int {
+        armedNow: MutableSet<AlarmRegistry.Armed>,
+    ) {
         val from = now.toLocalDate()
         val holidays = runCatching {
             KhmerHolidays.inRange(from, from.plusDays(WINDOW_DAYS.toLong()))
                 .filter { it.kind == HolidayKind.PUBLIC }
         }.getOrDefault(emptyList())
 
-        var armed = 0
         for (holiday in holidays) {
-            if (alreadyArmed + armed >= MAX_ALARMS) break
+            if (armedNow.size >= MAX_ALARMS) break
             val fireAt = holiday.date.minusDays(1).atTime(HOLIDAY_NOTICE_HOUR, 0)
             if (fireAt.isBefore(now)) continue
 
@@ -166,10 +185,8 @@ class ReminderScheduler(
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
             schedule(alarmManager, fireAt.atZone(zone).toInstant().toEpochMilli(), pending)
-            trackedRequestCodes += requestCode
-            armed++
+            armedNow += AlarmRegistry.Armed(requestCode, intent.data.toString())
         }
-        return armed
     }
 
     private fun schedule(alarmManager: AlarmManager, triggerMillis: Long, pending: PendingIntent) {
@@ -191,18 +208,28 @@ class ReminderScheduler(
         }
     }
 
-    private fun cancelAll(alarmManager: AlarmManager) {
-        trackedRequestCodes.forEach { code ->
-            val intent = Intent(context, ReminderReceiver::class.java)
+    /**
+     * Cancels everything the last re-arm recorded, whichever process did it.
+     *
+     * The rebuilt Intent carries the stored data URI, because `filterEquals` compares it: a
+     * bare Intent with the right request code matches nothing, which is how every cancel before
+     * this silently did nothing. A snoozed reminder is not in the registry and is left alone -
+     * see [ReminderReceiver] - so re-arming never swallows a snooze the user asked for.
+     */
+    private fun cancelArmed(alarmManager: AlarmManager) {
+        for (entry in registry.armed()) {
+            val intent = Intent(context, ReminderReceiver::class.java).apply {
+                data = Uri.parse(entry.dataUri)
+            }
             PendingIntent.getBroadcast(
-                context, code, intent,
+                context, entry.requestCode, intent,
                 PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE,
             )?.let {
                 alarmManager.cancel(it)
                 it.cancel()
             }
         }
-        trackedRequestCodes.clear()
+        registry.replace(emptySet())
     }
 
     /** True when reminders will fire at the exact minute rather than being batched. */
@@ -229,14 +256,5 @@ class ReminderScheduler(
 
         /** Keeps holiday request codes clear of the event ones. */
         private const val HOLIDAY_CODE_BASE = 900_000_000
-
-        /**
-         * Which alarms are currently armed.
-         *
-         * Held in memory rather than persisted because [rescheduleAll] runs on every process
-         * start, on boot and daily, so a lost set costs one duplicate cancel-and-rearm cycle
-         * rather than a stuck alarm.
-         */
-        private val trackedRequestCodes = mutableSetOf<Int>()
     }
 }

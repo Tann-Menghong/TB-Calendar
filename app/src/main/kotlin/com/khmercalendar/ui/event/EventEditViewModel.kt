@@ -40,6 +40,13 @@ data class EventEditState(
     val isPinned: Boolean = false,
     /** The steps inside this task, in their own order. Empty for an ordinary event. */
     val checklist: List<ChecklistItem> = emptyList(),
+    /**
+     * Whether the occurrence on screen is done.
+     *
+     * Separate from the draft's flag, which belongs to the series: for a repeating task the
+     * detail screen shows one date, and that date is what its button ticks.
+     */
+    val occurrenceCompleted: Boolean = false,
 )
 
 /** Backs the add and edit form, and the delete paths on the detail screen. */
@@ -124,6 +131,7 @@ class EventEditViewModel(
                 categories = categories,
                 isNew = false,
                 isPinned = entity.isPinned,
+                occurrenceCompleted = repository.isCompleted(entity.id, initialDate ?: start.toLocalDate()),
             )
         }
     }
@@ -199,8 +207,12 @@ class EventEditViewModel(
         }
     }
 
-    fun setCompleted(eventId: Long, completed: Boolean) {
-        viewModelScope.launch { repository.setCompleted(eventId, completed) }
+    /** Ticks the occurrence on [date]; for a repeating task, that one occurrence only. */
+    fun setCompleted(eventId: Long, date: LocalDate, completed: Boolean) {
+        viewModelScope.launch {
+            repository.setCompleted(eventId, date, completed)
+            _state.update { it.copy(occurrenceCompleted = repository.isCompleted(eventId, date)) }
+        }
     }
 
     /**

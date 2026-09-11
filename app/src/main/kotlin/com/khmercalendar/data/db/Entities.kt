@@ -263,3 +263,42 @@ data class FocusSessionEntity(
     val endedAtMillis: Long? = null,
     val eventId: Long? = null,
 )
+
+/**
+ * One occurrence of a repeating task, ticked off.
+ *
+ * ## Why this exists
+ *
+ * A repeating series is one row in `events`, and it carried one completion flag. Ticking
+ * Monday's chore therefore ticked every Monday there would ever be - and the reminder
+ * scheduler, which skips completed rows, stopped reminding about all of them. The only way to
+ * record "this Monday is done" is a row per occurrence, keyed by the day it falls on.
+ *
+ * A one-off task still uses its own `events.isCompleted`: it has exactly one occurrence, and
+ * moving it here would rewrite every task ever finished for no gain.
+ *
+ * Presence is the fact, as with habit ticks: there is no "not done" row. The composite key is
+ * what makes a double tap a no-op rather than a second completion, and the cascade means a
+ * deleted task takes its history with it instead of leaving rows nothing can reach.
+ *
+ * @property epochDay the local day the occurrence *starts* on.
+ * @property completedAtMillis when it was ticked, which is the day statistics count it on.
+ */
+@Entity(
+    tableName = "task_completions",
+    primaryKeys = ["eventId", "epochDay"],
+    foreignKeys = [
+        ForeignKey(
+            entity = EventEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["eventId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index("completedAtMillis")],
+)
+data class TaskCompletionEntity(
+    val eventId: Long,
+    val epochDay: Long,
+    val completedAtMillis: Long,
+)

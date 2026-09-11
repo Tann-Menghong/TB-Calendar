@@ -12,6 +12,7 @@ import com.khmercalendar.data.db.FocusSessionEntity
 import com.khmercalendar.data.db.HabitEntity
 import com.khmercalendar.data.db.HabitEntryEntity
 import com.khmercalendar.data.db.KhmerCalendarDatabase
+import com.khmercalendar.data.db.TaskCompletionEntity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -152,6 +153,7 @@ class BackupManager(
             val exceptions = database.eventExceptionDao().all().groupBy { it.eventId }
             val steps = database.checklistDao().all().groupBy { it.eventId }
             val ticks = database.habitDao().allEntries().groupBy { it.habitId }
+            val done = database.taskCompletionDao().all().groupBy { it.eventId }
 
             BackupArchive(
                 formatVersion = BackupArchive.FORMAT_VERSION,
@@ -185,6 +187,9 @@ class BackupManager(
                         checklist = steps[e.id].orEmpty()
                             .sortedWith(compareBy({ it.sortOrder }, { it.id }))
                             .map { BackupChecklistItem(it.text, it.isDone, it.sortOrder, it.createdAtMillis) },
+                        completedOccurrences = done[e.id].orEmpty().map {
+                            BackupOccurrenceCompletion(it.epochDay, it.completedAtMillis)
+                        },
                     )
                 },
                 notes = database.dayNoteDao().all().map {
@@ -341,10 +346,17 @@ class BackupManager(
                         ),
                     )
                 }
+                insertTicks(id, e, now)
                 checkpoint()
             }
             for ((alias, first) in plan.eventAliases) {
                 eventIds[first]?.let { eventIds[alias] = it }
+            }
+            // Ticks for a task the phone already has are merged in, the way habit days are:
+            // they are history, and the key makes a day already ticked a no-op.
+            val fileEvents = archive.events.associateBy { it.id }
+            for ((backupId, deviceId) in plan.duplicateEvents) {
+                fileEvents[backupId]?.let { insertTicks(deviceId, it, now) }
             }
 
             for (n in plan.newNotes) {
@@ -585,6 +597,15 @@ class BackupManager(
             skippedFocus = skippedFocus,
             unreadable = unreadable,
         )
+    }
+
+    private suspend fun insertTicks(eventId: Long, event: BackupEvent, now: Long) {
+        for (tick in event.completedOccurrences) {
+            if (!BackupValidation.isValidDay(tick.epochDay)) continue
+            database.taskCompletionDao().insert(
+                TaskCompletionEntity(eventId, tick.epochDay, tick.completedAtMillis ?: now),
+            )
+        }
     }
 
     internal fun countsOf(archive: BackupArchive) = BackupCounts(

@@ -1,5 +1,67 @@
 # Changelog
 
+## 2.5.0 — 2026-09-11
+
+Reminders that stop when they should, and repeating tasks you can finish one day at a time.
+
+### Reminders outlived the things they were for
+
+Every reminder is an alarm set ahead of time, and every change to your calendar re-sets them — cancelling the old ones first. **The cancelling had never worked.** Android only cancels an alarm if you describe it exactly, including its internal address, and the app described each one without it. The list of what had been set was also kept only in memory, so it was empty every time Android closed the app in the background.
+
+What that meant, each confirmed by a test on the old version before anything was changed:
+
+- **Move an event to another day** and the reminder for the old day still went off.
+- **Delete an event** and its reminder still went off.
+- **Turn notifications off** and every reminder already set still went off.
+- **An event running past midnight** reminded you twice.
+
+Now each alarm is recorded with everything needed to cancel it, in a small file that survives the app being closed. And as a second line of defence, a reminder checks just before it appears that the event still exists, still starts at that time, and — for a task — isn't already done. If that check can't finish in a few seconds, the reminder is shown anyway: a reminder you can dismiss is better than one that never comes.
+
+That check also silences the stale alarms older versions left behind, which could not be cancelled at all.
+
+### Ticking one day of a repeating task ticked every day
+
+A repeating task was stored once, with one "done" flag. **Ticking Monday's chore marked every Monday done**, forever — and since the reminder scheduler skips finished tasks, it also stopped reminding you about any of them.
+
+Each day of a repeating task is now done on its own. Tick today's chore and tomorrow's is still waiting, still reminded.
+
+Upgrading repairs what the old behaviour left: a repeating task marked done as a whole becomes the one day it was ticked for — the first occurrence on or after the day you ticked it, which is the one the to-do list was showing you — and the rest come back undone. A task marked done with no record of when is left exactly as it is, rather than guessed at.
+
+### "Done" on a meeting's reminder silenced the meeting
+
+Every reminder offered a **រួចរាល់** button, including reminders for ordinary events. On a weekly meeting it marked the meeting "done" — so it stopped being reminded, and dropped off the dashboard's next-event card and out of conflict checks.
+
+The button now appears only on tasks, and ticks only the day it was for. Upgrading clears the flag from any event it touched.
+
+### Also fixed
+
+- **Editing a finished task re-stamped it as finished today.** Fixing a typo in a task you finished in January moved it into this week's statistics. The original completion time is kept.
+- **Duplicating a finished task made a finished copy**, counted twice in statistics; duplicating a pinned date made a second countdown. A copy now starts undone and unpinned.
+- **A snoozed reminder could be swallowed.** A snooze shared its alarm's address, so saving any event within those ten minutes cancelled it. Snoozes now have their own.
+- **A daily task appeared on the wrong day, and on the dashboard three times.** The to-do list picked "the next occurrence still to do" from a list in no particular order, so a daily chore could show up dated months ahead — and ticking it would now have ticked that far-off day. The dashboard's focus list counted every day of the chore as a separate task and showed it three times. Both now show each task once, on the day you can act on.
+- **Tapping a reminder opened the event on today's date**, not the date it was for. Pressing "done" there after tomorrow's reminder would have ticked today. It now opens on the occurrence's own date.
+- **Statistics count each day of a repeating task.** A daily chore kept all week is seven, not one.
+- **Backups carry the days each repeating task was ticked** (backup format 3), and a later restore merges new ticks into a task the phone already has.
+
+### Tested
+
+**503 unit tests** pass and lint is clean, including 29 new ones. The four reminder failures above were written as tests first and failed on 2.4.0 exactly as described, judged by the alarms Android itself holds rather than by what the app believed it had set. The migration tests build a real version 6 database and cover a daily task, a weekly task ticked between occurrences, a meeting flagged done, a finished one-off, and a series with no completion time. The to-do list tests feed occurrences in shuffled order, because that is how they really arrive.
+
+On an **Android 8.0 (API 26)** emulator:
+
+- **Upgrading a real version 6 database** holding what 2.4.0 left behind: a daily chore marked done as a whole became a single tick on the day it was ticked, a weekly meeting flagged done had the flag cleared and its reminders armed again, and a finished one-off task kept its flag and time.
+- **Deleting that meeting** took the recorded alarms from two to none, and the alarms Android held for the app dropped with them.
+- **Real reminders**, set to fire two and a half minutes ahead: "done" appeared only on the task's reminder, and tapping it ticked tomorrow's occurrence rather than the series. Tapping the meeting's reminder opened it on tomorrow's date; the build before the fix opened it on today.
+- **The to-do list** showed the repaired chore on tomorrow, and ticking it recorded tomorrow and moved it on to the day after. **The dashboard** listed it once.
+
+### Privacy
+
+Unchanged: no account, no analytics, no tracking, no ads. Reminders are alarms on your phone; nothing about them leaves it.
+
+### Install
+
+Android 8.0 (API 26) or later. Download `TB-Calendar-2.5.0.apk` below. Upgrading keeps all your data and repairs repeating tasks as described above.
+
 ## 2.4.0 — 2026-09-11
 
 Note edits that finally save, and a backup that keeps everything.

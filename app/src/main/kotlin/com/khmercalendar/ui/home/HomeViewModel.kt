@@ -168,9 +168,12 @@ class HomeViewModel(
 
         // Ranked, not "the first six the query returned". A focus list that ignores which
         // task is urgent is a list of tasks, which the to-do screen already is.
+        // One occurrence per task first. Every day of a daily chore in the window was its own
+        // candidate, so the focus list showed the same chore three times over.
+        val taskRows = TaskBoard.representatives(flat.filter { it.isTask }, day)
         val tasks = TaskBoard
             .focus(
-                tasks = flat.filter { it.isTask }.map { TaskItem(it, it.taskPriority) },
+                tasks = taskRows.map { TaskItem(it, it.taskPriority) },
                 today = day,
                 limit = TASK_LIMIT,
             )
@@ -249,8 +252,9 @@ class HomeViewModel(
                 eventsThisMonth = byDate
                     .filterKeys { !it.isBefore(day) && !it.isAfter(monthEnd) }
                     .values.sumOf { it.size },
-                openTasks = flat.count { it.isTask && !it.isCompleted },
-                doneTasks = flat.count { it.isTask && it.isCompleted },
+                // Counted per task, for the same reason: sixty days of one chore is not sixty tasks.
+                openTasks = taskRows.count { !it.isCompleted },
+                doneTasks = taskRows.count { it.isCompleted },
                 todayTasksDone = todayEvents.count { it.isTask && it.isCompleted },
                 todayTasksTotal = todayEvents.count { it.isTask },
             ),
@@ -277,8 +281,9 @@ class HomeViewModel(
         }
     }
 
-    fun setTaskCompleted(eventId: Long, completed: Boolean) {
-        viewModelScope.launch { repository.setCompleted(eventId, completed) }
+    /** Ticks the occurrence on [date]; for a repeating task, that one occurrence only. */
+    fun setTaskCompleted(eventId: Long, date: LocalDate, completed: Boolean) {
+        viewModelScope.launch { repository.setCompleted(eventId, date, completed) }
     }
 
     private companion object {

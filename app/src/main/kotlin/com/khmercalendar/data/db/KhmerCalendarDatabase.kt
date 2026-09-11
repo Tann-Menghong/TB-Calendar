@@ -21,8 +21,9 @@ import kotlinx.coroutines.launch
         HabitEntryEntity::class,
         ChecklistItemEntity::class,
         FocusSessionEntity::class,
+        TaskCompletionEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 abstract class KhmerCalendarDatabase : RoomDatabase() {
@@ -35,6 +36,7 @@ abstract class KhmerCalendarDatabase : RoomDatabase() {
     abstract fun habitDao(): HabitDao
     abstract fun checklistDao(): ChecklistDao
     abstract fun focusDao(): FocusDao
+    abstract fun taskCompletionDao(): TaskCompletionDao
 
     companion object {
         private const val NAME = "khmer_calendar.db"
@@ -158,6 +160,108 @@ abstract class KhmerCalendarDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Adds per-occurrence completion for repeating tasks, and repairs what the single flag did.
+         *
+         * The table and index SQL are copied from the schema Room exported for version 7, as
+         * every migration here is.
+         *
+         * ## The repair
+         *
+         * Until now a repeating series had one `isCompleted`, so ticking one occurrence marked the
+         * whole series done. Each such row becomes a tick on a single occurrence: the first one on
+         * or after the day it was ticked, because the to-do list shows a repeating task as its
+         * next occurrence from today, and that is the one people were ticking. If none follows -
+         * the series had ended - the last one before is used. The series flag is then cleared, so
+         * the other occurrences come back undone, which is what they always were.
+         *
+         * A series flagged done with no completion time is left exactly as it is. There is no way
+         * to know which occurrence was meant, and guessing would un-finish something the user
+         * finished.
+         *
+         * Ordinary events lose the flag entirely. It means nothing on an event, and the only thing
+         * that ever set it was the reminder's "done" button, which was shown on meetings too - and
+         * left each meeting it touched silenced and missing from the dashboard.
+         */
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `task_completions` (`eventId` INTEGER NOT NULL, " +
+                        "`epochDay` INTEGER NOT NULL, `completedAtMillis` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`eventId`, `epochDay`), FOREIGN KEY(`eventId`) REFERENCES " +
+                        "`events`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_task_completions_completedAtMillis` " +
+                        "ON `task_completions` (`completedAtMillis`)",
+                )
+                repairRepeatingCompletions(db, java.time.ZoneId.systemDefault())
+                db.execSQL(
+                    "UPDATE events SET isCompleted = 0, completedAtMillis = NULL " +
+                        "WHERE isTask = 0 AND isCompleted = 1",
+                )
+            }
+        }
+
+        /** The repair step of [MIGRATION_6_7]. The zone is a parameter so a test can fix it. */
+        internal fun repairRepeatingCompletions(db: SupportSQLiteDatabase, zone: java.time.ZoneId) {
+            class Legacy(
+                val id: Long,
+                val startMillis: Long,
+                val allDay: Boolean,
+                val rrule: String,
+                val completedAt: Long,
+            )
+
+            val rows = ArrayList<Legacy>()
+            db.query(
+                "SELECT id, startUtcMillis, allDay, rrule, completedAtMillis FROM events " +
+                    "WHERE isTask = 1 AND isCompleted = 1 AND rrule IS NOT NULL " +
+                    "AND completedAtMillis IS NOT NULL",
+            ).use { c ->
+                while (c.moveToNext()) {
+                    rows += Legacy(c.getLong(0), c.getLong(1), c.getInt(2) != 0, c.getString(3), c.getLong(4))
+                }
+            }
+
+            val expander = com.khmercalendar.core.recurrence.RecurrenceExpander
+            for (row in rows) {
+                // A rule that does not parse is expanded as a single occurrence, which the flag
+                // already describes correctly.
+                val rule = com.khmercalendar.core.recurrence.RecurrenceRule.parse(row.rrule) ?: continue
+                val exceptions = HashSet<java.time.LocalDate>()
+                db.query(
+                    "SELECT exceptionEpochDay FROM event_exceptions WHERE eventId = ?",
+                    arrayOf<Any?>(row.id),
+                ).use { c ->
+                    while (c.moveToNext()) exceptions += java.time.LocalDate.ofEpochDay(c.getLong(0))
+                }
+
+                val first = com.khmercalendar.domain.EventTimes.dateOf(row.startMillis, zone, row.allDay)
+                val tickedOn = java.time.Instant.ofEpochMilli(row.completedAt).atZone(zone).toLocalDate()
+                val day = expander.occurrences(
+                    first, rule, tickedOn, tickedOn.plusDays(REPAIR_WINDOW_DAYS), exceptions,
+                ).firstOrNull()
+                    ?: expander.occurrences(
+                        first, rule, tickedOn.minusDays(REPAIR_WINDOW_DAYS), tickedOn, exceptions,
+                    ).lastOrNull()
+                    ?: continue
+
+                db.execSQL(
+                    "INSERT OR IGNORE INTO task_completions (eventId, epochDay, completedAtMillis) " +
+                        "VALUES (?, ?, ?)",
+                    arrayOf<Any?>(row.id, day.toEpochDay(), row.completedAt),
+                )
+                db.execSQL(
+                    "UPDATE events SET isCompleted = 0, completedAtMillis = NULL WHERE id = ?",
+                    arrayOf<Any?>(row.id),
+                )
+            }
+        }
+
+        /** How far either side of the tick the repair looks for the occurrence it was for. */
+        private const val REPAIR_WINDOW_DAYS = 400L
+
         @Volatile
         private var instance: KhmerCalendarDatabase? = null
 
@@ -174,6 +278,7 @@ abstract class KhmerCalendarDatabase : RoomDatabase() {
                     MIGRATION_3_4,
                     MIGRATION_4_5,
                     MIGRATION_5_6,
+                    MIGRATION_6_7,
                 )
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {

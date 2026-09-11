@@ -59,6 +59,7 @@ class AppContainer(
             exceptionDao = database.eventExceptionDao(),
             noteDao = database.dayNoteDao(),
             database.checklistDao(),
+            database.taskCompletionDao(),
         )
     }
 

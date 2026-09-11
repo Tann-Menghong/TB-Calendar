@@ -11,6 +11,7 @@ import com.khmercalendar.data.db.FocusSessionEntity
 import com.khmercalendar.data.db.HabitEntity
 import com.khmercalendar.data.db.HabitEntryEntity
 import com.khmercalendar.data.db.KhmerCalendarDatabase
+import com.khmercalendar.data.db.TaskCompletionEntity
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -357,10 +358,10 @@ class BackupManagerTest {
     @Test
     fun `a file from a newer app is refused before anything is written`() = runTest {
         try {
-            manager(target).previewOf("""{"formatVersion": 3, "appVersion": "9", "exportedAtMillis": 1}""")
+            manager(target).previewOf("""{"formatVersion": 4, "appVersion": "9", "exportedAtMillis": 1}""")
             fail("a newer format must be refused")
         } catch (expected: BackupError.TooNew) {
-            assertEquals(3, expected.version)
+            assertEquals(4, expected.version)
         }
         assertEquals(0, target.eventDao().count())
     }
@@ -482,5 +483,38 @@ class BackupManagerTest {
         assertTrue(summary.settingsFailed)
         assertFalse(summary.settingsApplied)
         assertEquals(1, target.eventDao().count())
+    }
+
+    @Test
+    fun `ticked days of a repeating task survive a backup and merge on a later restore`() = runTest {
+        val task = source.eventDao().insert(
+            EventEntity(
+                title = "ស្រោចទឹកផ្កា",
+                startUtcMillis = 0,
+                endUtcMillis = 86_400_000,
+                allDay = true,
+                zoneId = "UTC",
+                rrule = "FREQ=DAILY",
+                isTask = true,
+                createdAtMillis = 1,
+                updatedAtMillis = 1,
+            ),
+        )
+        source.taskCompletionDao().insert(TaskCompletionEntity(task, 20_700, 11))
+        source.taskCompletionDao().insert(TaskCompletionEntity(task, 20_701, 12))
+
+        restore(backupOf(source))
+
+        val restored = target.eventDao().allEvents().single()
+        assertEquals(listOf(20_700L, 20_701L), target.taskCompletionDao().all().map { it.epochDay })
+        assertTrue(target.taskCompletionDao().all().all { it.eventId == restored.id })
+        assertEquals(11L, target.taskCompletionDao().all().first().completedAtMillis)
+
+        // A day ticked on the old phone afterwards joins the task the new phone already has.
+        source.taskCompletionDao().insert(TaskCompletionEntity(task, 20_702, 13))
+        restore(backupOf(source))
+
+        assertEquals(1, target.eventDao().count())
+        assertEquals(listOf(20_700L, 20_701L, 20_702L), target.taskCompletionDao().all().map { it.epochDay })
     }
 }

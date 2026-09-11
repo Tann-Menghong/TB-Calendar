@@ -139,7 +139,7 @@ fun TaskListScreen(
                             checklist = state.checklists[task.occurrence.eventId],
                             task = task,
                             today = state.today,
-                            onToggle = { done -> viewModel.setCompleted(task.eventId, done) },
+                            onToggle = { done -> viewModel.setCompleted(task.eventId, task.date, done) },
                             onCyclePriority = {
                                 viewModel.setPriority(task.eventId, next(task.priority))
                             },

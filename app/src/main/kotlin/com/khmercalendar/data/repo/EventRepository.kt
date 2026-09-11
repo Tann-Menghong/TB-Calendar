@@ -13,6 +13,8 @@ import com.khmercalendar.data.db.EventEntity
 import com.khmercalendar.data.db.EventExceptionDao
 import com.khmercalendar.data.db.EventExceptionEntity
 import com.khmercalendar.data.db.ReminderDao
+import com.khmercalendar.data.db.TaskCompletionDao
+import com.khmercalendar.data.db.TaskCompletionEntity
 import com.khmercalendar.domain.CompletedTask
 import com.khmercalendar.domain.CountdownItem
 import com.khmercalendar.domain.ChecklistItem
@@ -45,6 +47,7 @@ class EventRepository(
     private val exceptionDao: EventExceptionDao,
     private val noteDao: DayNoteDao,
     private val checklistDao: ChecklistDao,
+    private val completionDao: TaskCompletionDao,
     private val zoneProvider: () -> ZoneId = { ZoneId.systemDefault() },
 ) {
 
@@ -72,8 +75,9 @@ class EventRepository(
             eventDao.observeCandidates(fromMillis, toMillis),
             categoryDao.observeAll(),
             exceptionDao.observeAll(),
-        ) { events, categories, exceptions ->
-            expand(events, categories, exceptions, from, to, zone)
+            completionDao.observeBetween(from.toEpochDay(), to.toEpochDay()),
+        ) { events, categories, exceptions, completions ->
+            expand(events, categories, exceptions, completions, from, to, zone)
         }
     }
 
@@ -85,6 +89,7 @@ class EventRepository(
             eventDao.candidates(fromMillis, toMillis),
             categoryDao.all(),
             exceptionDao.all(),
+            completionDao.between(from.toEpochDay(), to.toEpochDay()),
             from, to, zone,
         )
     }
@@ -93,6 +98,7 @@ class EventRepository(
         events: List<EventEntity>,
         categories: List<CategoryEntity>,
         exceptions: List<EventExceptionEntity>,
+        completions: List<TaskCompletionEntity>,
         from: LocalDate,
         to: LocalDate,
         zone: ZoneId,
@@ -100,6 +106,7 @@ class EventRepository(
         val categoryById = categories.associateBy { it.id }
         val hidden = categories.filterNot { it.isVisible }.map { it.id }.toSet()
         val exceptionsByEvent = exceptions.groupBy({ it.eventId }, { LocalDate.ofEpochDay(it.exceptionEpochDay) })
+        val ticked = completions.mapTo(HashSet()) { it.eventId to it.epochDay }
 
         val out = HashMap<LocalDate, MutableList<EventOccurrence>>()
         for (event in events) {
@@ -134,7 +141,9 @@ class EventRepository(
                     categoryId = event.categoryId,
                     categoryName = category?.name,
                     isTask = event.isTask,
-                    isCompleted = event.isCompleted,
+                    // A repeating task is done one occurrence at a time; see [setCompleted].
+                    isCompleted = event.isCompleted ||
+                        (rule != null && (event.id to date.toEpochDay()) in ticked),
                     isRecurring = rule != null,
                     priority = event.priority,
                     isPinned = event.isPinned,
@@ -187,6 +196,7 @@ class EventRepository(
     suspend fun save(draft: EventDraftModel): Long {
         val zone = zoneProvider()
         val now = System.currentTimeMillis()
+        val existing = if (draft.id == 0L) null else eventDao.byId(draft.id)
         val startLocal = if (draft.allDay) {
             draft.date.atStartOfDay()
         } else {
@@ -218,9 +228,15 @@ class EventRepository(
             // Preserved across an edit rather than carried on the draft: pinning is done
             // from the detail screen with one tap, and the editor has no pin control, so
             // taking it from a draft would silently unpin anything you edited.
-            isPinned = if (draft.id == 0L) false else (eventDao.byId(draft.id)?.isPinned ?: false),
-            completedAtMillis = if (draft.isCompleted) now else null,
-            createdAtMillis = if (draft.id == 0L) now else (eventDao.byId(draft.id)?.createdAtMillis ?: now),
+            isPinned = existing?.isPinned ?: false,
+            // Kept when the state did not change. Stamping "now" on every save moved a task
+            // finished in January into this week's statistics the moment its title was fixed.
+            completedAtMillis = when {
+                !draft.isCompleted -> null
+                existing != null && existing.isCompleted -> existing.completedAtMillis
+                else -> now
+            },
+            createdAtMillis = existing?.createdAtMillis ?: now,
             updatedAtMillis = now,
         )
 
@@ -241,6 +257,12 @@ class EventRepository(
         val copy = original.copy(
             id = 0,
             title = original.title + " (ច្បាប់ចម្លង)",
+            // A copy starts undone and unpinned. Copying the flags made a duplicate of a
+            // finished task count twice in statistics, and a duplicate of a pinned date
+            // appear as a second countdown to the same day.
+            isCompleted = false,
+            completedAtMillis = null,
+            isPinned = false,
             createdAtMillis = now,
             updatedAtMillis = now,
         )
@@ -263,14 +285,38 @@ class EventRepository(
      * that column until statistics did, at which point a task ticked in January and un-ticked
      * in March would have counted as March's work.
      */
-    suspend fun setCompleted(eventId: Long, completed: Boolean) {
+    suspend fun setCompleted(eventId: Long, date: LocalDate, completed: Boolean) {
+        val event = eventDao.byId(eventId) ?: return
         val now = System.currentTimeMillis()
-        eventDao.setCompleted(
-            id = eventId,
-            completed = completed,
-            completedAt = if (completed) now else null,
-            atMillis = now,
-        )
+
+        if (RecurrenceRule.parse(event.rrule) == null) {
+            // Already in that state: a second tap must not move the completion time.
+            if (event.isCompleted == completed) return
+            eventDao.setCompleted(
+                id = eventId,
+                completed = completed,
+                completedAt = if (completed) now else null,
+                atMillis = now,
+            )
+            return
+        }
+
+        if (completed) {
+            completionDao.insert(TaskCompletionEntity(eventId, date.toEpochDay(), now))
+        } else {
+            completionDao.delete(eventId, date.toEpochDay())
+            // A series-wide flag can only have come from the old behaviour. Leaving it would make
+            // un-ticking do nothing, because the flag alone marks every occurrence done.
+            if (event.isCompleted) eventDao.setCompleted(eventId, false, null, now)
+        }
+    }
+
+    /** Whether one occurrence of [eventId] is done, by the same rule the occurrences use. */
+    suspend fun isCompleted(eventId: Long, date: LocalDate): Boolean {
+        val event = eventDao.byId(eventId) ?: return false
+        if (event.isCompleted) return true
+        if (RecurrenceRule.parse(event.rrule) == null) return false
+        return completionDao.find(eventId, date.toEpochDay()) != null
     }
 
     /** Changes a task's urgency in place, without going through the full editor. */
@@ -432,7 +478,7 @@ class EventRepository(
         val zone = ZoneId.systemDefault()
         val fromMillis = from.atStartOfDay(zone).toInstant().toEpochMilli()
         val toMillis = to.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1
-        return eventDao.observeCompletedTasksBetween(fromMillis, toMillis).map { rows ->
+        val oneOff = eventDao.observeCompletedTasksBetween(fromMillis, toMillis).map { rows ->
             rows.mapNotNull { row ->
                 val at = row.completedAtMillis ?: return@mapNotNull null
                 CompletedTask(
@@ -443,6 +489,19 @@ class EventRepository(
                 )
             }
         }
+        // Each occurrence of a repeating task is its own completion, counted on the day it
+        // was ticked - a daily chore kept all week is seven, not one.
+        val repeating = completionDao.observeCompletedBetween(fromMillis, toMillis).map { rows ->
+            rows.map { row ->
+                CompletedTask(
+                    eventId = row.eventId,
+                    date = Instant.ofEpochMilli(row.completedAtMillis).atZone(zone).toLocalDate(),
+                    priority = com.khmercalendar.domain.TaskPriority.of(row.priority),
+                    categoryId = row.categoryId,
+                )
+            }
+        }
+        return combine(oneOff, repeating) { a, b -> a + b }
     }
 
     // --- day notes -------------------------------------------------------------------

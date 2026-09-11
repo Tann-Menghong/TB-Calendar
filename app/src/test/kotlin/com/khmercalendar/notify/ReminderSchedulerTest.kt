@@ -58,6 +58,7 @@ class ReminderSchedulerTest {
         exceptionDao = db.eventExceptionDao(),
         noteDao = db.dayNoteDao(),
             checklistDao = db.checklistDao(),
+        completionDao = db.taskCompletionDao(),
     )
 
     private fun scheduler(eventDao: EventDao = db.eventDao()) = ReminderScheduler(

@@ -17,6 +17,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.File
+import java.time.LocalDate
+import java.time.ZoneId
 
 /**
  * The schema migration, against a database actually built at the old version.
@@ -100,6 +102,7 @@ class MigrationTest {
                 KhmerCalendarDatabase.MIGRATION_3_4,
                 KhmerCalendarDatabase.MIGRATION_4_5,
                 KhmerCalendarDatabase.MIGRATION_5_6,
+                KhmerCalendarDatabase.MIGRATION_6_7,
             )
             .allowMainThreadQueries()
             .build()
@@ -418,6 +421,131 @@ class MigrationTest {
         val fresh = openMigrated()
 
         assertEquals(0, fresh.eventDao().count())
-        assertEquals(6, fresh.openHelper.writableDatabase.version)
+        assertEquals(7, fresh.openHelper.writableDatabase.version)
+    }
+
+    // --- 6 to 7: per-occurrence completion ------------------------------------------------
+
+    private fun localNoon(epochDay: Long): Long =
+        LocalDate.ofEpochDay(epochDay).atTime(12, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+    /** A version 6 events row. [completedAt] null writes SQL NULL. */
+    private fun insertV6Event(
+        raw: SQLiteDatabase,
+        id: Long,
+        title: String,
+        startEpochDay: Long,
+        rrule: String?,
+        isTask: Boolean,
+        isCompleted: Boolean,
+        completedAt: Long?,
+    ) {
+        val start = startEpochDay * 86_400_000L
+        raw.execSQL(
+            "INSERT INTO events (id, title, description, location, startUtcMillis, endUtcMillis, " +
+                "allDay, zoneId, rrule, categoryId, colorArgb, isTask, isCompleted, priority, " +
+                "isPinned, completedAtMillis, createdAtMillis, updatedAtMillis) VALUES " +
+                "(?, ?, NULL, NULL, ?, ?, 1, ?, ?, NULL, NULL, ?, ?, 0, 0, ?, 1, 1)",
+            arrayOf<Any?>(
+                id, title, start, start + 86_400_000L, ZONE, rrule,
+                if (isTask) 1 else 0, if (isCompleted) 1 else 0, completedAt,
+            ),
+        )
+    }
+
+    @Test
+    fun `a version 6 calendar gains per-occurrence ticks with everything else intact`() = runBlocking {
+        createVersion(6)
+        SQLiteDatabase.openOrCreateDatabase(dbFile, null).use { raw ->
+            insertV6Event(raw, 51, "ដាក់ពាក្យ", 20_000, null, isTask = true, isCompleted = false, completedAt = null)
+            raw.execSQL(
+                "INSERT INTO focus_sessions (kind, startedAtMillis, plannedMinutes, endedAtMillis, eventId) " +
+                    "VALUES ('focus', 1, 25, 1500001, 51)",
+            )
+        }
+
+        val migrated = openMigrated()
+
+        assertNotNull("the task was lost by the 6 to 7 migration", migrated.eventDao().byId(51))
+        assertEquals(1, migrated.focusDao().count())
+        assertTrue(migrated.taskCompletionDao().all().isEmpty())
+    }
+
+    @Test
+    fun `a daily task marked done as a whole becomes the one day that was ticked`() = runBlocking {
+        createVersion(6)
+        val start = 20_000L
+        val tickedAt = localNoon(start + 5)
+        SQLiteDatabase.openOrCreateDatabase(dbFile, null).use { raw ->
+            insertV6Event(raw, 61, "ស្រោចទឹកផ្កា", start, "FREQ=DAILY", isTask = true, isCompleted = true, completedAt = tickedAt)
+        }
+
+        val migrated = openMigrated()
+
+        val ticks = migrated.taskCompletionDao().all()
+        assertEquals(listOf(start + 5), ticks.map { it.epochDay })
+        assertEquals(tickedAt, ticks.single().completedAtMillis)
+        val series = migrated.eventDao().byId(61)!!
+        assertEquals(false, series.isCompleted)
+        assertNull(series.completedAtMillis)
+    }
+
+    @Test
+    fun `a weekly task ticked between occurrences becomes its next occurrence`() = runBlocking {
+        createVersion(6)
+        val start = 20_000L
+        SQLiteDatabase.openOrCreateDatabase(dbFile, null).use { raw ->
+            insertV6Event(
+                raw, 62, "សម្អាតផ្ទះ", start, "FREQ=WEEKLY",
+                isTask = true, isCompleted = true, completedAt = localNoon(start + 9),
+            )
+        }
+
+        val migrated = openMigrated()
+
+        // Ticked two days after one occurrence: the list was already showing the next.
+        assertEquals(listOf(start + 14), migrated.taskCompletionDao().all().map { it.epochDay })
+    }
+
+    @Test
+    fun `a meeting flagged done by its reminder is no longer flagged`() = runBlocking {
+        createVersion(6)
+        SQLiteDatabase.openOrCreateDatabase(dbFile, null).use { raw ->
+            insertV6Event(raw, 63, "ប្រជុំ", 20_000, "FREQ=WEEKLY", isTask = false, isCompleted = true, completedAt = 5)
+        }
+
+        val migrated = openMigrated()
+
+        val meeting = migrated.eventDao().byId(63)!!
+        assertEquals(false, meeting.isCompleted)
+        assertNull(meeting.completedAtMillis)
+        assertTrue(migrated.taskCompletionDao().all().isEmpty())
+    }
+
+    @Test
+    fun `a finished one-off task keeps its flag and its time`() = runBlocking {
+        createVersion(6)
+        SQLiteDatabase.openOrCreateDatabase(dbFile, null).use { raw ->
+            insertV6Event(raw, 64, "ដាក់ពាក្យ", 20_000, null, isTask = true, isCompleted = true, completedAt = 777)
+        }
+
+        val migrated = openMigrated()
+
+        val task = migrated.eventDao().byId(64)!!
+        assertEquals(true, task.isCompleted)
+        assertEquals(777L, task.completedAtMillis)
+    }
+
+    @Test
+    fun `a series marked done with no completion time is left alone rather than guessed at`() = runBlocking {
+        createVersion(6)
+        SQLiteDatabase.openOrCreateDatabase(dbFile, null).use { raw ->
+            insertV6Event(raw, 65, "អានសៀវភៅ", 20_000, "FREQ=DAILY", isTask = true, isCompleted = true, completedAt = null)
+        }
+
+        val migrated = openMigrated()
+
+        assertEquals(true, migrated.eventDao().byId(65)!!.isCompleted)
+        assertTrue(migrated.taskCompletionDao().all().isEmpty())
     }
 }
