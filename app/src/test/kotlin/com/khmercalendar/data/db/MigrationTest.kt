@@ -103,6 +103,7 @@ class MigrationTest {
                 KhmerCalendarDatabase.MIGRATION_4_5,
                 KhmerCalendarDatabase.MIGRATION_5_6,
                 KhmerCalendarDatabase.MIGRATION_6_7,
+                KhmerCalendarDatabase.MIGRATION_7_8,
             )
             .allowMainThreadQueries()
             .build()
@@ -421,7 +422,7 @@ class MigrationTest {
         val fresh = openMigrated()
 
         assertEquals(0, fresh.eventDao().count())
-        assertEquals(7, fresh.openHelper.writableDatabase.version)
+        assertEquals(8, fresh.openHelper.writableDatabase.version)
     }
 
     // --- 6 to 7: per-occurrence completion ------------------------------------------------
@@ -547,5 +548,49 @@ class MigrationTest {
 
         assertEquals(true, migrated.eventDao().byId(65)!!.isCompleted)
         assertTrue(migrated.taskCompletionDao().all().isEmpty())
+    }
+
+    // --- 7 to 8: event templates ----------------------------------------------------------
+
+    @Test
+    fun `a version 7 calendar gains templates with its events and ticks intact`() = runBlocking {
+        createVersion(7)
+        SQLiteDatabase.openOrCreateDatabase(dbFile, null).use { raw ->
+            // Events did not change between 6 and 7, so the version 6 row is a version 7 row.
+            insertV6Event(raw, 71, "ហាត់ប្រាណ", 20_000, "FREQ=DAILY", isTask = true, isCompleted = false, completedAt = null)
+            raw.execSQL("INSERT INTO task_completions (eventId, epochDay, completedAtMillis) VALUES (71, 20001, 5)")
+        }
+
+        val migrated = openMigrated()
+
+        assertNotNull("the task was lost by the 7 to 8 migration", migrated.eventDao().byId(71))
+        assertEquals(listOf(20_001L), migrated.taskCompletionDao().all().map { it.epochDay })
+        assertTrue(migrated.templateDao().all().isEmpty())
+    }
+
+    @Test
+    fun `a migrated template is writable and lets go of a deleted category`() = runBlocking {
+        createVersion(7)
+
+        val migrated = openMigrated()
+        val work = migrated.categoryDao().upsert(CategoryEntity(name = "ការងារ", colorArgb = 1))
+        migrated.templateDao().insert(
+            TemplateEntity(
+                name = "ប្រជុំ",
+                title = "ប្រជុំក្រុម",
+                startMinute = 600,
+                durationMinutes = 30,
+                categoryId = work,
+                priority = 0,
+                reminderMinutes = "10",
+                createdAtMillis = 1,
+            ),
+        )
+        migrated.openHelper.writableDatabase.execSQL("DELETE FROM categories WHERE id = ?", arrayOf<Any?>(work))
+
+        // ON DELETE SET NULL, as the entity declares: the template stays, without the category.
+        val template = migrated.templateDao().all().single()
+        assertEquals("ប្រជុំក្រុម", template.title)
+        assertNull(template.categoryId)
     }
 }

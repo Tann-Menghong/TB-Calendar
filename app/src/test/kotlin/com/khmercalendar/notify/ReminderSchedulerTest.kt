@@ -134,6 +134,7 @@ class ReminderSchedulerTest {
         ) = fail()
         override suspend fun setPriority(id: Long, priority: Int, atMillis: Long) = fail()
         override suspend fun setPinned(id: Long, pinned: Boolean, atMillis: Long) = fail()
+        override suspend fun setIsTask(id: Long, isTask: Boolean, atMillis: Long) = fail()
         override fun observePinned(): kotlinx.coroutines.flow.Flow<List<EventEntity>> = fail()
         override suspend fun count(): Int = fail()
         override fun observeCompletedTasksBetween(

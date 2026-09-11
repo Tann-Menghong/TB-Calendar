@@ -19,6 +19,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
+import com.khmercalendar.domain.EventTemplate
+import com.khmercalendar.domain.EventTemplates
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -54,6 +58,7 @@ class EventEditViewModel(
     private val repository: EventRepository,
     private val scheduler: ReminderScheduler,
     private val settings: StateFlow<AppSettings>,
+    private val templates: com.khmercalendar.data.repo.TemplateRepository,
 ) : ViewModel() {
 
     private var checklistJob: Job? = null
@@ -149,6 +154,71 @@ class EventEditViewModel(
 
     fun update(block: (EventDraftModel) -> EventDraftModel) {
         _state.update { it.copy(draft = block(it.draft), error = null) }
+    }
+
+    /**
+     * Saved templates.
+     *
+     * A flow of its own rather than a field on [EventEditState]: [load] replaces the whole state,
+     * and a list kept there would be wiped every time an event opened.
+     */
+    val templateList: StateFlow<List<EventTemplate>> = templates.observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Fills the form from [template], keeping the day already chosen. */
+    fun applyTemplate(template: EventTemplate) = update { draft ->
+        EventTemplates.toDraft(template, draft.date, draft)
+    }
+
+    /**
+     * Saves the form as a template. The event itself is not saved: a template is a shape, not a
+     * commitment, and the user may still be deciding.
+     */
+    fun saveAsTemplate(name: String, onSaved: () -> Unit) {
+        val draft = _state.value.draft
+        if (draft.title.isBlank()) {
+            _state.update { it.copy(error = "សូមបញ្ចូលចំណងជើងមុនរក្សាទុកជាគំរូ") }
+            onSaved()
+            return
+        }
+        viewModelScope.launch {
+            templates.save(EventTemplates.from(draft, name))
+            onSaved()
+        }
+    }
+
+    fun deleteTemplate(id: Long) {
+        viewModelScope.launch { templates.delete(id) }
+    }
+
+    /**
+     * Moves the occurrence on [from] to [to].
+     *
+     * @param onMoved called with the event and date that now hold it, so the screen can reopen
+     *   there - for a day of a repeating series that is a different event.
+     */
+    fun reschedule(eventId: Long, from: LocalDate, to: LocalDate, onMoved: (Long, LocalDate) -> Unit) {
+        if (from == to) return
+        viewModelScope.launch {
+            val id = repository.reschedule(eventId, from, to) ?: return@launch
+            scheduler.rescheduleAll()
+            onMoved(id, to)
+        }
+    }
+
+    /** Event to task or back, reflected on the screen at once. */
+    fun setIsTask(eventId: Long, date: LocalDate, isTask: Boolean) {
+        viewModelScope.launch {
+            repository.setIsTask(eventId, isTask)
+            _state.update {
+                it.copy(
+                    draft = it.draft.copy(isTask = isTask),
+                    occurrenceCompleted = repository.isCompleted(eventId, date),
+                )
+            }
+            // A task that was done had its reminders skipped; as an event it is reminded again.
+            scheduler.rescheduleAll()
+        }
     }
 
     fun setAllDay(allDay: Boolean) = update { it.copy(allDay = allDay) }

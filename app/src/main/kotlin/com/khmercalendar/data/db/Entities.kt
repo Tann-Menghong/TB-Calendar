@@ -302,3 +302,48 @@ data class TaskCompletionEntity(
     val epochDay: Long,
     val completedAtMillis: Long,
 )
+
+/**
+ * A reusable shape for something new: "weekly meeting, 9:00, one hour, reminder half an hour
+ * before, category work".
+ *
+ * Its own table by the rule the habit tables set: a template is not a date. It has a time of day
+ * and a length, but no day - putting it in `events` would put it on the calendar.
+ *
+ * @property startMinute minutes after midnight it starts at. Ignored for an all-day template.
+ * @property durationMinutes how long it lasts. May carry past midnight; for an all-day template it
+ *   is whole days times 1440.
+ * @property reminderMinutes lead times as "30,60", the same values the editor offers.
+ * @property categoryId set to null if the category is deleted: removing a category must not take
+ *   the templates that used it with it.
+ */
+@Entity(
+    tableName = "event_templates",
+    foreignKeys = [
+        ForeignKey(
+            entity = CategoryEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["categoryId"],
+            onDelete = ForeignKey.SET_NULL,
+        ),
+    ],
+    indices = [Index("categoryId")],
+)
+data class TemplateEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val title: String,
+    val description: String? = null,
+    val location: String? = null,
+    val allDay: Boolean = false,
+    val startMinute: Int = 540,
+    val durationMinutes: Int = 60,
+    val categoryId: Long? = null,
+    val colorArgb: Int? = null,
+    val isTask: Boolean = false,
+    val priority: Int = 0,
+    val reminderMinutes: String = "",
+    val rrule: String? = null,
+    val sortOrder: Int = 0,
+    val createdAtMillis: Long,
+)

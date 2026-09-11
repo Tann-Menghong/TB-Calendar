@@ -27,7 +27,12 @@ import com.khmercalendar.ui.tasks.TaskListViewModel
 fun appViewModelFactory(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
     initializer { CalendarViewModel(container.eventRepository, container.settings) }
     initializer {
-        EventEditViewModel(container.eventRepository, container.reminderScheduler, container.settings)
+        EventEditViewModel(
+            container.eventRepository,
+            container.reminderScheduler,
+            container.settings,
+            container.templateRepository,
+        )
     }
     initializer { HomeViewModel(container.eventRepository, container.settings) }
     initializer { AgendaViewModel(container.eventRepository, container.settings) }

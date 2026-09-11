@@ -1,11 +1,11 @@
 {
-  "versionCode": 23,
-  "versionName": "2.6.0",
-  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v2.6.0/TB-Calendar-2.6.0.apk",
-  "apkSizeBytes": 60395960,
-  "apkSha256": "009ff0a5ef46fc00aa5caadf1bdcda9a46ab433c3ab201cf6a056d879150ba33",
+  "versionCode": 24,
+  "versionName": "2.7.0",
+  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v2.7.0/TB-Calendar-2.7.0.apk",
+  "apkSizeBytes": 60412340,
+  "apkSha256": "0ba0c8211446a11c69908b6168a090ecfdd8c9009b72c370d09b23a988a9cdc4",
   "minSdk": 26,
-  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v2.6.0",
-  "releaseNotesKm": "ស្វែងរកការកំណត់ណាមួយដោយវាយឈ្មោះ ហើយកម្មវិធីនឹងបើកអេក្រង់ និងរំកិលទៅការកំណត់នោះផ្ទាល់។ លទ្ធផលស្វែងរកអាចច្រោះតាមប្រភេទ ស្ថានភាព អាទិភាព និងប្រភេទព្រឹត្តិការណ៍។",
-  "releaseNotesEn": "Search settings by name - in Khmer or in the words another app would use - and the right screen opens scrolled to that setting. Search results can be filtered by kind, status, priority and category, and when filters hide everything the screen says so instead of claiming nothing was found."
+  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v2.7.0",
+  "releaseNotesKm": "រក្សាទុកព្រឹត្តិការណ៍ដែលអ្នកធ្វើញឹកញាប់ជាគំរូ ហើយចាប់ផ្តើមព្រឹត្តិការណ៍ថ្មីពីវាលើថ្ងៃដែលអ្នកបានជ្រើស។ ប្តូរព្រឹត្តិការណ៍ទៅថ្ងៃផ្សេង ឬប្តូរព្រឹត្តិការណ៍ទៅជាកិច្ចការ ដោយមិនចាំបាច់បើកកម្មវិធីកែសម្រួល។",
+  "releaseNotesEn": "Save an event you make again and again as a template, and start new events from it on the day you chose. Move an event to tomorrow, next week or any day - for a repeating event, just that one day - and turn an event into a task or back in one tap, without losing its steps or ticks."
 }

@@ -26,6 +26,10 @@ import kotlinx.serialization.Serializable
  * Adds the days each repeating task was ticked ([BackupEvent.completedOccurrences]). A format 2
  * reader would drop them silently, so the number moved again for the same reason as before.
  *
+ * ## Format 4
+ *
+ * Adds event templates ([templates]), for the same reason again: a format 3 reader would drop them.
+ *
  * [formatVersion], [appVersion] and [exportedAtMillis] have no defaults on purpose. They are
  * what tells this file apart from any other JSON object; with defaults, `{}` would decode as a
  * valid empty backup, and restore would cheerfully report that there was nothing to add.
@@ -40,12 +44,13 @@ data class BackupArchive(
     val notes: List<BackupNote> = emptyList(),
     val habits: List<BackupHabit> = emptyList(),
     val focusSessions: List<BackupFocusSession> = emptyList(),
+    val templates: List<BackupTemplate> = emptyList(),
     /** Null in format 1, and in any file written without settings. */
     val settings: BackupSettings? = null,
 ) {
     companion object {
         /** Bumped for any change after which an older reader would lose data, not only crash. */
-        const val FORMAT_VERSION = 3
+        const val FORMAT_VERSION = 4
     }
 }
 
@@ -109,6 +114,26 @@ data class BackupChecklistItem(
 data class BackupOccurrenceCompletion(
     val epochDay: Long,
     val completedAtMillis: Long? = null,
+)
+
+/** An event template. [startMinute] is minutes after midnight; see TemplateEntity. */
+@Serializable
+data class BackupTemplate(
+    val name: String,
+    val title: String,
+    val description: String? = null,
+    val location: String? = null,
+    val allDay: Boolean = false,
+    val startMinute: Int = 540,
+    val durationMinutes: Int = 60,
+    val categoryId: Long? = null,
+    val colorArgb: Int? = null,
+    val isTask: Boolean = false,
+    val priority: Int = 0,
+    val reminderMinutes: List<Int> = emptyList(),
+    val rrule: String? = null,
+    val sortOrder: Int = 0,
+    val createdAtMillis: Long? = null,
 )
 
 @Serializable

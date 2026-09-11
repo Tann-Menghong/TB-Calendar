@@ -13,6 +13,7 @@ import com.khmercalendar.data.db.HabitEntity
 import com.khmercalendar.data.db.HabitEntryEntity
 import com.khmercalendar.data.db.KhmerCalendarDatabase
 import com.khmercalendar.data.db.TaskCompletionEntity
+import com.khmercalendar.data.db.TemplateEntity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -29,10 +30,11 @@ data class BackupCounts(
     val habits: Int = 0,
     val habitDays: Int = 0,
     val focusSessions: Int = 0,
+    val templates: Int = 0,
 ) {
     val isEmpty: Boolean
         get() = events == 0 && categories == 0 && notes == 0 && checklistItems == 0 &&
-            habits == 0 && habitDays == 0 && focusSessions == 0
+            habits == 0 && habitDays == 0 && focusSessions == 0 && templates == 0
 }
 
 /**
@@ -214,6 +216,25 @@ class BackupManager(
                 focusSessions = database.focusDao().all().map {
                     BackupFocusSession(it.kind, it.startedAtMillis, it.plannedMinutes, it.endedAtMillis, it.eventId)
                 },
+                templates = database.templateDao().all().map {
+                    BackupTemplate(
+                        name = it.name,
+                        title = it.title,
+                        description = it.description,
+                        location = it.location,
+                        allDay = it.allDay,
+                        startMinute = it.startMinute,
+                        durationMinutes = it.durationMinutes,
+                        categoryId = it.categoryId,
+                        colorArgb = it.colorArgb,
+                        isTask = it.isTask,
+                        priority = it.priority,
+                        reminderMinutes = it.reminderMinutes.split(",").mapNotNull { m -> m.trim().toIntOrNull() },
+                        rrule = it.rrule,
+                        sortOrder = it.sortOrder,
+                        createdAtMillis = it.createdAtMillis,
+                    )
+                },
             )
         }
         return data.copy(settings = settings?.exportPortable())
@@ -374,6 +395,28 @@ class BackupManager(
                 )
             }
 
+            for (t in plan.newTemplates) {
+                database.templateDao().insert(
+                    TemplateEntity(
+                        name = t.name.trim(),
+                        title = t.title.trim(),
+                        description = t.description,
+                        location = t.location,
+                        allDay = t.allDay,
+                        startMinute = t.startMinute.coerceIn(0, 1_439),
+                        durationMinutes = t.durationMinutes.coerceAtLeast(1),
+                        categoryId = t.categoryId?.let { categoryIds[it] },
+                        colorArgb = t.colorArgb,
+                        isTask = t.isTask,
+                        priority = t.priority,
+                        reminderMinutes = t.reminderMinutes.filter { it >= 0 }.distinct().joinToString(","),
+                        rrule = t.rrule,
+                        sortOrder = t.sortOrder,
+                        createdAtMillis = t.createdAtMillis ?: now,
+                    ),
+                )
+            }
+
             val habitIds = HashMap<Long, Long>(plan.duplicateHabits)
             for (h in plan.newHabits) {
                 habitIds[h.id] = database.habitDao().upsert(
@@ -473,6 +516,8 @@ class BackupManager(
         val newNotes = ArrayList<BackupNote>()
         val mergedNotes = ArrayList<Pair<BackupNote, DayNoteEntity>>()
         var skippedNotes = 0
+        val newTemplates = ArrayList<BackupTemplate>()
+        var skippedTemplates = 0
 
         if (selection.calendar) {
             database.categoryDao().all().forEach { categoriesOnDevice.putIfAbsent(it.name, it.id) }
@@ -520,6 +565,18 @@ class BackupManager(
                             else -> mergedNotes += n to onDevice
                         }
                     }
+                }
+            }
+
+            // A template is known by its name: two with the same name are the same template to the
+            // person choosing between them.
+            val templateNames = database.templateDao().all().mapTo(HashSet()) { it.name.trim() }
+            for (t in archive.templates) {
+                val name = t.name.trim()
+                when {
+                    name.isEmpty() || t.title.isBlank() -> unreadable++
+                    !templateNames.add(name) -> skippedTemplates++
+                    else -> newTemplates += t
                 }
             }
         }
@@ -588,6 +645,8 @@ class BackupManager(
             newNotes = newNotes,
             mergedNotes = mergedNotes,
             skippedNotes = skippedNotes,
+            newTemplates = newTemplates,
+            skippedTemplates = skippedTemplates,
             newHabits = newHabits,
             duplicateHabits = duplicateHabits,
             habitAliases = habitAliases,
@@ -616,6 +675,7 @@ class BackupManager(
         habits = archive.habits.size,
         habitDays = archive.habits.sumOf { it.entries.size },
         focusSessions = archive.focusSessions.size,
+        templates = archive.templates.size,
     )
 
     /**
@@ -685,6 +745,8 @@ internal class RestorePlan(
     val newNotes: List<BackupNote>,
     val mergedNotes: List<Pair<BackupNote, DayNoteEntity>>,
     val skippedNotes: Int,
+    val newTemplates: List<BackupTemplate>,
+    val skippedTemplates: Int,
     val newHabits: List<BackupHabit>,
     val duplicateHabits: Map<Long, Long>,
     val habitAliases: Map<Long, Long>,
@@ -703,6 +765,7 @@ internal class RestorePlan(
             habits = newHabits.size,
             habitDays = newHabitDays.size,
             focusSessions = newFocus.size,
+            templates = newTemplates.size,
         )
 
     val skipped: BackupCounts
@@ -713,5 +776,6 @@ internal class RestorePlan(
             habits = duplicateHabits.size + habitAliases.size,
             habitDays = skippedHabitDays,
             focusSessions = skippedFocus,
+            templates = skippedTemplates,
         )
 }

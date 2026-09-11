@@ -34,6 +34,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,6 +70,9 @@ fun EventEditScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val pickers = rememberPlatformPickers()
     val draft = state.draft
+    val templates by viewModel.templateList.collectAsStateWithLifecycle()
+    var showTemplates by remember { mutableStateOf(false) }
+    var showSaveTemplate by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.saved) { if (state.saved) onSaved() }
 
@@ -91,6 +97,12 @@ fun EventEditScreen(
                     }
                 },
                 actions = {
+                    TemplateActions(
+                        isNew = state.isNew,
+                        hasTemplates = templates.isNotEmpty(),
+                        onOpenTemplates = { showTemplates = true },
+                        onSaveAsTemplate = { showSaveTemplate = true },
+                    )
                     IconButton(onClick = viewModel::save, enabled = !state.isSaving) {
                         Icon(Icons.Default.Check, contentDescription = "រក្សាទុក")
                     }
@@ -106,6 +118,24 @@ fun EventEditScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            if (showTemplates) {
+                TemplateSheet(
+                    templates = templates,
+                    onDismiss = { showTemplates = false },
+                    onApply = { template ->
+                        viewModel.applyTemplate(template)
+                        showTemplates = false
+                    },
+                    onDelete = viewModel::deleteTemplate,
+                )
+            }
+            if (showSaveTemplate) {
+                SaveTemplateDialog(
+                    suggestedName = draft.title,
+                    onDismiss = { showSaveTemplate = false },
+                    onSave = { name -> viewModel.saveAsTemplate(name) { showSaveTemplate = false } },
+                )
+            }
             state.error?.let { error ->
                 Text(
                     text = error,

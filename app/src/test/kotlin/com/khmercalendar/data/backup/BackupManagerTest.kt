@@ -12,6 +12,7 @@ import com.khmercalendar.data.db.HabitEntity
 import com.khmercalendar.data.db.HabitEntryEntity
 import com.khmercalendar.data.db.KhmerCalendarDatabase
 import com.khmercalendar.data.db.TaskCompletionEntity
+import com.khmercalendar.data.db.TemplateEntity
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -358,10 +359,10 @@ class BackupManagerTest {
     @Test
     fun `a file from a newer app is refused before anything is written`() = runTest {
         try {
-            manager(target).previewOf("""{"formatVersion": 4, "appVersion": "9", "exportedAtMillis": 1}""")
+            manager(target).previewOf("""{"formatVersion": 5, "appVersion": "9", "exportedAtMillis": 1}""")
             fail("a newer format must be refused")
         } catch (expected: BackupError.TooNew) {
-            assertEquals(4, expected.version)
+            assertEquals(5, expected.version)
         }
         assertEquals(0, target.eventDao().count())
     }
@@ -516,5 +517,40 @@ class BackupManagerTest {
 
         assertEquals(1, target.eventDao().count())
         assertEquals(listOf(20_700L, 20_701L, 20_702L), target.taskCompletionDao().all().map { it.epochDay })
+    }
+
+    @Test
+    fun `templates survive a backup, keep their category, and are not doubled by a second restore`() = runTest {
+        val work = source.categoryDao().upsert(CategoryEntity(name = "ការងារ", colorArgb = 1))
+        source.templateDao().insert(
+            TemplateEntity(
+                name = "ប្រជុំប្រចាំសប្តាហ៍",
+                title = "ប្រជុំក្រុម",
+                location = "បន្ទប់ ២",
+                startMinute = 9 * 60,
+                durationMinutes = 90,
+                categoryId = work,
+                priority = 1,
+                reminderMinutes = "10,30",
+                rrule = "FREQ=WEEKLY",
+                createdAtMillis = 5,
+            ),
+        )
+        // A category already on the target, so the restored template must be re-linked to it.
+        target.categoryDao().upsert(CategoryEntity(name = "ផ្ទាល់ខ្លួន", colorArgb = 2))
+
+        val text = backupOf(source)
+        val first = restore(text)
+        val second = restore(text)
+
+        val restored = target.templateDao().all().single()
+        assertEquals("ប្រជុំក្រុម", restored.title)
+        assertEquals(540, restored.startMinute)
+        assertEquals(90, restored.durationMinutes)
+        assertEquals("10,30", restored.reminderMinutes)
+        assertEquals("FREQ=WEEKLY", restored.rrule)
+        assertEquals("ការងារ", target.categoryDao().byId(restored.categoryId!!)!!.name)
+        assertEquals(1, first.added.templates)
+        assertEquals(1, second.skipped.templates)
     }
 }

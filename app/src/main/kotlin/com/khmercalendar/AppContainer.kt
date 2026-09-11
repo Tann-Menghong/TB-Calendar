@@ -51,6 +51,10 @@ class AppContainer(
 
     val focusRepository: FocusRepository by lazy { FocusRepository(context, database.focusDao()) }
 
+    val templateRepository: com.khmercalendar.data.repo.TemplateRepository by lazy {
+        com.khmercalendar.data.repo.TemplateRepository(database.templateDao())
+    }
+
     val eventRepository: EventRepository by lazy {
         EventRepository(
             eventDao = database.eventDao(),

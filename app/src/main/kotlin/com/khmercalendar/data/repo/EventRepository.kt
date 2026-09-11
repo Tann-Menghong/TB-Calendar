@@ -141,9 +141,12 @@ class EventRepository(
                     categoryId = event.categoryId,
                     categoryName = category?.name,
                     isTask = event.isTask,
-                    // A repeating task is done one occurrence at a time; see [setCompleted].
-                    isCompleted = event.isCompleted ||
-                        (rule != null && (event.id to date.toEpochDay()) in ticked),
+                    // Only a task can be done, and a repeating one a day at a time; see
+                    // [setCompleted]. An event keeps any history it had as a task, unread, so
+                    // turning it back into a task restores the ticks instead of losing them.
+                    isCompleted = event.isTask && (
+                        event.isCompleted || (rule != null && (event.id to date.toEpochDay()) in ticked)
+                    ),
                     isRecurring = rule != null,
                     priority = event.priority,
                     isPinned = event.isPinned,
@@ -279,6 +282,70 @@ class EventRepository(
     }
 
     /**
+     * Moves the occurrence of [eventId] on [from] to [to], keeping its time of day and length.
+     *
+     * A one-off moves as a whole. A single date of a repeating series cannot move on its own -
+     * there is no per-occurrence override - so that date is copied as a one-off on [to] and then
+     * removed from the series. In that order: a failure between the two writes leaves a
+     * duplicate the user can see and delete, never an occurrence that vanished.
+     *
+     * The copy starts undone and unpinned, with the series' reminders. Later edits to the series
+     * do not reach it, which is what moving "this day only" means.
+     *
+     * @return the id of the event that now holds the moved occurrence, or null if there is no
+     *   such event.
+     */
+    suspend fun reschedule(eventId: Long, from: LocalDate, to: LocalDate): Long? {
+        val event = eventDao.byId(eventId) ?: return null
+        if (from == to) return eventId
+        val zone = zoneProvider()
+        val now = System.currentTimeMillis()
+        val start = EventTimes.fromUtcMillis(event.startUtcMillis, zone, event.allDay)
+        val end = EventTimes.fromUtcMillis(event.endUtcMillis, zone, event.allDay)
+
+        if (RecurrenceRule.parse(event.rrule) == null) {
+            val shift = java.time.temporal.ChronoUnit.DAYS.between(from, to)
+            eventDao.update(
+                event.copy(
+                    startUtcMillis = EventTimes.toUtcMillis(start.plusDays(shift), zone, event.allDay),
+                    endUtcMillis = EventTimes.toUtcMillis(end.plusDays(shift), zone, event.allDay),
+                    updatedAtMillis = now,
+                ),
+            )
+            return eventId
+        }
+
+        val movedStart = LocalDateTime.of(to, start.toLocalTime())
+        val copyId = eventDao.insert(
+            event.copy(
+                id = 0,
+                startUtcMillis = EventTimes.toUtcMillis(movedStart, zone, event.allDay),
+                endUtcMillis = EventTimes.toUtcMillis(movedStart.plus(Duration.between(start, end)), zone, event.allDay),
+                rrule = null,
+                isCompleted = false,
+                completedAtMillis = null,
+                isPinned = false,
+                createdAtMillis = now,
+                updatedAtMillis = now,
+            ),
+        )
+        reminderDao.replaceForEvent(copyId, reminders(eventId))
+        exceptionDao.insert(EventExceptionEntity(eventId, from.toEpochDay()))
+        return copyId
+    }
+
+    /**
+     * Turns an event into a task, or a task back into an event.
+     *
+     * Nothing is cleared. A task's steps and its per-day ticks stay in their tables and are
+     * simply not read while it is an event, so turning it back restores them - a round trip
+     * that silently threw away a checklist would make the button a trap.
+     */
+    suspend fun setIsTask(eventId: Long, isTask: Boolean) {
+        eventDao.setIsTask(eventId, isTask, System.currentTimeMillis())
+    }
+
+    /**
      * Ticks or unticks a task.
      *
      * Un-ticking clears the completion time rather than overwriting it with now. Nothing read
@@ -314,6 +381,7 @@ class EventRepository(
     /** Whether one occurrence of [eventId] is done, by the same rule the occurrences use. */
     suspend fun isCompleted(eventId: Long, date: LocalDate): Boolean {
         val event = eventDao.byId(eventId) ?: return false
+        if (!event.isTask) return false
         if (event.isCompleted) return true
         if (RecurrenceRule.parse(event.rrule) == null) return false
         return completionDao.find(eventId, date.toEpochDay()) != null

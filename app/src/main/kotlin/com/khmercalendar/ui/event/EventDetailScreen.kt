@@ -60,11 +60,13 @@ fun EventDetailScreen(
     occurrenceDate: LocalDate,
     onBack: () -> Unit,
     onEdit: (Long) -> Unit,
+    onMoved: (Long, LocalDate) -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val draft = state.draft
     val context = LocalContext.current
     var showDelete by remember { mutableStateOf(false) }
+    var showMove by remember { mutableStateOf(false) }
 
     LaunchedEffect(eventId) {
         viewModel.load(eventId, occurrenceDate)
@@ -209,6 +211,11 @@ fun EventDetailScreen(
             }
 
             Spacer(Modifier.height(12.dp))
+            EventQuickActions(
+                isTask = draft.isTask,
+                onMove = { showMove = true },
+                onToggleTask = { viewModel.setIsTask(eventId, occurrenceDate, !draft.isTask) },
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (draft.isTask) {
                     // The occurrence being looked at, not the series: this screen is opened on a
@@ -237,6 +244,18 @@ fun EventDetailScreen(
             }
             Spacer(Modifier.height(32.dp))
         }
+    }
+
+    if (showMove) {
+        MoveSheet(
+            date = occurrenceDate,
+            isRecurring = draft.recurrence != null,
+            onDismiss = { showMove = false },
+            onMove = { to ->
+                showMove = false
+                viewModel.reschedule(eventId, occurrenceDate, to, onMoved)
+            },
+        )
     }
 
     if (showDelete) {

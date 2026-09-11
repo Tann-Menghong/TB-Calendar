@@ -35,9 +35,9 @@ class BackupCodecTest {
     fun `a file from a newer app says so rather than claiming to be damaged`() {
         // Even though the body is unreadable to this version, the answer is "update the app".
         val error = assertThrows(BackupError.TooNew::class.java) {
-            BackupCodec.decode("""{"formatVersion": 4, "appVersion": "9.0", "exportedAtMillis": 1, "events": "changed"}""")
+            BackupCodec.decode("""{"formatVersion": 5, "appVersion": "9.0", "exportedAtMillis": 1, "events": "changed"}""")
         }
-        assertEquals(4, error.version)
+        assertEquals(5, error.version)
     }
 
     @Test

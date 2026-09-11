@@ -442,6 +442,7 @@ private fun RestoreResultDialog(summary: RestoreSummary, khmerNumerals: Boolean,
             add("បានបន្ថែម ${n(added.habits)} ទម្លាប់ និង ${n(added.habitDays)} ថ្ងៃដែលបានធ្វើ")
         }
         if (added.focusSessions > 0) add("បានបន្ថែម ${n(added.focusSessions)} វគ្គផ្តោតអារម្មណ៍")
+        if (added.templates > 0) add("បានបន្ថែម ${n(added.templates)} គំរូ")
         val skippedTotal = skipped.events + skipped.notes + skipped.habitDays + skipped.focusSessions
         if (skippedTotal > 0) add("រំលង ${n(skippedTotal)} ធាតុដែលមានរួចហើយ")
         if (summary.unreadable > 0) add("${n(summary.unreadable)} ធាតុមិនអាចអានបាន")

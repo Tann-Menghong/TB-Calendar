@@ -417,6 +417,12 @@ fun KhmerCalendarNavHost(
                     occurrenceDate = date,
                     onBack = navController::popBackStack,
                     onEdit = { id -> navController.navigate(Routes.eventEdit(id, date.toString())) },
+                    // Reopened on the moved occurrence. The date is part of this route, so staying
+                    // put would leave the screen describing a day the event is no longer on.
+                    onMoved = { id, movedTo ->
+                        navController.popBackStack()
+                        navController.navigate(Routes.eventDetail(id, movedTo.toString()))
+                    },
                 )
             }
 

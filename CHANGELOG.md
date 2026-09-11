@@ -1,5 +1,51 @@
 # Changelog
 
+## 2.7.0 — 2026-09-11
+
+Save the shape of an event you make again and again, and move or re-type an event without opening the editor.
+
+### គំរូ · Templates
+
+The weekly meeting, the morning run, the Friday report: most calendars are the same few events typed over and over. In the event editor there is now a **រក្សាទុកជាគំរូ** (save as template) button.
+
+A template keeps the title, time of day, length, place, category, colour, reminders, repeat, and whether it is a task — **but not the date**. Start a new event, tap **ចាប់ផ្តើមពីគំរូ**, pick the template, and everything is filled in on the day you had already chosen.
+
+- An event from 23:00 to 01:00 is saved as two hours long and lands the same way, ending the next morning.
+- An all-day event over three days stays three days wherever it lands, across a month or a year end.
+- Applying a template to a new event never turns it into a different event, and it always starts not done.
+- Deleting a template asks first, and says that events already made from it are not touched.
+
+Templates are in backups, with their category, and restoring the same backup twice does not double them.
+
+### ប្តូរថ្ងៃ · Move to another day
+
+An event's details screen has a **ប្តូរថ្ងៃ** button: **ថ្ងៃស្អែក** (tomorrow), **សប្តាហ៍ក្រោយ** (next week), or **រើសថ្ងៃ…** (pick a day). The time and length stay the same.
+
+For a repeating event only that one day moves, and the sheet says so before you choose. The moved day becomes its own event with the series' reminders; every other day of the series stays where it was.
+
+### ប្តូរទៅជាកិច្ចការ · Event to task, task to event
+
+The same screen can turn an event into a task, or a task back into an event, in one tap. Nothing is thrown away: a task's steps and the days it was ticked are kept while it is an event, not shown and **not counted in statistics**, and come back if you turn it into a task again.
+
+### Tested
+
+**544 unit tests** pass, including 23 new ones, and lint reports no errors. The new tests cover templates across midnight, over several days and across a year end; moving one-off, overnight, multi-day and repeating events; the round trip from task to event and back, including statistics; templates in backups; and the database upgrade.
+
+On an **Android 8.0 (API 26)** emulator, upgrading over 2.6.0:
+
+- The database upgraded to version 8 on first launch with all 11 existing events intact.
+- An event titled *Standup*, repeating daily, was saved as a template; the start-from-template button appeared at once. A new event on 24 September started from it came out as *Standup*, daily, 2–3 PM, on the 24th.
+- **ប្តូរថ្ងៃ → ថ្ងៃស្អែក** on that repeating event showed the "only this day" note, then opened the moved day on 25 September as a one-off with its 30-minute reminder. The 24th was left empty, and every other day of the series was unchanged.
+- **ប្តូរទៅជាកិច្ចការ** turned it into a task at once, with steps and "mark done" appearing; back went to the calendar.
+
+### Privacy
+
+Unchanged: no account, no analytics, no tracking, no ads. Templates live in the app's own database on your phone.
+
+### Install
+
+Android 8.0 (API 26) or later. Download `TB-Calendar-2.7.0.apk` below. Upgrading keeps all your data; the database gains one table for templates. Backups made by 2.7 use format 4, which 2.6 and earlier cannot read; backups from older versions still restore.
+
 ## 2.6.0 — 2026-09-11
 
 Find any setting by typing it, and narrow search to exactly what you are looking for.

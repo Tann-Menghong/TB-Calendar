@@ -144,6 +144,10 @@ interface EventDao {
     @Query("UPDATE events SET isPinned = :pinned, updatedAtMillis = :atMillis WHERE id = :id")
     suspend fun setPinned(id: Long, pinned: Boolean, atMillis: Long)
 
+    /** Event to task or back. Nothing else changes; see EventRepository.setIsTask. */
+    @Query("UPDATE events SET isTask = :isTask, updatedAtMillis = :atMillis WHERE id = :id")
+    suspend fun setIsTask(id: Long, isTask: Boolean, atMillis: Long)
+
     /**
      * Every pinned row, whatever its date.
      *
@@ -442,11 +446,28 @@ interface TaskCompletionDao {
             "c.completedAtMillis AS completedAtMillis, e.priority AS priority, " +
             "e.categoryId AS categoryId " +
             "FROM task_completions c JOIN events e ON e.id = c.eventId " +
-            "WHERE c.completedAtMillis BETWEEN :fromMillis AND :toMillis"
+            // A task turned back into an event keeps its ticks, unread - they must not count.
+            "WHERE e.isTask = 1 AND c.completedAtMillis BETWEEN :fromMillis AND :toMillis"
     )
     fun observeCompletedBetween(fromMillis: Long, toMillis: Long): Flow<List<CompletedOccurrenceRow>>
 
     /** Every tick, for a backup. */
     @Query("SELECT * FROM task_completions ORDER BY eventId, epochDay")
     suspend fun all(): List<TaskCompletionEntity>
+}
+
+@Dao
+interface TemplateDao {
+
+    @Query("SELECT * FROM event_templates ORDER BY sortOrder, name")
+    fun observeAll(): Flow<List<TemplateEntity>>
+
+    @Query("SELECT * FROM event_templates ORDER BY sortOrder, name")
+    suspend fun all(): List<TemplateEntity>
+
+    @Insert
+    suspend fun insert(template: TemplateEntity): Long
+
+    @Query("DELETE FROM event_templates WHERE id = :id")
+    suspend fun deleteById(id: Long)
 }

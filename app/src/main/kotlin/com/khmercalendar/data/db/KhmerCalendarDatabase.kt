@@ -22,8 +22,9 @@ import kotlinx.coroutines.launch
         ChecklistItemEntity::class,
         FocusSessionEntity::class,
         TaskCompletionEntity::class,
+        TemplateEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
 )
 abstract class KhmerCalendarDatabase : RoomDatabase() {
@@ -37,6 +38,7 @@ abstract class KhmerCalendarDatabase : RoomDatabase() {
     abstract fun checklistDao(): ChecklistDao
     abstract fun focusDao(): FocusDao
     abstract fun taskCompletionDao(): TaskCompletionDao
+    abstract fun templateDao(): TemplateDao
 
     companion object {
         private const val NAME = "khmer_calendar.db"
@@ -203,6 +205,27 @@ abstract class KhmerCalendarDatabase : RoomDatabase() {
             }
         }
 
+        /** Event templates: a new table, nothing existing touched. SQL copied from 8.json. */
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `event_templates` (`id` INTEGER PRIMARY KEY " +
+                        "AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `title` TEXT NOT NULL, " +
+                        "`description` TEXT, `location` TEXT, `allDay` INTEGER NOT NULL, " +
+                        "`startMinute` INTEGER NOT NULL, `durationMinutes` INTEGER NOT NULL, " +
+                        "`categoryId` INTEGER, `colorArgb` INTEGER, `isTask` INTEGER NOT NULL, " +
+                        "`priority` INTEGER NOT NULL, `reminderMinutes` TEXT NOT NULL, `rrule` TEXT, " +
+                        "`sortOrder` INTEGER NOT NULL, `createdAtMillis` INTEGER NOT NULL, " +
+                        "FOREIGN KEY(`categoryId`) REFERENCES `categories`(`id`) ON UPDATE NO ACTION " +
+                        "ON DELETE SET NULL )",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_event_templates_categoryId` " +
+                        "ON `event_templates` (`categoryId`)",
+                )
+            }
+        }
+
         /** The repair step of [MIGRATION_6_7]. The zone is a parameter so a test can fix it. */
         internal fun repairRepeatingCompletions(db: SupportSQLiteDatabase, zone: java.time.ZoneId) {
             class Legacy(
@@ -279,6 +302,7 @@ abstract class KhmerCalendarDatabase : RoomDatabase() {
                     MIGRATION_4_5,
                     MIGRATION_5_6,
                     MIGRATION_6_7,
+                    MIGRATION_7_8,
                 )
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {

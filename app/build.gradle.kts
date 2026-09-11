@@ -26,8 +26,8 @@ android {
         // library desugaring, which the calendar arithmetic leans on heavily.
         minSdk = 26
         targetSdk = 36
-        versionCode = 23
-        versionName = "2.6.0"
+        versionCode = 24
+        versionName = "2.7.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
