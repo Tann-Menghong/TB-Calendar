@@ -1,11 +1,11 @@
 {
-  "versionCode": 22,
-  "versionName": "2.5.0",
-  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v2.5.0/TB-Calendar-2.5.0.apk",
-  "apkSizeBytes": 60379576,
-  "apkSha256": "e2c818f3787df2d79e6e99ba92f7ab83665498e43332d38310a5fef22de925a6",
+  "versionCode": 23,
+  "versionName": "2.6.0",
+  "apkUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/download/v2.6.0/TB-Calendar-2.6.0.apk",
+  "apkSizeBytes": 60395960,
+  "apkSha256": "009ff0a5ef46fc00aa5caadf1bdcda9a46ab433c3ab201cf6a056d879150ba33",
   "minSdk": 26,
-  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v2.5.0",
-  "releaseNotesKm": "ការរំលឹកឈប់រោទ៍សម្រាប់ព្រឹត្តិការណ៍ដែលបានផ្លាស់ទី ឬលុប ហើយការបិទការជូនដំណឹងឥឡូវមានប្រសិទ្ធភាពពិតប្រាកដ។ កិច្ចការដែលធ្វើម្តងទៀតអាចសម្គាល់ថារួចរាល់ម្តងមួយថ្ងៃ មិនមែនទាំងស៊េរីទេ។ ប៊ូតុង «រួចរាល់» បង្ហាញតែលើកិច្ចការប៉ុណ្ណោះ។",
-  "releaseNotesEn": "Reminders for moved or deleted events no longer fire, and turning notifications off now actually disarms them - cancelling had never worked. Each day of a repeating task is now completed on its own; ticking one day used to mark the whole series done and silence its reminders. The reminder's done button appears only on tasks. Upgrading repairs repeating tasks the old behaviour marked done."
+  "releasePageUrl": "https://github.com/Tann-Menghong/TB-Calendar/releases/tag/v2.6.0",
+  "releaseNotesKm": "ស្វែងរកការកំណត់ណាមួយដោយវាយឈ្មោះ ហើយកម្មវិធីនឹងបើកអេក្រង់ និងរំកិលទៅការកំណត់នោះផ្ទាល់។ លទ្ធផលស្វែងរកអាចច្រោះតាមប្រភេទ ស្ថានភាព អាទិភាព និងប្រភេទព្រឹត្តិការណ៍។",
+  "releaseNotesEn": "Search settings by name - in Khmer or in the words another app would use - and the right screen opens scrolled to that setting. Search results can be filtered by kind, status, priority and category, and when filters hide everything the screen says so instead of claiming nothing was found."
 }

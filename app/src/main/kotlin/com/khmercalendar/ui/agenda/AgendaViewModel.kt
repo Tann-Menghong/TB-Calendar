@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.khmercalendar.data.db.CategoryEntity
 import com.khmercalendar.data.prefs.AppSettings
+import com.khmercalendar.domain.SearchFilter
 import com.khmercalendar.domain.SearchResults
 import com.khmercalendar.domain.SearchResult
 import com.khmercalendar.domain.CalendarSearch
@@ -63,6 +64,16 @@ class AgendaViewModel(
 
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query.asStateFlow()
+
+    /**
+     * What search results are narrowed to.
+     *
+     * Held here rather than on the screen so it survives rotation, and applied on the screen
+     * rather than here so the unfiltered count is still known - a screen that says "nothing
+     * found" while a filter is hiding twelve results is telling the user the wrong thing.
+     */
+    private val _searchFilter = MutableStateFlow(SearchFilter())
+    val searchFilter: StateFlow<SearchFilter> = _searchFilter.asStateFlow()
 
     val categories: StateFlow<List<CategoryEntity>> = repository.observeCategories()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -157,6 +168,9 @@ class AgendaViewModel(
                     colorArgb = row.colorArgb ?: categoryById[row.categoryId]?.colorArgb ?: 0,
                     isTask = row.isTask,
                     isCompleted = row.isCompleted,
+                    categoryId = row.categoryId,
+                    priority = row.priority,
+                    isPinned = row.isPinned,
                 )
             }
 
@@ -188,6 +202,10 @@ class AgendaViewModel(
 
     fun setQuery(value: String) {
         _query.value = value
+    }
+
+    fun setSearchFilter(filter: SearchFilter) {
+        _searchFilter.value = filter
     }
 
     fun setCategory(id: Long?) = _filter.update { it.copy(categoryId = id) }

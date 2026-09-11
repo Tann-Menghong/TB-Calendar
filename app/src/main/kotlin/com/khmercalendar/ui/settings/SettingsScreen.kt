@@ -36,6 +36,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
@@ -58,6 +59,8 @@ fun SettingsScreen(
 ) {
     val scope = rememberCoroutineScope()
     var pinDialog by remember { mutableStateOf(false) }
+    // Saveable, so coming back from the screen a result opened finds the search still there.
+    var query by rememberSaveable { mutableStateOf("") }
 
     Scaffold(topBar = { TopAppBar(title = { Text("ការកំណត់") }) }) { padding ->
         Column(
@@ -66,6 +69,15 @@ fun SettingsScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState()),
         ) {
+            SettingsSearchField(query = query, onQueryChange = { query = it })
+            if (query.trim().length >= SettingsIndex.MIN_QUERY_LENGTH) {
+                SettingsSearchResults(
+                    query = query,
+                    onNavigate = onNavigate,
+                    onClearQuery = { query = "" },
+                )
+                return@Column
+            }
             SettingsGroup("រូបរាង និងការបង្ហាញ") {
                 SettingsRow(
                     title = "រូបរាង",

@@ -114,7 +114,8 @@ fun ChoiceRow(
 
 @Composable
 fun SettingsGroup(title: String, content: @Composable () -> Unit) {
-    Column(Modifier.fillMaxWidth()) {
+    // Scrolls itself into view, and briefly tints, when settings search sent the user here.
+    Column(Modifier.fillMaxWidth().then(rememberSettingsFocus(title))) {
         Text(
             title,
             style = MaterialTheme.typography.labelLarge,

@@ -33,6 +33,10 @@ sealed interface SearchResult {
         val colorArgb: Int,
         val isTask: Boolean,
         val isCompleted: Boolean,
+        /** What search filters read. Defaulted so existing constructions still compile. */
+        val categoryId: Long? = null,
+        val priority: Int = 0,
+        val isPinned: Boolean = false,
     ) : SearchResult
 
     /** A day note. Opened at its day, since a note has no identity apart from its date. */

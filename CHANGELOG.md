@@ -1,5 +1,55 @@
 # Changelog
 
+## 2.6.0 — 2026-09-11
+
+Find any setting by typing it, and narrow search to exactly what you are looking for.
+
+### ស្វែងរកការកំណត់ · Search settings
+
+The settings are spread over nine screens and about sixty rows, most of them two taps deep. There is now a search box at the top of **ការកំណត់**.
+
+Type a few letters of what you want — in Khmer, or in the words another app would have used — and tap the result. It opens the right screen **and scrolls straight to the setting**, tinting it for a moment so your eye lands on it.
+
+- **ងងឹត** or **dark** finds the theme.
+- **PIN** finds the app lock.
+- **week start** finds the first day of the week.
+- **លេខខ្មែរ** finds Khmer numerals.
+
+Results show which screen each setting is on, so two with the same name — **បុណ្យជាតិ** is both the list of holidays and a switch on the calendar — can be told apart.
+
+The words search knows are checked against the screens themselves every time the app is built, so renaming a setting cannot leave search offering a name that no longer exists.
+
+### Search filters
+
+Search results can now be narrowed with a row of chips under the search box:
+
+- **What:** events, tasks, countdowns, notes, holidays — combine as many as you like.
+- **Status:** not done, or done.
+- **Priority:** important, normal, low.
+- **Category:** any of yours.
+
+Status and priority belong to tasks, so choosing either hides ordinary events, notes and holidays rather than pretending a holiday is "important". A category likewise hides what has no category.
+
+When a filter hides every result, the screen says so — how many things matched your words, and a button to clear the filters — instead of claiming nothing was found.
+
+### Tested
+
+**521 unit tests** pass and lint is clean, including 18 new ones. One of them caught a real ranking flaw before release: typing **PIN** put the countdown list first, because its keyword "pinned" starts with "pin". An exact match now outranks a prefix.
+
+On an **Android 8.0 (API 26)** emulator:
+
+- **widget** found the widget settings; tapping the result opened **រូបរាង** already scrolled down to **ធាតុក្រាហ្វិកលើអេក្រង់ដើម**, the last group on that long screen.
+- **PIN** listed **ចាក់សោកម្មវិធី** first; tapping it cleared the search and scrolled the settings list to **ឯកជនភាព និងទិន្នន័យ**.
+- In search, **tasks** left only tasks; **tasks** and **done** left only the one finished task; **events** and **done** together hid everything, and the screen said *41 things match "day" but not the filters you chose* — the 41 being eleven events and thirty holidays — and **សម្អាតតម្រង** brought them all back.
+
+### Privacy
+
+Unchanged: no account, no analytics, no tracking, no ads. Search runs entirely on the phone, over your own data.
+
+### Install
+
+Android 8.0 (API 26) or later. Download `TB-Calendar-2.6.0.apk` below. Upgrading keeps all your data; the database is unchanged this release.
+
 ## 2.5.0 — 2026-09-11
 
 Reminders that stop when they should, and repeating tasks you can finish one day at a time.

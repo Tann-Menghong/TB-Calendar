@@ -231,7 +231,11 @@ fun SearchScreen(
     onOpenDay: (LocalDate) -> Unit,
 ) {
     val query by viewModel.query.collectAsStateWithLifecycle()
-    val results by viewModel.searchResults.collectAsStateWithLifecycle()
+    val allResults by viewModel.searchResults.collectAsStateWithLifecycle()
+    val filter by viewModel.searchFilter.collectAsStateWithLifecycle()
+    val categories by viewModel.categories.collectAsStateWithLifecycle()
+    // Filtered here, where the unfiltered count is still at hand for the "hidden by filters" line.
+    val results = remember(allResults, filter) { filter.apply(allResults) }
     val focusRequester = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
     val settings = LocalAppSettings.current
@@ -266,36 +270,57 @@ fun SearchScreen(
             )
         },
     ) { padding ->
-        when {
-            !CalendarSearch.isSearchable(query) -> EmptyState(
-                icon = Icons.Outlined.Search,
-                title = "ស្វែងរក",
-                message = "ចំណងជើង ទីតាំង ប្រភេទ កំណត់ចំណាំ បុណ្យជាតិ ឬកាលបរិច្ឆេទ",
-                modifier = Modifier.padding(padding),
-            )
+        androidx.compose.foundation.layout.Column(Modifier.fillMaxSize().padding(padding)) {
+            if (CalendarSearch.isSearchable(query)) {
+                SearchFilterBar(
+                    filter = filter,
+                    categories = categories,
+                    onChange = viewModel::setSearchFilter,
+                )
+            }
+            when {
+                !CalendarSearch.isSearchable(query) -> EmptyState(
+                    icon = Icons.Outlined.Search,
+                    title = "ស្វែងរក",
+                    message = "ចំណងជើង ទីតាំង ប្រភេទ កំណត់ចំណាំ បុណ្យជាតិ ឬកាលបរិច្ឆេទ",
+                )
 
-            results.isEmpty -> EmptyState(
-                icon = Icons.Outlined.EventBusy,
-                title = "រកមិនឃើញ",
-                message = "គ្មានអ្វីត្រូវនឹង “$query”",
-                modifier = Modifier.padding(padding),
-            )
+                allResults.isEmpty -> EmptyState(
+                    icon = Icons.Outlined.EventBusy,
+                    title = "រកមិនឃើញ",
+                    message = "គ្មានអ្វីត្រូវនឹង “$query”",
+                )
 
-            else -> LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(bottom = 24.dp),
-            ) {
-                section("កាលបរិច្ឆេទ", results.dates) { hit ->
-                    DateJumpRow(hit, settings) { onOpenDay(hit.date) }
-                }
-                section("ព្រឹត្តិការណ៍", results.events) { hit ->
-                    EventHitRow(hit, settings) { onOpenEvent(hit.eventId, hit.date) }
-                }
-                section("កំណត់ចំណាំ", results.notes) { hit ->
-                    NoteHitRow(hit, settings) { onOpenDay(hit.date) }
-                }
-                section("បុណ្យជាតិ", results.holidays) { hit ->
-                    HolidayHitRow(hit, settings) { onOpenDay(hit.date) }
+                // Something matched the words and the filters hid all of it. Saying "nothing
+                // found" here would send the user to retype a search that already worked.
+                results.isEmpty -> EmptyState(
+                    icon = Icons.Outlined.Search,
+                    title = "តម្រងលាក់លទ្ធផលទាំងអស់",
+                    message = "${com.khmercalendar.ui.components.localeNumber(allResults.total)} " +
+                        "ត្រូវនឹង “$query” ប៉ុន្តែមិនត្រូវនឹងតម្រងដែលបានជ្រើស",
+                    action = {
+                        androidx.compose.material3.TextButton(
+                            onClick = { viewModel.setSearchFilter(com.khmercalendar.domain.SearchFilter()) },
+                        ) { Text("សម្អាតតម្រង") }
+                    },
+                )
+
+                else -> LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 24.dp),
+                ) {
+                    section("កាលបរិច្ឆេទ", results.dates) { hit ->
+                        DateJumpRow(hit, settings) { onOpenDay(hit.date) }
+                    }
+                    section("ព្រឹត្តិការណ៍", results.events) { hit ->
+                        EventHitRow(hit, settings) { onOpenEvent(hit.eventId, hit.date) }
+                    }
+                    section("កំណត់ចំណាំ", results.notes) { hit ->
+                        NoteHitRow(hit, settings) { onOpenDay(hit.date) }
+                    }
+                    section("បុណ្យជាតិ", results.holidays) { hit ->
+                        HolidayHitRow(hit, settings) { onOpenDay(hit.date) }
+                    }
                 }
             }
         }
